@@ -125,6 +125,16 @@ def merge_registry(base,current):
     cfg=copy.deepcopy(current or base)
     if current is not None:
         cfg["vendedores"]=copy.deepcopy(current.get("vendedores",[]))
+    # Migração de compatibilidade: versões anteriores podiam deixar um vendedor
+    # ATIVO com categoria "Canal Nacional". Nesse estado ele ficava invisível no
+    # ranking porque a elegibilidade exige vendedor ativo + franquia + categoria local.
+    # Se o gestor marcou o vendedor para exibir no Dashboard/Ranking, essa intenção
+    # administrativa prevalece e o cadastro é normalizado como vendedor da franquia.
+    for seller in cfg.get("vendedores",[]):
+        if seller.get("ativo",False):
+            seller["pertence_franquia"]=True
+            if normalize_text(seller.get("categoria")) in {"canal nacional",""}:
+                seller["categoria"]="Vendedor"
     return cfg
 
 def prepare_config(base,rows,month,year):
@@ -840,7 +850,7 @@ def render_management(st,base,current_rows,current_cfg,metadata):
                 seller["equipe"]=mid.selectbox("Equipe",TEAM_OPTIONS,index=TEAM_OPTIONS.index(current_team),key=f"geq{i}")
                 was_active=bool(seller.get("ativo",False))
                 seller["ativo"]=right.checkbox("Exibir no Dashboard/Ranking",was_active,key=f"gat{i}")
-                if seller["ativo"] and not seller.get("pertence_franquia",False):
+                if seller["ativo"]:
                     seller["pertence_franquia"]=True
                     if normalize_text(seller.get("categoria")) in {"canal nacional",""}:seller["categoria"]="Vendedor"
                 seller["classificado"]=True
