@@ -269,6 +269,22 @@ def apply_team_labels(summary,cfg):
         item["equipe"]=normalized_team(seller.get("equipe"),seller)
     return summary
 
+def team_sales_totals(summary,cfg):
+    """Soma vendas por equipe usando a configuração gerencial, inclusive vendedores ocultos."""
+    registry={normalize_text(x.get("vendedor")):x for x in cfg.get("vendedores",[])}
+    totals={"Equipe Interna":0,"Equipe Externa":0}
+    excluded={"website","adm","freelance","canal nacional"}
+    for item in summary:
+        seller=registry.get(normalize_text(item.get("vendedor")),{})
+        if not seller.get("pertence_franquia",False):
+            continue
+        if normalize_text(seller.get("categoria",item.get("categoria",""))) in excluded:
+            continue
+        team=normalized_team(seller.get("equipe"),seller)
+        if team in totals:
+            totals[team]+=int(item.get("vendas",0) or 0)
+    return totals
+
 def performance(media):
     media=float(media or 0)
     if media>=2.0:return "Azul","#0891B2","cyan"
@@ -843,9 +859,12 @@ def render_management(st,base,current_rows,current_cfg,metadata):
     month_names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
     st.info(f'{month_names[int(cfg["mes"])-1]} / {cfg["ano"]} · cálculos de dias, semanas e projeções continuam usando a lógica atual do sistema.')
 
-    # A meta da empresa continua sendo a mesma variável usada por todos os cálculos.
-    # Apenas restauramos o controle gerencial que havia sido removido da interface.
-    cfg["meta_empresa"]=int(st.number_input("Meta do mês",min_value=0,value=int(cfg.get("meta_empresa",0)),step=1,key="gestao_meta_empresa"))
+    # Metas gerenciais. A meta da empresa mantém a mesma variável já usada nos cálculos;
+    # as metas de equipe são apenas novos parâmetros de acompanhamento visual.
+    meta_col1,meta_col2,meta_col3=st.columns(3)
+    cfg["meta_empresa"]=int(meta_col1.number_input("Meta do mês",min_value=0,value=int(cfg.get("meta_empresa",0)),step=1,key="gestao_meta_empresa"))
+    cfg["meta_equipe_interna"]=int(meta_col2.number_input("Meta Equipe Interna",min_value=0,value=int(cfg.get("meta_equipe_interna",0)),step=1,key="gestao_meta_equipe_interna"))
+    cfg["meta_equipe_externa"]=int(meta_col3.number_input("Meta Equipe Externa",min_value=0,value=int(cfg.get("meta_equipe_externa",0)),step=1,key="gestao_meta_equipe_externa"))
 
     sales_by_seller={}
     for row in month_rows:
@@ -1007,6 +1026,37 @@ def render_app():
             name=channel_name(item)
             if name!="ADM" and name in channels:channels[name]+=item["vendas"]
         st.markdown(channel_summary_html(channels,total),unsafe_allow_html=True)
+        team_totals=team_sales_totals(summary,cfg)
+        internal_sales=team_totals["Equipe Interna"]
+        external_sales=team_totals["Equipe Externa"]
+        internal_goal=int(cfg.get("meta_equipe_interna",0) or 0)
+        external_goal=int(cfg.get("meta_equipe_externa",0) or 0)
+        st.markdown(f'''
+        <style>
+        .team-goals-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}}
+        .team-goal-card{{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:15px 17px;box-shadow:0 3px 12px rgba(15,23,42,.05);min-width:0}}
+        .team-goal-card .tg-title{{font-size:.70rem;font-weight:900;color:#64748B;letter-spacing:.05em;text-transform:uppercase}}
+        .team-goal-card .tg-main{{display:flex;align-items:flex-end;gap:8px;margin-top:8px}}
+        .team-goal-card .tg-value{{font-size:2rem;font-weight:950;line-height:1;color:#0F172A}}
+        .team-goal-card .tg-label{{font-size:.62rem;font-weight:850;color:#64748B;padding-bottom:3px}}
+        .team-goal-card .tg-meta{{margin-top:9px;padding-top:8px;border-top:1px solid #E2E8F0;font-size:.72rem;font-weight:800;color:#475569}}
+        .team-goal-card .tg-meta b{{font-size:.92rem;color:#0F172A}}
+        @media(max-width:560px){{.team-goals-grid{{grid-template-columns:1fr 1fr;gap:7px}}.team-goal-card{{padding:11px 10px;border-radius:11px}}.team-goal-card .tg-value{{font-size:1.55rem}}.team-goal-card .tg-title{{font-size:.56rem}}.team-goal-card .tg-meta{{font-size:.60rem}}}}
+        @media(max-width:340px){{.team-goals-grid{{grid-template-columns:1fr}}}}
+        </style>
+        <div class="team-goals-grid">
+          <div class="team-goal-card">
+            <div class="tg-title">Equipe Interna</div>
+            <div class="tg-main"><div class="tg-value">{internal_sales}</div><div class="tg-label">VENDAS</div></div>
+            <div class="tg-meta">META <b>{internal_goal}</b></div>
+          </div>
+          <div class="team-goal-card">
+            <div class="tg-title">Equipe Externa</div>
+            <div class="tg-main"><div class="tg-value">{external_sales}</div><div class="tg-label">VENDAS</div></div>
+            <div class="tg-meta">META <b>{external_goal}</b></div>
+          </div>
+        </div>
+        ''',unsafe_allow_html=True)
         render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color)
     elif area=="SEMANAL":
         st.markdown('<div class="section">Acompanhamento semanal · segunda a domingo</div>',unsafe_allow_html=True)
