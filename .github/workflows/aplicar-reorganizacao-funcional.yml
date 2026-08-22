@@ -2,13 +2,10 @@ name: Aplicar reorganização funcional
 
 on:
   push:
-    branches: [feat/reorganizacao-acesso-ranking-relatorio]
+    branches: [main]
     paths:
       - scripts/patch_reorganizacao_funcional.py
       - .github/workflows/aplicar-reorganizacao-funcional.yml
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -19,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/reorganizacao-acesso-ranking-relatorio
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -71,4 +68,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py
           git diff --cached --quiet || git commit -m "Reorganizar acesso, ranking e relatório geral [skip ci]"
-          git push origin HEAD:feat/reorganizacao-acesso-ranking-relatorio
+          git push origin HEAD:main
