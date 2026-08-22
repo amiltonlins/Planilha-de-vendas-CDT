@@ -181,7 +181,7 @@ def summarize(rows, cfg):
         projected_base=item["projecao"]*projected_rate
         projected_neo=projected_base*cfg["bonus_neoenergia"]["percentual_bonus"] if item["neo_elegivel"] else 0
         projected_adim=projected_base*cfg["bonus_adimplencia"]["percentual_bonus"] if item["adim_elegivel"] else 0
-        item.update({"cenario_projetado":projected_scenario,"taxa_proj":projected_rate,"base_proj":projected_base,"comissao_proj":projected_base+projected_neo+projected_adim+item["premio_total"]})
+        item.update({"cenario_projetado":projected_scenario,"taxa_proj":projected_rate,"base_proj":projected_base,"comissao_proj":projected_base,"bonus_neo_proj":projected_neo,"bonus_adim_proj":projected_adim,"total_variavel_proj":projected_base+projected_neo+projected_adim+item["premio_total"]})
     return result, calendar_days, [d for d in calendar_days if d<=cutoff], official
 
 
@@ -193,13 +193,13 @@ def header(sh, values, row=None): sh.add(values,{i:1 for i in range(1,len(values
 
 
 def build_sheets(rows,cfg,summary,all_days,elapsed,official):
-    report_summary=[x for x in summary if x.get("elegivel_individual",True)]; sheets=[]; n=len(report_summary)+4; week_count=max((len(x["semanas"]) for x in report_summary),default=5)
+    report_summary=sorted([x for x in summary if x.get("elegivel_individual",True)],key=lambda x:(x["vendas"],x["projecao"]),reverse=True); sheets=[]; n=len(report_summary)+4; week_count=max((len(x["semanas"]) for x in report_summary),default=5)
     dash=Sheet("DASHBOARD",{1:27,2:18,3:3,4:28,5:18,6:18},freeze=None)
     title(dash,"PAINEL COMERCIAL • AFOGADOS",f"Competência {cfg['mes']:02d}/{cfg['ano']}  |  Atualizado até dia {cfg['dia_referencia']}","F")
     dash.add([]); dash.add(["VISÃO GERAL"],{1:9}); dash.merge("A4:F4")
     total=sum(x["vendas"] for x in summary); proj=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary)
     website=sum(x["vendas"] for x in summary if x["categoria"].lower()=="website"); adm=sum(x["vendas"] for x in summary if x["categoria"].lower()=="adm"); free=sum(x["vendas"] for x in summary if x["categoria"].lower()=="freelance")
-    kpis=[("VENDAS TOTAIS",total,11),("META DO MÊS",cfg["meta_empresa"],12),("% DA META",total/cfg["meta_empresa"],13),("PROJEÇÃO",proj,12),("FALTAM",max(0,cfg["meta_empresa"]-total),14),("VENDAS NEO",neo,11),("% NEO",neo/total if total else 0,13),("DIAS ZERADOS",sum(x["zeros"] for x in summary),14),("WEBSITE",website,11),("ADM",adm,11),("FREELANCE",free,11),("COMISSÃO EQUIPE",sum(x["total"] for x in summary),15),("COMISSÃO PROJETADA",sum(x["comissao_proj"] for x in summary),15),("PRÊMIOS ACUMULADOS",sum(x["premio_total"] for x in summary),15)]
+    kpis=[("VENDAS TOTAIS",total,11),("META DO MÊS",cfg["meta_empresa"],12),("% DA META",total/cfg["meta_empresa"],13),("PROJEÇÃO",proj,12),("FALTAM",max(0,cfg["meta_empresa"]-total),14),("VENDAS NEO",neo,11),("% NEO",neo/total if total else 0,13),("DIAS ZERADOS",sum(x["zeros"] for x in summary),14),("WEBSITE",website,11),("ADM",adm,11),("FREELANCE",free,11),("COMISSÃO EQUIPE",sum(x["total"] for x in summary),15),("COMISSÃO PROJETADA",sum(x["comissao_proj"] for x in summary),15),("TOTAL VAR. PROJETADO",sum(x["total_variavel_proj"] for x in summary),15),("PRÊMIOS ACUMULADOS",sum(x["premio_total"] for x in summary),15)]
     for i in range(0,len(kpis),2):
         a=kpis[i]; b=kpis[i+1] if i+1<len(kpis) else ("","",10); dash.add([a[0],a[1],None,b[0],b[1]],{1:10,2:a[2],4:10,5:b[2]},24)
     first_seller=report_summary[0]["vendedor"] if report_summary else "Sem vendedor ativo"; dash.add([]); dash.add(["VISÃO INDIVIDUAL",None,None,"SELECIONE O VENDEDOR",first_seller],{1:9,4:10,5:12},24); dash.merge(f"A{len(dash.rows)}:B{len(dash.rows)}"); selector=f"E{len(dash.rows)}"
@@ -225,8 +225,8 @@ def build_sheets(rows,cfg,summary,all_days,elapsed,official):
     for x in report_summary: weekly.add([x["vendedor"],*x["semanas"],*x["premios"],x["premio_total"],max(x["semanas"]),min(x["semanas"]),sum(x["semanas"])/week_count,current,x["semanas"][current-1]-x["semanas"][max(0,current-2)]],{i:5 for i in range(2+week_count,3+2*week_count)})
     weekly.color_scale(f"B5:{column(week_count+1)}{n}"); sheets.append(weekly)
 
-    comm=Sheet("COMISSOES",{1:24,**{i:18 for i in range(2,14)}},freeze="A5",autofilter=f"A4:M{n}"); title(comm,"COMISSÕES E REMUNERAÇÃO",f"Cenário oficial: {'empresa >= 1.000' if official=='maior_ou_igual_1000' else 'empresa < 1.000'}","M"); comm.add([]); header(comm,["Vendedor","Vendas","Mínimo","R$/venda","Base","Bônus Neo","Bônus adimpl.","Prêmios","Total","Projetada","Próxima faixa","Faltam","Ganho adicional"])
-    for x in report_summary: comm.add([x["vendedor"],x["vendas"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["premio_total"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"]],{i:5 for i in range(4,11)}|{13:5})
+    comm=Sheet("COMISSOES",{1:24,**{i:18 for i in range(2,17)}},freeze="A5",autofilter=f"A4:P{n}"); title(comm,"COMISSÕES E REMUNERAÇÃO",f"Cenário oficial: {'empresa >= 1.000' if official=='maior_ou_igual_1000' else 'empresa < 1.000'}","P"); comm.add([]); header(comm,["Vendedor","Vendas","Mínimo","R$/venda","Base atual","Bônus Neo atual","Bônus adimpl. atual","Prêmios acumulados","Total atual","Comissão projetada","Bônus Neo proj.","Bônus adimpl. proj.","Total variável projetado","Próxima faixa","Faltam","Ganho adicional"])
+    for x in report_summary: comm.add([x["vendedor"],x["vendas"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["premio_total"],x["total"],x["comissao_proj"],x["bonus_neo_proj"],x["bonus_adim_proj"],x["total_variavel_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"]],{i:5 for i in range(4,14)}|{16:5})
     comm.color_scale(f"I5:I{n}"); sheets.append(comm)
 
     conf=Sheet("CONFIGURACOES",{1:30,2:22,3:52},freeze="A5"); title(conf,"CONFIGURAÇÕES","Valores carregados de config.json; altere o JSON e gere novamente","C"); conf.add([]); header(conf,["Parâmetro","Valor","Observação"])
