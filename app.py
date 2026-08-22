@@ -135,7 +135,8 @@ def prepare_config(base,rows,month,year):
         inferred=next((label for label in ("Website","ADM","Freelance") if normalize_text(label) in normalize_text(name)),sample["categoria"])
         registered=bool(old); belongs=old.get("pertence_franquia",registered)
         category=old.get("categoria",inferred if registered else "Canal Nacional")
-        sellers.append({"vendedor":name,"setor":old.get("setor",sample["setor"]),"categoria":category,
+        team_value=normalized_team(old.get("equipe"),old or {"setor":sample["setor"],"categoria":category})
+        sellers.append({"vendedor":name,"setor":old.get("setor",sample["setor"]),"equipe":team_value,"categoria":category,
             "pertence_franquia":belongs,"classificado":old.get("classificado",registered),"ativo":old.get("ativo",registered),
             "experiencia":old.get("experiencia",False),"meta_individual":old.get("meta_individual",70),
             "trabalha_sabado":old.get("trabalha_sabado",True),"trabalha_domingo":old.get("trabalha_domingo",False),
@@ -167,6 +168,26 @@ def load_published(base):
         return rows,merge_registry(base,payload.get("config",base)),payload
     raw=rows_from_csv((ROOT/"dados_exemplo.csv").read_bytes()); rows,_=canonicalize(raw,base); cfg=prepare_config(base,rows,base["mes"],base["ano"])
     return rows,cfg,{"atualizado_em":datetime.now().isoformat(timespec="seconds"),"arquivo":"dados_exemplo.csv","demonstracao":True,"historico_importacoes":[]}
+
+TEAM_OPTIONS=("Equipe Interna","Equipe Externa","Outros Canais")
+
+def normalized_team(value, seller=None):
+    raw=normalize_text(value)
+    canonical={normalize_text(x):x for x in TEAM_OPTIONS}
+    if raw in canonical:return canonical[raw]
+    legacy=normalize_text((seller or {}).get("setor",value))
+    category=normalize_text((seller or {}).get("categoria",""))
+    combined=f"{legacy} {category}"
+    if any(token in combined for token in ("pap","extern","porta a porta")):return "Equipe Externa"
+    if any(token in combined for token in ("adm","website","freelance","canal nacional")):return "Outros Canais"
+    return "Equipe Interna"
+
+def apply_team_labels(summary,cfg):
+    registry={normalize_text(x.get("vendedor")):x for x in cfg.get("vendedores",[])}
+    for item in summary:
+        seller=registry.get(normalize_text(item.get("vendedor")),{})
+        item["equipe"]=normalized_team(seller.get("equipe"),seller)
+    return summary
 
 def performance(media):
     media=float(media or 0)
@@ -423,7 +444,7 @@ def ranking_html(ranking):
             f'<div class="rank-row"><div class="rank-pos">{medal}</div>'
             f'<a class="rank-click" href="?seller={html.escape(str(x["vendedor"]),quote=True)}" target="_self">'
             f'<div class="rank-name" style="background:{color}">' 
-            f'<div class="rank-seller"><b>{html.escape(x["vendedor"])}</b><small>{html.escape(x["setor"])}</small></div>'
+            f'<div class="rank-seller"><div class="rank-mobile-head"><div><b>{html.escape(x["vendedor"])}</b><small>{html.escape(x.get("equipe","Equipe Interna"))}</small></div><div class="rank-mobile-status"><strong>{status_emoji}</strong><small>{html.escape(status_message)}</small></div></div></div>' 
             f'<div class="rank-inside">'
             f'<span class="main-kpi"><strong>{x["vendas"]}</strong><small>VENDAS</small></span>'
             f'<span class="main-kpi"><strong>{x["projecao"]}</strong><small>PROJEÇÃO</small></span>'
@@ -438,7 +459,7 @@ def ranking_html(ranking):
             f'<span><strong>{money(x["bonus_adim_proj"])}</strong><small>BÔNUS (SE) 100% ADIM</small></span>'
             f'<span><strong>{money(x["premio_total"])}</strong><small>SEMANAIS</small></span>'
             f'<span class="total-highlight"><strong>{money(x["total_variavel_proj"])}</strong><small>TOTAL VAR. PROJ.</small></span>'
-            f'<span class="rank-projection-status"><strong class="rank-status-emoji">{status_emoji}</strong><small>{html.escape(status_message)}</small></span>'
+            f'<span class="rank-projection-status desktop-status"><strong class="rank-status-emoji">{status_emoji}</strong><small>{html.escape(status_message)}</small></span>'
             f'</div></div></a></div>'
         )
     return '<div class="rank-card">'+''.join(rows)+'</div>' if rows else '<div class="empty-bi">Nenhum vendedor local ativo para exibir no ranking.</div>'
@@ -523,6 +544,16 @@ CSS="""<style>
 [data-testid="stDialog"] .stButton{display:none!important}
 }
 
+
+.integrated-header{display:flex;align-items:center;justify-content:space-between;gap:18px}.header-account{display:flex;align-items:center;gap:14px;flex:0 0 auto}.header-user{font-size:.74rem;font-weight:800;color:#E2E8F0;white-space:nowrap}.header-actions{display:flex;gap:7px}.header-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 11px;border:1px solid rgba(255,255,255,.24);border-radius:8px;color:white!important;text-decoration:none!important;font-size:.65rem;font-weight:900;letter-spacing:.03em}.header-actions a:hover{background:rgba(255,255,255,.10)}
+.rank-mobile-status{display:none}.rank-mobile-head{display:contents}
+@media(max-width:560px){
+.integrated-header{padding:11px 12px!important;gap:8px!important;align-items:flex-start!important}.integrated-header .bi-brand{min-width:0;flex:1}.integrated-header .bi-brand h1{font-size:.95rem!important;white-space:normal}.integrated-header .bi-brand p{display:none}.header-account{flex-direction:column;align-items:flex-end;gap:5px;max-width:44%}.header-user{font-size:.58rem;max-width:100%;overflow:hidden;text-overflow:ellipsis}.header-actions{gap:4px}.header-actions a{min-height:27px;padding:0 7px;font-size:.52rem;border-radius:6px}
+.rank-card{overflow:visible!important}.rank-row{grid-template-columns:30px minmax(0,1fr)!important;gap:5px!important;padding:5px 2px!important}.rank-pos{font-size:.76rem}.rank-click{min-width:0!important;width:100%!important}.rank-name{display:block!important;padding:9px!important;border-radius:10px!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}.rank-seller{padding:0!important}.rank-mobile-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important;margin-bottom:7px}.rank-mobile-head>div:first-child{min-width:0;flex:1}.rank-seller b{font-size:.79rem!important;line-height:1.05!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}.rank-seller small{font-size:.53rem!important;margin-top:3px!important}.rank-mobile-status{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-width:60px!important;text-align:center!important}.rank-mobile-status strong{font-size:1.35rem!important;line-height:1!important}.rank-mobile-status small{font-size:.43rem!important;line-height:1.05!important;margin-top:3px!important;color:rgba(255,255,255,.92)!important;font-weight:800!important}.rank-inside{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}.rank-inside span{min-width:0!important;min-height:42px!important;padding:4px 3px!important;border-left:0!important;background:rgba(255,255,255,.07);border-radius:7px}.rank-inside strong{font-size:.72rem!important;white-space:normal!important;overflow-wrap:anywhere!important}.rank-inside small{font-size:.42rem!important;line-height:1.05!important;margin-top:3px!important}.rank-inside .main-kpi{grid-column:span 1;background:rgba(15,23,42,.18)!important;min-height:52px!important}.rank-inside .main-kpi strong{font-size:1.16rem!important}.rank-inside .neo-highlight strong{font-size:.9rem!important}.rank-inside .total-highlight{grid-column:span 3!important;min-height:48px!important}.rank-inside .total-highlight strong{font-size:1.02rem!important}.rank-inside .desktop-status{display:none!important}
+[data-testid="stDialog"] [role="dialog"]{box-sizing:border-box!important;width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;margin-left:auto!important;margin-right:auto!important;overflow-x:clip!important}[data-testid="stDialog"] [role="dialog"]>div{box-sizing:border-box!important;width:100%!important;max-width:100%!important;padding:.58rem!important;overflow-x:clip!important}[data-testid="stDialog"] .seller-mobile-primary,[data-testid="stDialog"] .seller-kpi-grid{width:100%!important;max-width:100%!important;box-sizing:border-box!important}[data-testid="stDialog"] .seller-mobile-primary{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important}[data-testid="stDialog"] .seller-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important}[data-testid="stDialog"] .seller-kpi{box-sizing:border-box!important;min-width:0!important;width:100%!important;max-width:100%!important;padding:7px!important}[data-testid="stDialog"] .seller-kpi strong{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}[data-testid="stDialog"] .seller-dialog-meta{box-sizing:border-box!important;width:100%!important;max-width:100%!important}
+}
+@media(max-width:350px){[data-testid="stDialog"] .seller-kpi-grid{grid-template-columns:1fr 1fr!important}.rank-inside{grid-template-columns:repeat(2,minmax(0,1fr))!important}.rank-inside .total-highlight{grid-column:span 2!important}}
+
 </style>"""
 
 def render_login(st,cfg):
@@ -543,7 +574,7 @@ def open_seller_dialog(st,x):
     @st.dialog(x["vendedor"],width="large")
     def _dialog():
         status,c,_=performance(x["media"])
-        st.markdown(f'<div class="seller-dialog-meta" style="--seller-color:{c}"><span>{html.escape(x["setor"])}</span><b>Performance {status}</b></div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="seller-dialog-meta" style="--seller-color:{c}"><span>{html.escape(x.get("equipe","Equipe Interna"))}</span><b>Performance {status}</b></div>',unsafe_allow_html=True)
         st.markdown(seller_kpis_html(x),unsafe_allow_html=True)
         if st.button("FECHAR",key="close_seller_dialog",use_container_width=True):
             st.session_state.pop("seller_detail",None)
@@ -598,7 +629,7 @@ def render_management(st,base,current_rows,current_cfg,metadata):
         for i,s in enumerate(cfg["vendedores"]):
             marker="⚠️ " if not s.get("classificado",True) else ""
             with st.expander(marker+s["vendedor"]):
-                a,b,c,d=st.columns(4); s["setor"]=a.text_input("Setor",s.get("setor",""),key=f"gset{i}"); s["pertence_franquia"]=b.checkbox("Pertence à franquia",s.get("pertence_franquia",False),key=f"gfr{i}"); s["ativo"]=c.checkbox("Ativo no dashboard",s.get("ativo",False),key=f"gat{i}"); s["experiencia"]=d.checkbox("Em experiência",s.get("experiencia",False),key=f"gex{i}")
+                a,b,c,d=st.columns(4); current_team=normalized_team(s.get("equipe"),s); s["equipe"]=a.selectbox("Equipe",TEAM_OPTIONS,index=TEAM_OPTIONS.index(current_team),key=f"geq{i}"); s["pertence_franquia"]=b.checkbox("Pertence à franquia",s.get("pertence_franquia",False),key=f"gfr{i}"); s["ativo"]=c.checkbox("Ativo no dashboard",s.get("ativo",False),key=f"gat{i}"); s["experiencia"]=d.checkbox("Em experiência",s.get("experiencia",False),key=f"gex{i}")
                 a,b,c=st.columns(3); s["meta_individual"]=int(a.number_input("Meta individual",1,value=int(s.get("meta_individual",70)),key=f"gme{i}")); s["trabalha_sabado"]=b.checkbox("Trabalha sábado",s.get("trabalha_sabado",True),key=f"gsa{i}"); s["trabalha_domingo"]=c.checkbox("Trabalha domingo",s.get("trabalha_domingo",False),key=f"gdo{i}"); s["classificado"]=s["pertence_franquia"] or normalize_text(s.get("categoria")) in {"website","adm","freelance"}
         confirmed=st.form_submit_button("CONFIRMAR E PUBLICAR ATUALIZAÇÃO")
     if confirmed:
@@ -618,27 +649,29 @@ def render_app():
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     try:rows,cfg,metadata=load_published(base)
     except Exception as exc:st.error(f"A base publicada não pôde ser carregada: {exc}");return
-    mobile_client=is_mobile_client(st)
-    if not mobile_client and not st.session_state.get("dashboard_autenticado",False):
+    if not st.session_state.get("dashboard_autenticado",False):
         render_login(st,cfg)
         return
-    if mobile_client and not st.session_state.get("dashboard_usuario"):
-        st.session_state.dashboard_usuario="Acesso mobile"
     areas=["VISÃO GERAL","SEMANAL","PREMIAÇÕES"]
-    if st.session_state.get("area") not in areas+ ["GESTÃO"]:st.session_state.area="VISÃO GERAL"
-    head_main,head_menu=st.columns([18,1])
-    with head_main:
-        st.markdown('<div class="bi-topbar bi-topbar-nav"><div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div></div>',unsafe_allow_html=True)
-    with head_menu:
-        with st.popover("⋮"):
-            st.caption(f'Usuário: {st.session_state.get("dashboard_usuario","")}')
-            if st.button("GESTÃO",use_container_width=True,key="menu_gestao"):
-                st.session_state.area="GESTÃO";st.rerun()
-            if st.button("SAIR",use_container_width=True,key="menu_sair"):
-                for key in ("dashboard_autenticado","dashboard_usuario","seller_detail","gestor_autenticado","login_duplicate_first"):
-                    st.session_state.pop(key,None)
-                st.session_state.area="VISÃO GERAL"
-                st.rerun()
+    if st.session_state.get("area") not in areas+["GESTÃO"]:st.session_state.area="VISÃO GERAL"
+    action=st.query_params.get("action")
+    if action=="logout":
+        for key in ("dashboard_autenticado","dashboard_usuario","seller_detail","gestor_autenticado","login_duplicate_first"):
+            st.session_state.pop(key,None)
+        st.session_state.area="VISÃO GERAL"
+        st.query_params.clear()
+        st.rerun()
+    if action=="management":
+        st.session_state.area="GESTÃO"
+        try:del st.query_params["action"]
+        except KeyError:pass
+    user_name=html.escape(str(st.session_state.get("dashboard_usuario") or "Usuário autenticado"))
+    st.markdown(
+        '<div class="bi-topbar bi-topbar-nav integrated-header">'
+        '<div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div>'
+        f'<div class="header-account"><span class="header-user">{user_name}</span><div class="header-actions"><a href="?action=management" target="_self">GESTÃO</a><a href="?action=logout" target="_self">SAIR</a></div></div>'
+        '</div>',unsafe_allow_html=True
+    )
     if st.session_state.area=="GESTÃO":
         render_management(st,base,rows,cfg,metadata)
         return
@@ -647,7 +680,7 @@ def render_app():
         st.session_state.area=selected_area
         st.rerun()
     area=st.session_state.area
-    try:summary,all_days,elapsed,official=summarize(rows,cfg)
+    try:summary,all_days,elapsed,official=summarize(rows,cfg); apply_team_labels(summary,cfg)
     except Exception as exc:st.error(f"Falha ao processar relatório: {exc}");return
     data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1)); updated=datetime.fromisoformat(metadata["atualizado_em"])
     st.caption(f"Última atualização: {updated:%d/%m/%Y às %H:%M}  •  Dados acumulados até: {data_until:%d/%m/%Y}  •  Competência: {cfg['mes']:02d}/{cfg['ano']}")
@@ -667,7 +700,10 @@ def render_app():
         st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
         for x in team:counts[performance(x["media"])[0]]+=1
         st.markdown(performance_summary_html(counts),unsafe_allow_html=True)
-        st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True); ranking=sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
+        st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True)
+        team_filter=st.selectbox("Filtrar ranking por equipe",("Todas as Equipes",)+TEAM_OPTIONS,key="ranking_team_filter",label_visibility="collapsed")
+        filtered_team=team if team_filter=="Todas as Equipes" else [x for x in team if x.get("equipe")==team_filter]
+        ranking=sorted(filtered_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
         st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","FREELANCE","CANAL NACIONAL")}
         for item in summary:
             name=channel_name(item)
