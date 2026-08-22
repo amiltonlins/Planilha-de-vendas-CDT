@@ -119,12 +119,12 @@ def canonicalize(raw_rows,base_config):
     return output,mapping
 
 def merge_registry(base,current):
+    # A planilha importada é a fonte de verdade para a existência de vendedores.
+    # Não reintroduzir vendedores pré-cadastrados do config base na operação diária.
+    # As configurações administrativas já persistidas continuam sendo preservadas.
     cfg=copy.deepcopy(current or base)
-    known={normalize_text(x["vendedor"]):x for x in cfg.get("vendedores",[])}
-    for seller in base.get("vendedores",[]):
-        key=normalize_text(seller["vendedor"])
-        if key not in known or not known[key].get("classificado",False):known[key]=copy.deepcopy(seller)
-    cfg["vendedores"]=list(known.values())
+    if current is not None:
+        cfg["vendedores"]=copy.deepcopy(current.get("vendedores",[]))
     return cfg
 
 def prepare_config(base,rows,month,year):
@@ -154,8 +154,11 @@ def prepare_config(base,rows,month,year):
                 variants[raw]=variants.get(raw,0)+1
             name=max(variants,key=lambda value:(variants[value],len(value)))
         inferred=next((label for label in ("Website","ADM","Freelance") if normalize_text(label) in key),sample["categoria"])
-        registered=bool(previous); belongs=previous.get("pertence_franquia",registered)
-        category=previous.get("categoria",inferred if registered else "Canal Nacional")
+        registered=bool(previous)
+        # Vendedor novo nasce apenas como identificado pela planilha. As decisões
+        # administrativas de equipe/visibilidade vêm depois e não filtram suas vendas.
+        belongs=previous.get("pertence_franquia",False)
+        category=previous.get("categoria",inferred if registered else "Vendedor")
         team_value=normalized_team(previous.get("equipe"),previous or {"setor":sample["setor"],"categoria":category})
         sellers.append({"vendedor":name,"setor":previous.get("setor",sample["setor"]),"equipe":team_value,"categoria":category,
             "pertence_franquia":belongs,"classificado":previous.get("classificado",registered),"ativo":previous.get("ativo",registered),
@@ -815,25 +818,40 @@ def render_management(st,base,current_rows,current_cfg,metadata):
     if uploaded and imported_days:st.success("Datas detectadas no novo arquivo: "+", ".join(d.strftime("%d/%m/%Y") for d in imported_days))
     if unknown:st.warning(f"{unknown} vendedores aguardam classificação. Eles ficam em OUTROS CANAIS até você classificá-los/ativá-los corretamente.")
 
+    st.markdown("#### PERÍODO DE REFERÊNCIA")
+    month_names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
+    st.info(f'{month_names[int(cfg["mes"])-1]} / {cfg["ano"]} · cálculos de dias, semanas e projeções continuam usando a lógica atual do sistema.')
+
+    sales_by_seller={}
+    for row in month_rows:
+        key=normalize_text(row.get("vendedor",""))
+        if key:sales_by_seller[key]=sales_by_seller.get(key,0)+1
+
     with st.form("gestao_config"):
-        st.markdown("#### METAS E BÔNUS"); a,b,c=st.columns(3)
-        cfg["meta_empresa"]=int(a.number_input("Meta mensal",1,value=int(cfg["meta_empresa"])))
-        cfg["limite_cenario_maior"]=int(b.number_input("Limite do cenário maior",1,value=int(cfg["limite_cenario_maior"])))
-        cfg["dia_referencia"]=int(c.number_input("Dados até o dia",1,31,value=min(int(cfg["dia_referencia"]),31)))
-        a,b,c=st.columns(3)
-        cfg["bonus_neoenergia"]["percentual_minimo"]=a.number_input("Neo mínimo (%)",0.,100.,value=float(cfg["bonus_neoenergia"]["percentual_minimo"]*100))/100
-        cfg["bonus_neoenergia"]["percentual_bonus"]=b.number_input("Bônus Neo (%)",0.,100.,value=float(cfg["bonus_neoenergia"]["percentual_bonus"]*100))/100
-        cfg["bonus_adimplencia"]["percentual_bonus"]=c.number_input("Bônus M2 (%)",0.,100.,value=float(cfg["bonus_adimplencia"]["percentual_bonus"]*100))/100
-        st.markdown("#### PREMIAÇÕES SEMANAIS"); cols=st.columns(len(cfg["premiacao_semanal"]))
-        for i,item in enumerate(cfg["premiacao_semanal"]):
-            item["vendas"]=int(cols[i].number_input(f"Faixa {i+1}",1,value=int(item["vendas"]),key=f"gfq{i}")); item["premio"]=cols[i].number_input("Prêmio R$",0.,value=float(item["premio"]),key=f"gfp{i}")
-        st.markdown("#### VENDEDORES · ATIVAR / DESATIVAR / CLASSIFICAR")
-        for i,s in enumerate(cfg["vendedores"]):
-            marker="⚠️ " if not s.get("classificado",True) else ""
-            with st.expander(marker+s["vendedor"]):
-                a,b,c,d=st.columns(4); current_team=normalized_team(s.get("equipe"),s); s["equipe"]=a.selectbox("Equipe",TEAM_OPTIONS,index=TEAM_OPTIONS.index(current_team),key=f"geq{i}"); s["pertence_franquia"]=b.checkbox("Pertence à franquia",s.get("pertence_franquia",False),key=f"gfr{i}"); s["ativo"]=c.checkbox("Ativo no dashboard",s.get("ativo",False),key=f"gat{i}"); s["experiencia"]=d.checkbox("Em experiência",s.get("experiencia",False),key=f"gex{i}")
-                a,b,c=st.columns(3); s["meta_individual"]=int(a.number_input("Meta individual",1,value=int(s.get("meta_individual",70)),key=f"gme{i}")); s["trabalha_sabado"]=b.checkbox("Trabalha sábado",s.get("trabalha_sabado",True),key=f"gsa{i}"); s["trabalha_domingo"]=c.checkbox("Trabalha domingo",s.get("trabalha_domingo",False),key=f"gdo{i}"); s["classificado"]=s["pertence_franquia"] or normalize_text(s.get("categoria")) in {"website","adm","freelance"}
-        confirmed=st.form_submit_button("CONFIRMAR E PUBLICAR ATUALIZAÇÃO")
+        st.markdown("#### GESTÃO DE VENDEDORES")
+        st.caption("Os vendedores são identificados automaticamente pela planilha. Aqui você define somente a equipe e se aparecem no Dashboard/Ranking.")
+        for i,seller in enumerate(cfg["vendedores"]):
+            key=normalize_text(seller.get("vendedor","")); qty=sales_by_seller.get(key,0)
+            with st.container(border=True):
+                left,mid,right=st.columns([3.0,2.0,1.5])
+                left.markdown(f'**{seller["vendedor"]}**')
+                left.caption(f'{qty} venda(s) reconhecida(s) no mês')
+                current_team=normalized_team(seller.get("equipe"),seller)
+                seller["equipe"]=mid.selectbox("Equipe",TEAM_OPTIONS,index=TEAM_OPTIONS.index(current_team),key=f"geq{i}")
+                was_active=bool(seller.get("ativo",False))
+                seller["ativo"]=right.checkbox("Exibir no Dashboard/Ranking",was_active,key=f"gat{i}")
+                if seller["ativo"] and not seller.get("pertence_franquia",False):
+                    seller["pertence_franquia"]=True
+                    if normalize_text(seller.get("categoria")) in {"canal nacional",""}:seller["categoria"]="Vendedor"
+                seller["classificado"]=True
+        confirmed=st.form_submit_button("SALVAR CONFIGURAÇÕES",use_container_width=True)
+
+    st.markdown("#### CONFERÊNCIA DA IMPORTAÇÃO")
+    audit=[]
+    for seller in cfg["vendedores"]:
+        qty=sales_by_seller.get(normalize_text(seller.get("vendedor","")),0)
+        audit.append({"Vendedor":seller.get("vendedor",""),"Vendas reconhecidas":qty,"Status":"OK"})
+    if audit:st.dataframe(audit,use_container_width=True,hide_index=True)
     if confirmed:
         if imported_days and pending_import_id:
             history.append({"importacao_id":pending_import_id,"data_importacao":datetime.now().isoformat(timespec="seconds"),"arquivo":source,"dias":[d.isoformat() for d in imported_days],"registros_arquivo":pending_import_count,"vendedores":pending_seller_count,"usuario":st.session_state.get("dashboard_usuario","") or "","status":"Ativa"}); history=history[-180:]
