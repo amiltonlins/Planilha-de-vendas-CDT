@@ -1,0 +1,36 @@
+name: Aplicar executivo BI
+
+on:
+  push:
+    branches:
+      - feat/ranking-completo-vendedores
+    paths:
+      - scripts/patch_exec_bi.py
+      - .github/workflows/aplicar-executivo-bi.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/ranking-completo-vendedores
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar alterações
+        run: python scripts/patch_exec_bi.py
+      - name: Validar sintaxe
+        run: |
+          python -m py_compile app.py
+          python -m py_compile gerar_painel.py
+      - name: Commitar alterações
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py gerar_painel.py
+          git diff --cached --quiet || git commit -m "Reorganizar painel executivo e premiações [skip ci]"
+          git push origin HEAD:feat/ranking-completo-vendedores
