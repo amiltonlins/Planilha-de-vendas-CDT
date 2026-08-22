@@ -1,6 +1,11 @@
-name: Aplicar reorganização executiva BI
+name: Aplicar ranking completo
 
 on:
+  push:
+    branches:
+      - feat/ranking-completo-vendedores
+    paths:
+      - .github/workflows/aplicar-ranking-completo.yml
   pull_request:
     branches:
       - main
@@ -11,7 +16,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.head_ref == 'feat/ranking-completo-vendedores'
+    if: github.event_name == 'push' || github.head_ref == 'feat/ranking-completo-vendedores'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,23 +26,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Aplicar alterações
-        run: |
-          python scripts/patch_exec_bi.py
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('app.py')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace("st.markdown('<div class=\"section\">Relatório geral da equipe</div>'',unsafe_allow_html=True)","st.markdown('<div class=\"section\">Relatório geral da equipe</div>',unsafe_allow_html=True)")
-          p.write_text(s,encoding='utf-8')
-          PY
+        run: python scripts/patch_ranking_completo.py
       - name: Validar sintaxe
-        run: |
-          python -m py_compile app.py
-          python -m py_compile gerar_painel.py
+        run: python -m py_compile app.py
       - name: Commitar app atualizado
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.py gerar_painel.py
-          git diff --cached --quiet || git commit -m "Reorganizar painel executivo e premiações [skip ci]"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Atualiza ranking completo e move relatório geral [skip ci]"
           git push origin HEAD:feat/ranking-completo-vendedores
