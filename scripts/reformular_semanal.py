@@ -18,3 +18,4 @@ style_end='\n</style>"""'
 if '.weekly-rank-list{' not in s:
     s=s.replace(style_end,css+style_end,1)
 path.write_text(s,encoding='utf-8')
+# trigger
