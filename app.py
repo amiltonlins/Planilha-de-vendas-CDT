@@ -223,9 +223,35 @@ def executive_kpis_html(cfg,total,projection,neo,team):
         f'<div class="exec-card secondary"><small>FALTAM PARA META</small><strong>{faltam}</strong><span>Vendas necessárias</span></div>'
         f'<div class="exec-card secondary"><small>VENDAS NEO</small><strong>{neo}</strong><span>{pct(neo_pct)} do total</span></div>'
         f'<div class="exec-card secondary"><small>% NEO</small><strong>{pct(neo_pct)}</strong><span>Participação</span></div>'
-        f'<div class="exec-card secondary critical"><small>ZEROS</small><strong>{zeros}</strong><span>Dias sem venda</span></div>'
         '</div>'
     )
+
+def performance_summary_html(counts):
+    items=[
+        ("Azul",counts.get("Azul",0),"#0891B2"),
+        ("Verde",counts.get("Verde",0),"#16A34A"),
+        ("Amarelo",counts.get("Amarelo",0),"#F59E0B"),
+        ("Vermelho",counts.get("Vermelho",0),"#DC2626"),
+    ]
+    chips=''.join(
+        f'<div class="perf-chip" style="--chip:{color}"><span>{label}</span><strong>{value}</strong></div>'
+        for label,value,color in items
+    )
+    return f'<div class="perf-summary">{chips}</div>'
+
+def channel_summary_html(channels,total):
+    groups=[
+        (("VENDEDORES FRANQUIA",channels.get("VENDEDORES FRANQUIA",0)),("WEBSITE",channels.get("WEBSITE",0))),
+        (("FREELANCE",channels.get("FREELANCE",0)),("CANAL NACIONAL",channels.get("CANAL NACIONAL",0))),
+    ]
+    cards=[]
+    for pair in groups:
+        inner=''.join(
+            f'<div class="channel-mini"><span>{name}</span><strong>{value}</strong><small>{pct(value/total if total else 0)} do total</small></div>'
+            for name,value in pair
+        )
+        cards.append(f'<div class="channel-group">{inner}</div>')
+    return '<div class="channel-summary">'+''.join(cards)+'</div>'
 
 def seller_kpi_card(label,value,sub,cls):
     return f'<div class="seller-kpi {cls}"><small>{html.escape(str(label))}</small><strong>{html.escape(str(value))}</strong><span>{html.escape(str(sub))}</span></div>'
@@ -325,6 +351,10 @@ CSS="""<style>
 .seller-mobile-primary{display:none}
 @media(max-width:560px){.seller-mobile-primary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:12px}.seller-kpi-grid .mobile-duplicate{display:none}.seller-mobile-primary .seller-kpi{min-width:0}.seller-mobile-primary .seller-kpi strong{white-space:normal;overflow-wrap:anywhere}.seller-groups{margin-top:8px}}
 
+
+.perf-summary{background:white;border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;box-shadow:0 2px 10px rgba(15,23,42,.04)}.perf-chip{position:relative;border:1px solid #E2E8F0;border-radius:11px;padding:12px 14px;background:#F8FAFC;overflow:hidden}.perf-chip:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--chip)}.perf-chip span{display:block;font-size:.64rem;font-weight:900;color:#64748B;text-transform:uppercase;letter-spacing:.05em}.perf-chip strong{display:block;font-size:1.65rem;margin-top:6px;color:#0F172A}.channel-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.channel-group{background:white;border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;box-shadow:0 2px 10px rgba(15,23,42,.04)}.channel-mini{border:1px solid #E2E8F0;border-radius:11px;padding:13px 14px;background:#F8FAFC;min-width:0}.channel-mini span{display:block;font-size:.64rem;font-weight:900;color:#64748B;letter-spacing:.04em}.channel-mini strong{display:block;font-size:1.75rem;line-height:1.05;margin-top:7px;color:#0F172A}.channel-mini small{display:block;font-size:.66rem;color:#94A3B8;margin-top:5px}
+@media(max-width:720px){.perf-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px}.perf-chip{padding:10px 11px}.perf-chip strong{font-size:1.4rem}.channel-summary{grid-template-columns:1fr;gap:8px}.channel-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px}.channel-mini{padding:10px}.channel-mini strong{font-size:1.4rem}.rank-card{border-radius:12px}.rank-row{grid-template-columns:28px minmax(0,1fr)!important;gap:4px!important;padding:5px 3px!important}.rank-pos{font-size:.72rem}.rank-name{padding:9px!important;border-radius:10px!important;gap:7px!important}.rank-seller{padding-top:0!important;margin-bottom:3px}.rank-seller b{font-size:.9rem!important;line-height:1.15}.rank-seller small{font-size:.57rem!important}.rank-inside{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:5px!important}.rank-inside span{grid-column:span 2;min-height:42px!important;padding:5px 3px!important;border-left:0!important;border:1px solid rgba(255,255,255,.18);border-radius:7px;background:rgba(255,255,255,.06)}.rank-inside .main-kpi{grid-column:span 3!important;background:rgba(15,23,42,.20)}.rank-inside .main-kpi strong{font-size:1.55rem!important}.rank-inside .main-kpi small{font-size:.58rem!important;font-weight:800}.rank-inside strong{font-size:.82rem!important;line-height:1.05!important}.rank-inside small{font-size:.49rem!important;margin-top:3px!important}.rank-inside .neo-highlight{grid-column:span 2!important}.rank-inside .total-highlight{grid-column:span 3!important}.rank-inside .total-highlight strong{font-size:.98rem!important}}
+
 </style>"""
 
 def render_management(st,base,current_rows,current_cfg,metadata):
@@ -415,11 +445,13 @@ def render_app():
         st.markdown(executive_kpis_html(cfg,total,projection,neo,team),unsafe_allow_html=True)
         st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
         for x in team:counts[performance(x["media"])[0]]+=1
-        tones={"Azul":"cyan","Verde":"green","Amarelo":"yellow","Vermelho":"red"}; cards(st,[(k.upper(),v,tones[k],"vendedores") for k,v in counts.items()],4)
+        st.markdown(performance_summary_html(counts),unsafe_allow_html=True)
         st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True); ranking=sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
-        st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","ADM","FREELANCE","CANAL NACIONAL")}
-        for item in summary:channels[channel_name(item)]+=item["vendas"]
-        cards(st,[(name,value,"cyan",pct(value/total if total else 0)+" do total") for name,value in channels.items()],5)
+        st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","FREELANCE","CANAL NACIONAL")}
+        for item in summary:
+            name=channel_name(item)
+            if name!="ADM" and name in channels:channels[name]+=item["vendas"]
+        st.markdown(channel_summary_html(channels,total),unsafe_allow_html=True)
     elif area=="VENDEDORES":
         if not team:st.warning("Nenhum vendedor local ativo. Entre em GESTÃO e classifique/ative os vendedores.");return
         chosen=st.selectbox("SELECIONE O VENDEDOR",[x["vendedor"] for x in team]); x=next(v for v in team if v["vendedor"]==chosen); status,c,tone=performance(x["media"])
