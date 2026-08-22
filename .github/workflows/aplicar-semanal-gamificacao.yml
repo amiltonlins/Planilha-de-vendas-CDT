@@ -21,6 +21,7 @@ jobs:
       - name: Validar sintaxe e regras preservadas
         run: |
           python -m py_compile app.py gerar_painel.py
+          python scripts/test_semanal_gamificacao.py
           grep -q 'weekly_rank_gamified_html' app.py
           grep -q 'ACOMPANHAMENTO SEMANAL' app.py
           grep -q 'premiacao_semanal' config.json
