@@ -20,50 +20,339 @@
     "percentual_bonus": 0.1
   },
   "premiacao_semanal": [
-    {"vendas": 10, "premio": 50},
-    {"vendas": 14, "premio": 100},
-    {"vendas": 20, "premio": 150},
-    {"vendas": 25, "premio": 200},
-    {"vendas": 30, "premio": 300}
+    {
+      "vendas": 10,
+      "premio": 50
+    },
+    {
+      "vendas": 14,
+      "premio": 100
+    },
+    {
+      "vendas": 20,
+      "premio": 150
+    },
+    {
+      "vendas": 25,
+      "premio": 200
+    },
+    {
+      "vendas": 30,
+      "premio": 300
+    }
   ],
   "reguas_comissao": {
     "maior_ou_igual_1000": [
-      {"vendas": 35, "valor_por_venda": 17.5},
-      {"vendas": 40, "valor_por_venda": 17.5},
-      {"vendas": 50, "valor_por_venda": 18},
-      {"vendas": 60, "valor_por_venda": 20},
-      {"vendas": 70, "valor_por_venda": 24},
-      {"vendas": 80, "valor_por_venda": 30},
-      {"vendas": 90, "valor_por_venda": 35},
-      {"vendas": 100, "valor_por_venda": 40}
+      {
+        "vendas": 35,
+        "valor_por_venda": 17.5
+      },
+      {
+        "vendas": 40,
+        "valor_por_venda": 17.5
+      },
+      {
+        "vendas": 50,
+        "valor_por_venda": 18
+      },
+      {
+        "vendas": 60,
+        "valor_por_venda": 20
+      },
+      {
+        "vendas": 70,
+        "valor_por_venda": 24
+      },
+      {
+        "vendas": 80,
+        "valor_por_venda": 30
+      },
+      {
+        "vendas": 90,
+        "valor_por_venda": 35
+      },
+      {
+        "vendas": 100,
+        "valor_por_venda": 40
+      }
     ],
     "abaixo_1000": [
-      {"vendas": 35, "valor_por_venda": 8},
-      {"vendas": 40, "valor_por_venda": 8},
-      {"vendas": 50, "valor_por_venda": 10},
-      {"vendas": 60, "valor_por_venda": 12},
-      {"vendas": 70, "valor_por_venda": 15},
-      {"vendas": 80, "valor_por_venda": 18},
-      {"vendas": 90, "valor_por_venda": 20},
-      {"vendas": 100, "valor_por_venda": 24}
+      {
+        "vendas": 35,
+        "valor_por_venda": 8
+      },
+      {
+        "vendas": 40,
+        "valor_por_venda": 8
+      },
+      {
+        "vendas": 50,
+        "valor_por_venda": 10
+      },
+      {
+        "vendas": 60,
+        "valor_por_venda": 12
+      },
+      {
+        "vendas": 70,
+        "valor_por_venda": 15
+      },
+      {
+        "vendas": 80,
+        "valor_por_venda": 18
+      },
+      {
+        "vendas": 90,
+        "valor_por_venda": 20
+      },
+      {
+        "vendas": 100,
+        "valor_por_venda": 24
+      }
     ]
   },
   "vendedores": [
-    {"vendedor":"MAGDA ALEXANDRA DA SILVA","setor":"CLIN","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"LINADJA DE OLIVEIRA DA SILVA","setor":"TELE","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"RENATA KELLI RAMOS DOS SANTOS","setor":"PAP","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"FABIOLA DOS SANTOS CORREIA","setor":"PAP","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"PRICILIA MARIA DA SILVA","setor":"TELE","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"KAMILLY VITORIA RIBEIRO DA SILVA","setor":"TELE","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"MAYHARA ELLEN MARQUES LACERDA","setor":"TELE","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"DANIELLE DO CARMO CARDOSO","setor":"PAP","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"ISABEL TALITA NASCIMENTO MASSA","setor":"PAP","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"JANAINA DE INOJOSA BARBOSA","setor":"TELE","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"MANUELA PEREIRA DA SILVA","setor":"PAP","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"SONIA BEZERRA SIMÃO","setor":"TELE","categoria":"Vendedor","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"WEBSITE E TELEVENDAS","setor":"DIGITAL","categoria":"Website","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"EQUIPE ADM","setor":"ADM","categoria":"ADM","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"FREELANCE","setor":"PAP","categoria":"Freelance","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true},
-    {"vendedor":"REFELANCE","setor":"PAP","categoria":"Freelance","experiencia":false,"meta_individual":70,"ativo":true,"trabalha_sabado":true,"trabalha_domingo":false,"data_inicio":"2026-01-01","data_desligamento":"","folgas":[],"pertence_franquia":true,"classificado":true}
-  ]
+    {
+      "vendedor": "MAGDA ALEXANDRA DA SILVA",
+      "setor": "CLIN",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "LINADJA DE OLIVEIRA DA SILVA",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "RENATA KELLI RAMOS DOS SANTOS",
+      "setor": "PAP",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "FABIOLA DOS SANTOS CORREIA",
+      "setor": "PAP",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "PRICILIA MARIA DA SILVA",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "KAMILLY VITORIA RIBEIRO DA SILVA",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "MAYHARA ELLEN MARQUES LACERDA",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "DANIELLE DO CARMO CARDOSO",
+      "setor": "PAP",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "ISABEL TALITA NASCIMENTO MASSA",
+      "setor": "PAP",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "JANAINA DE INOJOSA BARBOSA",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "MANUELA PEREIRA DA SILVA",
+      "setor": "PAP",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "SONIA BEZERRA SIMÃO",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "WEBSITE E TELEVENDAS",
+      "setor": "DIGITAL",
+      "categoria": "Website",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "EQUIPE ADM",
+      "setor": "ADM",
+      "categoria": "ADM",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "FREELANCE",
+      "setor": "PAP",
+      "categoria": "Freelance",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    },
+    {
+      "vendedor": "REFELANCE",
+      "setor": "PAP",
+      "categoria": "Freelance",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
+    }
+  ],
+  "meta_equipe_interna": 0,
+  "meta_equipe_externa": 0
 }
