@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx, month_weeks
+from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx, month_weeks, month_weeks
 
 NS={"m":"http://schemas.openxmlformats.org/spreadsheetml/2006/main","r":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 PUBLISHED_PATH=Path(os.environ.get("PAINEL_DATA_PATH",ROOT/"data"/"dados_publicados.json"))
