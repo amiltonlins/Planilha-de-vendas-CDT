@@ -82,6 +82,11 @@ class Sheet:
         return f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0">{pane}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>{cols}</cols><sheetData>{''.join(row_xml)}</sheetData>{merges}{flt}{cfs}{dvs}</worksheet>'''
 
 
+def normalize_seller_name(value):
+    import unicodedata, re
+    text=unicodedata.normalize("NFKD",str(value or "")).encode("ascii","ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+"," ",text).strip()
+
 def parse_date(value): return datetime.strptime(value.strip(), "%Y-%m-%d").date()
 
 
@@ -145,11 +150,16 @@ def summarize(rows, cfg):
     last_month=calendar_days[-1]; cutoff=min(date(year,month,min(cfg["dia_referencia"],last_month.day)),last_month)
     by=defaultdict(list)
     for row in rows:
-        if row["data_venda"].year==year and row["data_venda"].month==month and row["data_venda"]<=cutoff: by[row["vendedor"]].append(row)
+        if row["data_venda"].year==year and row["data_venda"].month==month and row["data_venda"]<=cutoff:
+            # A contagem é feita pela identidade normalizada do vendedor. Isso evita
+            # perder vendas quando o sistema exporta, por exemplo, DANIELE..., Daniele...
+            # ou o mesmo nome com variações de acento/espaçamento.
+            key=normalize_seller_name(row.get("vendedor",""))
+            if key:by[key].append(row)
     total=sum(len(x) for x in by.values()); official="maior_ou_igual_1000" if total>=cfg["limite_cenario_maior"] else "abaixo_1000"
     result=[]
     for seller in cfg["vendedores"]:
-        name=seller["vendedor"]; sales=by[name]; qty=len(sales); selling_days={x["data_venda"] for x in sales}
+        name=seller["vendedor"]; sales=by[normalize_seller_name(name)]; qty=len(sales); selling_days={x["data_venda"] for x in sales}
         category=seller.get("categoria","Vendedor"); franchise=seller.get("pertence_franquia",True); active=seller.get("ativo",True)
         local_seller=active and franchise and category.lower() not in ("website","adm","freelance","canal nacional")
         scheduled=workdays(year,month,seller.get("trabalha_sabado",cfg.get("calendario",{}).get("trabalha_sabado",True)),seller.get("trabalha_domingo",False),seller.get("data_inicio"),seller.get("data_desligamento"),seller.get("folgas",[]))

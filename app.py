@@ -130,17 +130,38 @@ def merge_registry(base,current):
 def prepare_config(base,rows,month,year):
     cfg=copy.deepcopy(base); cfg["mes"],cfg["ano"]=month,year
     existing={normalize_text(x["vendedor"]):x for x in cfg.get("vendedores",[])}; sellers=[]
-    for name in sorted({x["vendedor"] for x in rows},key=normalize_text):
-        sample=next(x for x in rows if x["vendedor"]==name); old=existing.get(normalize_text(name),{})
-        inferred=next((label for label in ("Website","ADM","Freelance") if normalize_text(label) in normalize_text(name)),sample["categoria"])
-        registered=bool(old); belongs=old.get("pertence_franquia",registered)
-        category=old.get("categoria",inferred if registered else "Canal Nacional")
-        team_value=normalized_team(old.get("equipe"),old or {"setor":sample["setor"],"categoria":category})
-        sellers.append({"vendedor":name,"setor":old.get("setor",sample["setor"]),"equipe":team_value,"categoria":category,
-            "pertence_franquia":belongs,"classificado":old.get("classificado",registered),"ativo":old.get("ativo",registered),
-            "experiencia":old.get("experiencia",False),"meta_individual":old.get("meta_individual",70),
-            "trabalha_sabado":old.get("trabalha_sabado",True),"trabalha_domingo":old.get("trabalha_domingo",False),
-            "data_inicio":old.get("data_inicio",f"{year}-01-01"),"data_desligamento":old.get("data_desligamento",""),"folgas":old.get("folgas",[])})
+
+    # Um mesmo vendedor pode chegar do sistema com diferenças de caixa, acento
+    # ou espaços. A configuração precisa ter UMA identidade por nome normalizado.
+    grouped={}
+    for row in rows:
+        key=normalize_text(row.get("vendedor",""))
+        if not key:continue
+        grouped.setdefault(key,[]).append(row)
+
+    for key in sorted(grouped):
+        group=grouped[key]
+        sample=group[0]
+        previous=existing.get(key,{})
+        # Se já existe cadastro, preserva o nome oficial cadastrado; caso contrário
+        # usa a grafia mais frequente recebida no relatório.
+        if previous.get("vendedor"):
+            name=previous["vendedor"]
+        else:
+            variants={}
+            for item in group:
+                raw=str(item.get("vendedor","")).strip()
+                variants[raw]=variants.get(raw,0)+1
+            name=max(variants,key=lambda value:(variants[value],len(value)))
+        inferred=next((label for label in ("Website","ADM","Freelance") if normalize_text(label) in key),sample["categoria"])
+        registered=bool(previous); belongs=previous.get("pertence_franquia",registered)
+        category=previous.get("categoria",inferred if registered else "Canal Nacional")
+        team_value=normalized_team(previous.get("equipe"),previous or {"setor":sample["setor"],"categoria":category})
+        sellers.append({"vendedor":name,"setor":previous.get("setor",sample["setor"]),"equipe":team_value,"categoria":category,
+            "pertence_franquia":belongs,"classificado":previous.get("classificado",registered),"ativo":previous.get("ativo",registered),
+            "experiencia":previous.get("experiencia",False),"meta_individual":previous.get("meta_individual",70),
+            "trabalha_sabado":previous.get("trabalha_sabado",True),"trabalha_domingo":previous.get("trabalha_domingo",False),
+            "data_inicio":previous.get("data_inicio",f"{year}-01-01"),"data_desligamento":previous.get("data_desligamento",""),"folgas":previous.get("folgas",[])})
     cfg["vendedores"]=sellers; return cfg
 
 def merge_daily_history(current_rows,incoming_rows):
