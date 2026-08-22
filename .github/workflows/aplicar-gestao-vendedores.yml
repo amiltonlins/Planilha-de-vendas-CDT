@@ -1,0 +1,29 @@
+name: Aplicar gestão dinâmica de vendedores
+on:
+  push:
+    branches:
+      - fix/gestao-vendedores-dinamicos
+jobs:
+  aplicar:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/gestao-vendedores-dinamicos
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar patch
+        run: python scripts/patch_gestao_vendedores.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py gerar_painel.py
+      - name: Commitar alteração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Corrigir gestão dinâmica de vendedores [skip ci]"
+          git push
