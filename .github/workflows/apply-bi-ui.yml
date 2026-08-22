@@ -1,0 +1,38 @@
+name: Apply BI UI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/modernize_dashboard.py
+      - .github/workflows/apply-bi-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply UI migration
+        run: python scripts/modernize_dashboard.py
+      - name: Validate syntax
+        run: python -m py_compile app.py
+      - name: Commit generated app
+        run: |
+          if git diff --quiet app.py; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Modernizar dashboard com visual BI e menu de três pontos"
+          git push origin HEAD:main
