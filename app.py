@@ -392,6 +392,11 @@ CSS="""<style>
 .rank-inside .rank-projection-status{background:rgba(255,255,255,.12);border-radius:8px;border-left:0}.rank-inside .rank-projection-status .rank-status-emoji{font-size:1.7rem;line-height:1}.rank-inside .rank-projection-status small{font-size:.52rem;font-weight:900;line-height:1.05;text-align:center}
 @media(max-width:720px){.rank-inside .rank-projection-status{grid-column:span 2!important}.rank-inside .rank-projection-status .rank-status-emoji{font-size:1.45rem!important}.rank-inside .rank-projection-status small{font-size:.46rem!important;line-height:1.05!important}}
 
+
+.bi-topbar-nav{display:flex;align-items:center;justify-content:space-between;gap:24px}.bi-brand{min-width:0;flex:1}.top-nav{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}.top-nav-item{display:inline-flex;align-items:center;justify-content:center;padding:9px 12px;border-radius:9px;color:#CBD5E1!important;text-decoration:none!important;font-size:.68rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;border:1px solid transparent;transition:.15s ease}.top-nav-item:hover{background:rgba(255,255,255,.09);color:white!important}.top-nav-item.active{background:white;color:#0F172A!important;border-color:rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+@media(max-width:980px){.bi-topbar-nav{align-items:flex-start;flex-direction:column;gap:12px}.top-nav{justify-content:flex-start;width:100%}.top-nav-item{padding:8px 10px;font-size:.62rem}}
+@media(max-width:560px){.bi-topbar-nav{gap:10px}.top-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.top-nav-item{width:100%;padding:8px 6px;font-size:.58rem}.top-nav-item:last-child{grid-column:span 2}.bi-brand p{font-size:.68rem!important}}
+
 </style>"""
 
 def render_management(st,base,current_rows,current_cfg,metadata):
@@ -462,16 +467,22 @@ def render_app():
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     try:rows,cfg,metadata=load_published(base)
     except Exception as exc:st.error(f"A base publicada não pôde ser carregada: {exc}");return
+    areas=["VISÃO GERAL","VENDEDORES","SEMANAL","PREMIAÇÕES","GESTÃO"]
     if "area" not in st.session_state:st.session_state.area="VISÃO GERAL"
-    top_left,top_menu=st.columns([18,1])
-    with top_left:st.markdown('<div class="bi-topbar"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div>',unsafe_allow_html=True)
-    with top_menu:
-        with st.popover("⋮"):
-            st.markdown("**NAVEGAÇÃO**")
-            areas=["VISÃO GERAL","VENDEDORES","SEMANAL","PREMIAÇÕES","GESTÃO"]
-            st.session_state.area=st.radio("Área",areas,index=areas.index(st.session_state.area),label_visibility="collapsed")
-            st.caption("Menu gerencial")
+    requested=st.query_params.get("area")
+    if requested in areas:st.session_state.area=requested
     area=st.session_state.area
+    import urllib.parse
+    nav=''.join(
+        f'<a class="top-nav-item {"active" if item==area else ""}" href="?area={urllib.parse.quote(item)}">{html.escape(item)}</a>'
+        for item in areas
+    )
+    st.markdown(
+        '<div class="bi-topbar bi-topbar-nav">'
+        '<div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div>'
+        f'<nav class="top-nav">{nav}</nav>'
+        '</div>',unsafe_allow_html=True
+    )
     if area=="GESTÃO":render_management(st,base,rows,cfg,metadata);return
     try:summary,all_days,elapsed,official=summarize(rows,cfg)
     except Exception as exc:st.error(f"Falha ao processar relatório: {exc}");return
