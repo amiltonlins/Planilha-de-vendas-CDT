@@ -1,0 +1,1 @@
+Ranking atualizado para exibir vendas, projeção, Neoenergia, percentual NEO e média diária dentro da faixa colorida do vendedor. Gráficos laterais de realizado x meta e participação NEO foram removidos. Relatório Geral ganhou download específico em Excel.

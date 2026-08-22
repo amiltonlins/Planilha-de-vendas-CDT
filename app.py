@@ -168,11 +168,11 @@ def load_published(base):
     raw=rows_from_csv((ROOT/"dados_exemplo.csv").read_bytes()); rows,_=canonicalize(raw,base); cfg=prepare_config(base,rows,base["mes"],base["ano"])
     return rows,cfg,{"atualizado_em":datetime.now().isoformat(timespec="seconds"),"arquivo":"dados_exemplo.csv","demonstracao":True,"historico_importacoes":[]}
 
-def performance(projected,target):
-    ratio=projected/target if target else 0
-    if ratio>=1.5:return "Azul","#0891B2","cyan"
-    if ratio>=1:return "Verde","#16A34A","green"
-    if ratio>=.7:return "Amarelo","#F59E0B","yellow"
+def performance(media):
+    media=float(media or 0)
+    if media>=2.0:return "Azul","#0891B2","cyan"
+    if media>=1.5:return "Verde","#16A34A","green"
+    if media>=1.0:return "Amarelo","#F59E0B","yellow"
     return "Vermelho","#DC2626","red"
 
 def money(value):return f"R$ {value:,.2f}".replace(",","X").replace(".",",").replace("X",".")
@@ -197,7 +197,7 @@ def table_html(records,columns,row_color=None,daily=False):
         color=row_color(rec) if row_color else "#fff"; cells=[]
         for key,_ in columns:
             value=rec.get(key,""); style=""
-            if key in ("vendedor","projecao") and row_color:style=f"background:{color};color:white;font-weight:800"
+            if key=="vendedor" and row_color:style=f"background:{color};color:white;font-weight:900"
             if daily and isinstance(key,int):
                 elapsed=rec.get("dias_decorridos",set()); scheduled=rec.get("dias_agendados",set()); diario=rec.get("diario",{})
                 if key not in elapsed:style="background:#F1F5F9;color:#94A3B8"; value=""
@@ -212,15 +212,17 @@ def ranking_html(ranking):
     medals=("🥇","🥈","🥉")
     rows=[]
     for i,x in enumerate(ranking[:8]):
-        _,color,_=performance(x["projecao"],x["meta_individual"])
+        _,color,_=performance(x["media"])
         medal=medals[i] if i<3 else f"{i+1}º"
         rows.append(
             f'<div class="rank-row"><div class="rank-pos">{medal}</div>'
-            f'<div class="rank-name" style="background:{color}"><b>{html.escape(x["vendedor"])}</b><small>{html.escape(x["setor"])}</small></div>'
-            f'<div class="rank-kpi"><b>{x["vendas"]}</b><small>vendas</small></div>'
-            f'<div class="rank-kpi"><b>{x["projecao"]}</b><small>projeção</small></div>'
-            f'<div class="rank-kpi"><b>{x["neo"]}</b><small>NEO</small></div>'
-            f'<div class="rank-kpi"><b>{pct(x["neo_pct"])}</b><small>% NEO</small></div></div>'
+            f'<div class="rank-name" style="background:{color}">'
+            f'<div class="rank-seller"><b>{html.escape(x["vendedor"])}</b><small>{html.escape(x["setor"])}</small></div>'
+            f'<div class="rank-inside"><span><strong>{x["vendas"]}</strong><small>VENDAS</small></span>'
+            f'<span><strong>{x["projecao"]}</strong><small>PROJEÇÃO</small></span>'
+            f'<span class="neo-highlight"><strong>{x["neo"]}</strong><small>NEO</small></span>'
+            f'<span><strong>{pct(x["neo_pct"])}</strong><small>% NEO</small></span>'
+            f'<span><strong>{x["media"]:.2f}</strong><small>MÉDIA/DIA</small></span></div></div></div>'
         )
     return '<div class="rank-card">'+''.join(rows)+'</div>' if rows else '<div class="empty-bi">Nenhum vendedor local ativo para exibir no ranking.</div>'
 
@@ -239,10 +241,10 @@ CSS="""<style>
 .stApp{background:var(--bg);color:var(--ink)}.block-container{padding:1rem 1.5rem 2.5rem;max-width:1920px}[data-testid="stSidebar"]{display:none!important}
 .bi-topbar{background:linear-gradient(110deg,#0F172A,#172554);color:white;border-radius:14px;padding:18px 22px;margin:0 0 10px;box-shadow:0 8px 30px rgba(15,23,42,.12)}.bi-topbar h1{font-size:1.42rem;margin:0;font-weight:800;letter-spacing:-.02em}.bi-topbar p{margin:4px 0 0;color:#CBD5E1;font-size:.78rem}
 .section{font-size:.83rem;font-weight:800;color:#334155;padding:5px 0;margin:14px 0 7px;letter-spacing:.035em;text-transform:uppercase}.metric{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px;min-height:92px;margin:2px 0 5px;box-shadow:0 2px 10px rgba(15,23,42,.045);overflow:hidden}.metric:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cyan)}.metric span{display:block;font-size:.66rem;font-weight:800;color:#64748B;letter-spacing:.05em;text-transform:uppercase}.metric strong{display:block;font-size:1.65rem;line-height:1.15;color:#0F172A;margin-top:8px;font-weight:800}.metric small{display:block;font-size:.68rem;color:#94A3B8;margin-top:5px}.metric.green:before{background:var(--green)}.metric.yellow:before{background:var(--amber)}.metric.red:before{background:var(--red)}
-.bi-panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(15,23,42,.04)}.rank-card{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.04)}.rank-row{display:grid;grid-template-columns:54px minmax(190px,1.55fr) 82px 82px 72px 88px;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid #EEF2F7}.rank-row:last-child{border-bottom:0}.rank-pos{font-weight:900;text-align:center}.rank-name{display:flex;flex-direction:column;min-width:0;padding:8px 10px;border-radius:9px;color:white;box-shadow:0 2px 7px rgba(15,23,42,.10)}.rank-name b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.81rem}.rank-name small{font-size:.62rem;color:rgba(255,255,255,.82)}.rank-kpi small{font-size:.62rem;color:#94A3B8}.rank-kpi{display:flex;flex-direction:column;text-align:center}.rank-kpi b{font-size:.87rem}
+.bi-panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(15,23,42,.04)}.rank-card{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.04)}.rank-row{display:grid;grid-template-columns:54px 1fr;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid #EEF2F7}.rank-row:last-child{border-bottom:0}.rank-pos{font-weight:900;text-align:center}.rank-name{display:grid;grid-template-columns:minmax(210px,1.3fr) 2.2fr;align-items:center;gap:14px;min-width:0;padding:10px 12px;border-radius:10px;color:white;box-shadow:0 2px 7px rgba(15,23,42,.10)}.rank-seller{display:flex;flex-direction:column;min-width:0}.rank-seller b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem}.rank-seller small{font-size:.65rem;color:rgba(255,255,255,.82)}.rank-inside{display:grid;grid-template-columns:repeat(5,minmax(72px,1fr));gap:8px;align-items:center}.rank-inside span{display:flex;flex-direction:column;align-items:center;padding:4px 6px;border-left:1px solid rgba(255,255,255,.25)}.rank-inside strong{font-size:1.2rem;line-height:1;font-weight:900}.rank-inside small{font-size:.58rem;color:rgba(255,255,255,.84);margin-top:4px}.rank-inside .neo-highlight strong{font-size:1.55rem;text-shadow:0 1px 2px rgba(0,0,0,.18)}
 .table-wrap{overflow:auto;max-height:590px;border:1px solid var(--line);border-radius:12px;background:white}.report{border-collapse:separate;border-spacing:0;white-space:nowrap;width:100%;font-size:.72rem}.report th{position:sticky;top:0;background:#0F172A;color:white;padding:8px 9px;z-index:2;font-size:.65rem}.report td{border-right:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;padding:6px 8px;text-align:center}.report tr:hover td{background-color:#F8FAFC}.empty-bi{background:white;border:1px dashed #CBD5E1;border-radius:12px;padding:22px;text-align:center;color:#64748B}
 .stButton button,.stDownloadButton button{border-radius:9px;background:#0F172A;color:white;border:0;font-weight:750;min-height:40px}.stButton button:hover,.stDownloadButton button:hover{background:#1E293B;color:white;border:0}[data-testid="stPopover"] button{border-radius:10px!important;background:#0F172A!important;color:white!important;border:1px solid #334155!important;min-width:48px!important;font-size:1.35rem!important}[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:12px;overflow:hidden}.element-container{margin-bottom:.2rem}
-@media(max-width:1100px){.block-container{padding:.7rem}.rank-row{grid-template-columns:45px minmax(150px,1fr) 65px 68px 60px 75px}.metric strong{font-size:1.35rem}}@media(max-width:720px){.bi-topbar{padding:14px}.bi-topbar h1{font-size:1.05rem}.rank-row{grid-template-columns:42px 1fr 62px 82px}.block-container{padding:.5rem}}
+@media(max-width:1100px){.block-container{padding:.7rem}.rank-row{grid-template-columns:45px 1fr}.rank-name{grid-template-columns:1fr}.rank-inside{grid-template-columns:repeat(5,1fr)}.metric strong{font-size:1.35rem}}@media(max-width:720px){.bi-topbar{padding:14px}.bi-topbar h1{font-size:1.05rem}.rank-row{grid-template-columns:42px 1fr}.rank-inside{grid-template-columns:repeat(2,1fr)}.block-container{padding:.5rem}}
 </style>"""
 
 def render_management(st,base,current_rows,current_cfg,metadata):
@@ -328,7 +330,7 @@ def render_app():
     except Exception as exc:st.error(f"Falha ao processar relatório: {exc}");return
     data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1)); updated=datetime.fromisoformat(metadata["atualizado_em"])
     st.caption(f"Última atualização: {updated:%d/%m/%Y às %H:%M}  •  Dados acumulados até: {data_until:%d/%m/%Y}  •  Competência: {cfg['mes']:02d}/{cfg['ano']}")
-    team=regular(summary); total=sum(x["vendas"] for x in summary); projection=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary); color=lambda x:performance(x["projecao"],x["meta_individual"])[1]
+    team=regular(summary); total=sum(x["vendas"] for x in summary); projection=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary); color=lambda x:performance(x["media"])[1]
     if area=="VISÃO GERAL":
         cards(st,[("META DO MÊS",cfg["meta_empresa"],"yellow","Objetivo comercial"),("VENDAS REALIZADAS",total,"cyan","Histórico acumulado"),("PROJEÇÃO",projection,"yellow","Fechamento estimado"),("% DA META",pct(total/cfg["meta_empresa"] if cfg["meta_empresa"] else 0),"green","Realizado"),("FALTAM PARA META",max(0,cfg["meta_empresa"]-total),"red","Vendas necessárias"),("VENDAS NEO",neo,"cyan","Neoenergia"),("% NEO",pct(neo/total if total else 0),"green","Participação"),("ZEROS",sum(x["zeros"] for x in team),"red","Dias sem venda")])
         left,right=st.columns([1.7,1],gap="small")
@@ -336,25 +338,27 @@ def render_app():
             st.markdown('<div class="section">Evolução comercial</div>',unsafe_allow_html=True); cumulative,ideal=daily_series(rows,cfg,data_until); st.line_chart({"Realizado acumulado":cumulative,"Ritmo da meta":ideal},height=245)
         with right:
             st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
-            for x in team:counts[performance(x["projecao"],x["meta_individual"])[0]]+=1
+            for x in team:counts[performance(x["media"])[0]]+=1
             tones={"Azul":"cyan","Verde":"green","Amarelo":"yellow","Vermelho":"red"}; cards(st,[(k.upper(),v,tones[k],"vendedores") for k,v in counts.items()],2)
-        left,right=st.columns([1.65,1],gap="small")
-        with left:
-            st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True); ranking=sorted(team,key=lambda x:(x["vendas"],x["neo_pct"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
-        with right:
-            st.markdown('<div class="section">Realizado x meta</div>',unsafe_allow_html=True); gap=max(0,cfg["meta_empresa"]-total); st.bar_chart({"Vendas":[total,gap]},height=185)
-            st.markdown('<div class="section">Participação NEO</div>',unsafe_allow_html=True); st.bar_chart({"Vendas":[neo,max(0,total-neo)]},height=160)
+        st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True); ranking=sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
         st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True); cols=[("setor","SETOR"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","COMISSÃO ATUAL"),("proj_fmt","COMISSÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS ADIM. PROJ."),("premio_fmt","PRÊMIOS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]; display=[]
         for x in sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True):display.append(x|{"media":f'{x["media"]:.2f}',"meta_pct":pct(x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0),"neo_pct_fmt":pct(x["neo_pct"]),"base_fmt":money(x["base"]),"proj_fmt":money(x["comissao_proj"]),"neo_proj_fmt":money(x["bonus_neo_proj"]),"adim_proj_fmt":money(x["bonus_adim_proj"]),"premio_fmt":money(x["premio_total"]),"total_proj_fmt":money(x["total_variavel_proj"])})
         st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                general_path=Path(folder)/"Relatorio_Geral_Equipe_Afogados.xlsx"
+                general_sheet=next(s for s in build_sheets(rows,cfg,summary,all_days,elapsed,official) if s.name=="RELATORIO GERAL")
+                write_xlsx(general_path,[general_sheet]); general_book=general_path.read_bytes()
+            st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        except Exception as exc:st.warning(f"Não foi possível gerar o Relatório Geral agora: {exc}")
         st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","ADM","FREELANCE","CANAL NACIONAL")}
         for item in summary:channels[channel_name(item)]+=item["vendas"]
         cards(st,[(name,value,"cyan",pct(value/total if total else 0)+" do total") for name,value in channels.items()],5)
     elif area=="VENDEDORES":
         if not team:st.warning("Nenhum vendedor local ativo. Entre em GESTÃO e classifique/ative os vendedores.");return
-        chosen=st.selectbox("SELECIONE O VENDEDOR",[x["vendedor"] for x in team]); x=next(v for v in team if v["vendedor"]==chosen); status,c,tone=performance(x["projecao"],x["meta_individual"])
+        chosen=st.selectbox("SELECIONE O VENDEDOR",[x["vendedor"] for x in team]); x=next(v for v in team if v["vendedor"]==chosen); status,c,tone=performance(x["media"])
         st.markdown(f'<div class="bi-panel" style="border-left:5px solid {c}"><b>{html.escape(x["vendedor"])}</b><br><span style="color:#64748B;font-size:.75rem">{html.escape(x["setor"])} · Performance {status}</span></div>',unsafe_allow_html=True)
-        cards(st,[("VENDAS",x["vendas"],"cyan",""),("MÉDIA",f'{x["media"]:.2f}',"cyan",f'{x["dias"]} dias'),("PROJEÇÃO",x["projecao"],tone,f'Meta {x["meta_individual"]}'),("% DA META",pct(x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0),tone,""),("ZEROS",x["zeros"],"red",f'Semana {x["zeros_semana"]}'),("NEO",x["neo"],"cyan",""),("% NEO",pct(x["neo_pct"]),"green",""),("COMISSÃO ATUAL",money(x["base"]),"green",""),("COMISSÃO PROJETADA",money(x["comissao_proj"]),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(x["bonus_neo_proj"]),"green",""),("BÔNUS ADIM. PROJ.",money(x["bonus_adim_proj"]),"green",""),("PRÊMIOS",money(x["premio_total"]),"green","Acumulados"),("TOTAL VAR. ATUAL",money(x["total"]),"cyan",""),("TOTAL VAR. PROJETADO",money(x["total_variavel_proj"]),"yellow","")])
+        cards(st,[("VENDAS",x["vendas"],"cyan",""),("MÉDIA",f'{x["media"]:.2f}',tone,f'{x["dias"]} dias'),("PROJEÇÃO",x["projecao"],tone,f'Meta {x["meta_individual"]}'),("% DA META",pct(x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0),tone,""),("ZEROS",x["zeros"],"red",f'Semana {x["zeros_semana"]}'),("NEO",x["neo"],"cyan",""),("% NEO",pct(x["neo_pct"]),"green",""),("COMISSÃO ATUAL",money(x["base"]),"green",""),("COMISSÃO PROJETADA",money(x["comissao_proj"]),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(x["bonus_neo_proj"]),"green",""),("BÔNUS ADIM. PROJ.",money(x["bonus_adim_proj"]),"green",""),("PRÊMIOS",money(x["premio_total"]),"green","Acumulados"),("TOTAL VAR. ATUAL",money(x["total"]),"cyan",""),("TOTAL VAR. PROJETADO",money(x["total_variavel_proj"]),"yellow","")])
     elif area=="SEMANAL":
         st.markdown('<div class="section">Acompanhamento semanal · segunda a domingo</div>',unsafe_allow_html=True)
         if not team:st.warning("Nenhum vendedor local ativo.");return
