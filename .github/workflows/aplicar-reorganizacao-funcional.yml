@@ -33,12 +33,10 @@ jobs:
           from gerar_painel import build_sheets,summarize,write_xlsx
           base=json.loads(Path('config.json').read_text(encoding='utf-8'))
           rows,cfg,metadata=app.load_published(base)
-          # fixos e normalização
           for name in ('Amilton','amilton','  AMILTON  ','Sheyla','Joice','Raphael'):
               user,status=app.authenticate_dashboard_name(cfg,name)
               assert status=='ok',(name,status)
           assert app.authenticate_dashboard_name(cfg,'usuario-inexistente')[1]=='invalid'
-          # vendedor ativo e inativo
           active=next((x for x in cfg['vendedores'] if x.get('ativo')),None)
           if active:
               first=app.first_name(active['vendedor'])
@@ -51,11 +49,9 @@ jobs:
               fixed={app.normalize_text(x) for x in app.FIXED_DASHBOARD_USERS}
               if app.normalize_text(first) not in fixed:
                   assert app.authenticate_dashboard_name(test_cfg,first)[1] in ('invalid','duplicate')
-          # duplicidade de primeiro nome exige nome completo
           dup={'vendedores':[{'vendedor':'Maria Silva','ativo':True},{'vendedor':'Maria Souza','ativo':True}]}
           assert app.authenticate_dashboard_name(dup,'Maria')[1]=='duplicate'
           assert app.authenticate_dashboard_name(dup,'Maria','Maria Silva')[1]=='ok'
-          # XLSX estruturalmente válido e relatorio geral presente
           summary,all_days,elapsed,official=summarize(rows,cfg)
           with tempfile.TemporaryDirectory() as d:
               path=Path(d)/'Relatorio_Geral_Equipe_Afogados.xlsx'
@@ -73,3 +69,4 @@ jobs:
           git add app.py
           git diff --cached --quiet || git commit -m "Reorganizar acesso, ranking e relatório geral [skip ci]"
           git push origin HEAD:feat/reorganizacao-acesso-ranking-relatorio
+# trigger 2
