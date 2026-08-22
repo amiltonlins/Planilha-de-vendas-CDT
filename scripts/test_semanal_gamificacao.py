@@ -23,17 +23,19 @@ labels=app.weekly_week_labels(cfg,6,idx)
 assert labels[0].startswith('✓') and 'ATUAL' in labels[idx]
 
 team=[
- {'vendedor':'A','semanas':[0,0,0,22], 'premios':[0,0,0,150]},
- {'vendedor':'B','semanas':[0,0,0,25], 'premios':[0,0,0,200]},
- {'vendedor':'C','semanas':[0,0,0,0], 'premios':[0,0,0,0]},
+ {'vendedor':'VENDEDOR A','semanas':[0,0,0,22], 'premios':[0,0,0,150]},
+ {'vendedor':'VENDEDOR B','semanas':[0,0,0,25], 'premios':[0,0,0,200]},
+ {'vendedor':'VENDEDOR ZERO','semanas':[0,0,0,0], 'premios':[0,0,0,0]},
 ]
 current=app.weekly_rank_gamified_html(team,3,cfg,True)
 history=app.weekly_rank_gamified_html(team,3,cfg,False)
-assert current.index('B') < current.index('A') < current.index('C')
+assert current.index('VENDEDOR B') < current.index('VENDEDOR A') < current.index('VENDEDOR ZERO')
 assert 'Faltam <b>3</b> vendas para <b>R$ 200,00</b>' in current
 assert 'weekly-target' not in history
-# Quem está zerado não recebe emoji; o card de C deve terminar sem sequência de gamificação.
-c_start=current.index('C')
-c_piece=current[c_start:c_start+220]
-assert '🤑' not in c_piece
+# Quem está zerado não recebe emoji no próprio card.
+zero_start=current.index('VENDEDOR ZERO')
+zero_card_start=current.rfind('<div class="weekly-game-card">',0,zero_start)
+zero_card_end=current.find('</div></div>',zero_start)+12
+zero_piece=current[zero_card_start:zero_card_end]
+assert '🤑' not in zero_piece
 print('OK: semanal gamificada validada')
