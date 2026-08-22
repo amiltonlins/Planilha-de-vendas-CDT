@@ -10,6 +10,7 @@ from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx
 
 NS={"m":"http://schemas.openxmlformats.org/spreadsheetml/2006/main","r":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 PUBLISHED_PATH=Path(os.environ.get("PAINEL_DATA_PATH",ROOT/"data"/"dados_publicados.json"))
+BASE_SELLER_DEFAULTS=[]
 ALIASES={
  "data_venda":("data venda","data da venda","data","dt venda","criado em","data cadastro"),
  "vendedor":("vendedor","colaborador","consultor","nome vendedor","usuario","responsavel"),
@@ -170,8 +171,18 @@ def prepare_config(base,rows,month,year):
         belongs=previous.get("pertence_franquia",False)
         category=previous.get("categoria",inferred if registered else "Vendedor")
         team_value=normalized_team(previous.get("equipe"),previous or {"setor":sample["setor"],"categoria":category})
+        # Compatibilidade com cadastros antigos: quando o estado persistido foi perdido
+        # em um redeploy, recuperamos somente vendedores conhecidos no config base.
+        # Isso não cria vendas nem altera cálculos; apenas restaura a intenção de exibição.
+        fallback_base=next((x for x in BASE_SELLER_DEFAULTS if normalize_text(x.get("vendedor"))==key),{})
+        active_default=bool(fallback_base.get("ativo",False)) if not registered else False
+        franchise_default=bool(fallback_base.get("pertence_franquia",False)) if not registered else False
+        if not registered and fallback_base:
+            belongs=franchise_default
+            category=fallback_base.get("categoria",category)
+            team_value=normalized_team(fallback_base.get("equipe"),fallback_base)
         sellers.append({"vendedor":name,"setor":previous.get("setor",sample["setor"]),"equipe":team_value,"categoria":category,
-            "pertence_franquia":belongs,"classificado":previous.get("classificado",registered),"ativo":previous.get("ativo",registered),
+            "pertence_franquia":belongs,"classificado":previous.get("classificado",registered or bool(fallback_base)),"ativo":previous.get("ativo",active_default if fallback_base else registered),
             "experiencia":previous.get("experiencia",False),"meta_individual":previous.get("meta_individual",70),
             "trabalha_sabado":previous.get("trabalha_sabado",True),"trabalha_domingo":previous.get("trabalha_domingo",False),
             "data_inicio":previous.get("data_inicio",f"{year}-01-01"),"data_desligamento":previous.get("data_desligamento",""),"folgas":previous.get("folgas",[])})
@@ -832,6 +843,10 @@ def render_management(st,base,current_rows,current_cfg,metadata):
     month_names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
     st.info(f'{month_names[int(cfg["mes"])-1]} / {cfg["ano"]} · cálculos de dias, semanas e projeções continuam usando a lógica atual do sistema.')
 
+    # A meta da empresa continua sendo a mesma variável usada por todos os cálculos.
+    # Apenas restauramos o controle gerencial que havia sido removido da interface.
+    cfg["meta_empresa"]=int(st.number_input("Meta do mês",min_value=0,value=int(cfg.get("meta_empresa",0)),step=1,key="gestao_meta_empresa"))
+
     sales_by_seller={}
     for row in month_rows:
         key=normalize_text(row.get("vendedor",""))
@@ -918,6 +933,8 @@ def render_app():
     st.set_page_config(page_title="Painel Comercial — Afogados",page_icon="📊",layout="wide",initial_sidebar_state="collapsed")
     st.markdown(CSS,unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
+    global BASE_SELLER_DEFAULTS
+    BASE_SELLER_DEFAULTS=copy.deepcopy(base.get("vendedores",[]))
     try:rows,cfg,metadata=load_published(base)
     except Exception as exc:st.error(f"A base publicada não pôde ser carregada: {exc}");return
     incoming_token=st.query_params.get("auth")
