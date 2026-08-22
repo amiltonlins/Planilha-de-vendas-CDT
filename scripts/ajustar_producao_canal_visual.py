@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Ajuste visual solicitado: sem rodapé, sem emoticons e tipografia padronizada.
 path=Path('app.py')
 s=path.read_text(encoding='utf-8')
 
