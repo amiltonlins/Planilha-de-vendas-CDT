@@ -24,9 +24,9 @@ jobs:
       - name: Validar
         run: |
           python -m py_compile app.py gerar_painel.py
-          grep -q 'areas=["VISÃO GERAL","SEMANAL"]' app.py
-          grep -q '#### PREMIAÇÕES E CENÁRIOS' app.py
-          if grep -q 'elif area=="PREMIAÇÕES"' app.py; then exit 1; fi
+          grep -Fq 'areas=["VISÃO GERAL","SEMANAL"]' app.py
+          grep -Fq '#### PREMIAÇÕES E CENÁRIOS' app.py
+          if grep -Fq 'elif area=="PREMIAÇÕES"' app.py; then exit 1; fi
       - name: Commit
         run: |
           git config user.name github-actions[bot]
