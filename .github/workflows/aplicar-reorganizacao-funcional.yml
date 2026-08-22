@@ -6,6 +6,9 @@ on:
     paths:
       - scripts/patch_reorganizacao_funcional.py
       - .github/workflows/aplicar-reorganizacao-funcional.yml
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -69,4 +72,3 @@ jobs:
           git add app.py
           git diff --cached --quiet || git commit -m "Reorganizar acesso, ranking e relatório geral [skip ci]"
           git push origin HEAD:feat/reorganizacao-acesso-ranking-relatorio
-# trigger 2
