@@ -3,7 +3,7 @@ name: Apply BI UI
 on:
   push:
     branches:
-      - feat/dashboard-bi-menu
+      - main
     paths:
       - scripts/modernize_dashboard.py
       - .github/workflows/apply-bi-ui.yml
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/dashboard-bi-menu
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -35,4 +35,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py
           git commit -m "Modernizar dashboard com visual BI e menu de três pontos"
-          git push origin HEAD:feat/dashboard-bi-menu
+          git push origin HEAD:main
