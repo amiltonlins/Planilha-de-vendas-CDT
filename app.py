@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Painel Comercial Afogados — dashboard, histórico diário e gestão de vendedores."""
 from __future__ import annotations
-import copy, csv, hmac, html, io, json, os, re, tempfile, unicodedata, zipfile
+import base64, copy, csv, hmac, html, io, json, os, re, tempfile, time, unicodedata, zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -239,6 +239,38 @@ def is_mobile_client(st):
         return False
     return any(token in ua for token in ("iphone","ipad","ipod","android","mobile"))
 
+def auth_signing_key(st):
+    try:
+        key=str(st.secrets.get("DASHBOARD_AUTH_KEY","") or st.secrets.get("GESTOR_SENHA",""))
+    except Exception:
+        key=os.environ.get("DASHBOARD_AUTH_KEY","") or os.environ.get("GESTOR_SENHA","")
+    return key
+
+def issue_dashboard_token(st,user):
+    key=auth_signing_key(st)
+    if not key:return ""
+    expiry=int(time.time())+12*60*60
+    payload=f"{user}|{expiry}"
+    sig=hmac.new(key.encode("utf-8"),payload.encode("utf-8"),"sha256").hexdigest()
+    raw=f"{payload}|{sig}".encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+def validate_dashboard_token(st,cfg,token):
+    key=auth_signing_key(st)
+    if not key or not token:return None
+    try:
+        padded=str(token)+"="*((4-len(str(token))%4)%4)
+        raw=base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+        user,expiry_text,sig=raw.rsplit("|",2)
+        if int(expiry_text)<int(time.time()):return None
+        payload=f"{user}|{expiry_text}"
+        expected=hmac.new(key.encode("utf-8"),payload.encode("utf-8"),"sha256").hexdigest()
+        if not hmac.compare_digest(sig,expected):return None
+        allowed={normalize_text(x["display"]) for x in authorized_dashboard_users(cfg).values()}
+        return user if normalize_text(user) in allowed else None
+    except Exception:
+        return None
+
 def validate_xlsx_bytes(data,required_sheet=None):
     if not data:raise ValueError("Arquivo XLSX vazio.")
     try:
@@ -432,7 +464,7 @@ def seller_kpis_html(x):
         '</div>'
     )
 
-def ranking_html(ranking):
+def ranking_html(ranking,auth_token=""):
     medals=("🥇","🥈","🥉")
     rows=[]
     for i,x in enumerate(ranking):
@@ -442,7 +474,7 @@ def ranking_html(ranking):
         status_emoji,status_message=projection_status_visual(meta_pct,x.get("meta_individual"),x.get("projecao"))
         rows.append(
             f'<div class="rank-row"><div class="rank-pos">{medal}</div>'
-            f'<a class="rank-click" href="?seller={html.escape(str(x["vendedor"]),quote=True)}" target="_self">'
+            f'<a class="rank-click" href="?{("auth="+html.escape(str(auth_token),quote=True)+"&") if auth_token else ""}seller={html.escape(str(x["vendedor"]),quote=True)}" target="_self">'
             f'<div class="rank-name" style="background:{color}">' 
             f'<div class="rank-seller"><div class="rank-mobile-head"><div><b>{html.escape(x["vendedor"])}</b><small>{html.escape(x.get("equipe","Equipe Interna"))}</small></div><div class="rank-mobile-status"><strong>{status_emoji}</strong><small>{html.escape(status_message)}</small></div></div></div>' 
             f'<div class="rank-inside">'
@@ -573,6 +605,10 @@ def render_login(st,cfg):
         if status=="ok":
             st.session_state.dashboard_autenticado=True
             st.session_state.dashboard_usuario=display
+            token=issue_dashboard_token(st,display)
+            if token:
+                st.session_state.dashboard_auth_token=token
+                st.query_params["auth"]=token
             st.rerun()
         else:
             st.error("Usuário não autorizado. Informe o primeiro e o segundo nome cadastrados.")
@@ -656,6 +692,13 @@ def render_app():
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     try:rows,cfg,metadata=load_published(base)
     except Exception as exc:st.error(f"A base publicada não pôde ser carregada: {exc}");return
+    incoming_token=st.query_params.get("auth")
+    if not st.session_state.get("dashboard_autenticado",False) and incoming_token:
+        restored_user=validate_dashboard_token(st,cfg,incoming_token)
+        if restored_user:
+            st.session_state.dashboard_autenticado=True
+            st.session_state.dashboard_usuario=restored_user
+            st.session_state.dashboard_auth_token=incoming_token
     if not st.session_state.get("dashboard_autenticado",False):
         render_login(st,cfg)
         return
@@ -663,7 +706,7 @@ def render_app():
     if st.session_state.get("area") not in areas+["GESTÃO"]:st.session_state.area="VISÃO GERAL"
     action=st.query_params.get("action")
     if action=="logout":
-        for key in ("dashboard_autenticado","dashboard_usuario","seller_detail","gestor_autenticado","login_duplicate_first"):
+        for key in ("dashboard_autenticado","dashboard_usuario","dashboard_auth_token","seller_detail","gestor_autenticado","login_duplicate_first"):
             st.session_state.pop(key,None)
         st.session_state.area="VISÃO GERAL"
         st.query_params.clear()
@@ -673,10 +716,12 @@ def render_app():
         try:del st.query_params["action"]
         except KeyError:pass
     user_name=html.escape(str(st.session_state.get("dashboard_usuario") or "Usuário autenticado"))
+    auth_token=st.session_state.get("dashboard_auth_token") or incoming_token or ""
+    management_href=f'?auth={html.escape(str(auth_token),quote=True)}&action=management' if auth_token else '?action=management'
     st.markdown(
         '<div class="bi-topbar bi-topbar-nav integrated-header">'
         '<div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div>'
-        f'<div class="header-account"><span class="header-user">{user_name}</span><div class="header-actions"><a href="?action=management" target="_self">GESTÃO</a><a href="?action=logout" target="_self">SAIR</a></div></div>'
+        f'<div class="header-account"><span class="header-user">{user_name}</span><div class="header-actions"><a href="{management_href}" target="_self">GESTÃO</a><a href="?action=logout" target="_self">SAIR</a></div></div>'
         '</div>',unsafe_allow_html=True
     )
     if st.session_state.area=="GESTÃO":
@@ -710,7 +755,7 @@ def render_app():
         st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True)
         team_filter=st.selectbox("Filtrar ranking por equipe",("TODAS AS EQUIPES",)+TEAM_OPTIONS,key="ranking_team_filter",label_visibility="collapsed")
         filtered_team=team if team_filter=="TODAS AS EQUIPES" else [x for x in team if x.get("equipe")==team_filter]
-        ranking=sorted(filtered_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
+        ranking=sorted(filtered_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking,auth_token),unsafe_allow_html=True)
         st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","FREELANCE","CANAL NACIONAL")}
         for item in summary:
             name=channel_name(item)
