@@ -2,9 +2,8 @@ name: Aplicar producao por canal compacta
 on:
   push:
     branches:
-      - feature/producao-canal-compacta
+      - main
     paths:
-      - scripts/apply_producao_canal_compacta.py
       - .github/workflows/aplicar-producao-canal-compacta.yml
 permissions:
   contents: write
