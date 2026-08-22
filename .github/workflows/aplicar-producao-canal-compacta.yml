@@ -1,0 +1,29 @@
+name: Aplicar producao por canal compacta
+on:
+  push:
+    branches:
+      - feature/producao-canal-compacta
+jobs:
+  aplicar:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/producao-canal-compacta
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar alteracoes
+        run: python scripts/apply_producao_canal_compacta.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py gerar_painel.py calendario_feriados.py
+      - name: Commitar alteracoes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Redesenhar producao por canal [skip ci]"
+          git push
