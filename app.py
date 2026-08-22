@@ -303,8 +303,7 @@ def seller_kpis_html(x):
         ("SEMANAIS",money(x["premio_total"]),"Acumulado semanal","level3"),
         ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total mobile-duplicate"),
     ]
-    status_emoji,status_message=projection_status_visual(meta_pct,x.get("meta_individual"),x.get("projecao"))
-    commercial_html=''.join(seller_kpi_card(*item) for item in commercial)+projection_status_card(status_emoji,status_message)
+    commercial_html=''.join(seller_kpi_card(*item) for item in commercial)
     awards_html=''.join(seller_kpi_card(*item) for item in awards)
     mobile_primary=[
         ("VENDAS",x["vendas"],"Produção","primary"),
@@ -330,6 +329,7 @@ def ranking_html(ranking):
         _,color,_=performance(x["media"])
         medal=medals[i] if i<3 else f"{i+1}º"
         meta_pct=x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0
+        status_emoji,status_message=projection_status_visual(meta_pct,x.get("meta_individual"),x.get("projecao"))
         rows.append(
             f'<div class="rank-row"><div class="rank-pos">{medal}</div>'
             f'<div class="rank-name" style="background:{color}">'
@@ -342,6 +342,7 @@ def ranking_html(ranking):
             f'<span><strong>{pct(meta_pct)}</strong><small>% META</small></span>'
             f'<span class="neo-highlight"><strong>{x["neo"]}</strong><small>NEO</small></span>'
             f'<span class="neo-highlight"><strong>{pct(x["neo_pct"])}</strong><small>% NEO</small></span>'
+            f'<span class="rank-projection-status"><strong class="rank-status-emoji">{status_emoji}</strong><small>{html.escape(status_message)}</small></span>'
             f'<span><strong>{money(x["base"])}</strong><small>PREMIAÇÃO ATUAL</small></span>'
             f'<span><strong>{money(x["comissao_proj"])}</strong><small>PREMIAÇÃO PROJ.</small></span>'
             f'<span><strong>{money(x["bonus_neo_proj"])}</strong><small>BÔNUS NEO PROJ.</small></span>'
@@ -386,6 +387,10 @@ CSS="""<style>
 
 .projection-status{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:white;border:1px solid var(--line);box-shadow:none;min-height:100%}.projection-status-emoji{font-size:2.25rem;line-height:1;margin:1px 0 8px}.projection-status-message{font-size:.70rem;line-height:1.15;font-weight:900;letter-spacing:.035em;color:#475569;text-align:center;word-break:normal;overflow-wrap:break-word}
 @media(max-width:560px){.projection-status{padding:9px 7px!important;min-height:82px}.projection-status-emoji{font-size:1.8rem;margin-bottom:6px}.projection-status-message{font-size:.58rem;line-height:1.12}}
+
+
+.rank-inside .rank-projection-status{background:rgba(255,255,255,.12);border-radius:8px;border-left:0}.rank-inside .rank-projection-status .rank-status-emoji{font-size:1.7rem;line-height:1}.rank-inside .rank-projection-status small{font-size:.52rem;font-weight:900;line-height:1.05;text-align:center}
+@media(max-width:720px){.rank-inside .rank-projection-status{grid-column:span 2!important}.rank-inside .rank-projection-status .rank-status-emoji{font-size:1.45rem!important}.rank-inside .rank-projection-status small{font-size:.46rem!important;line-height:1.05!important}}
 
 </style>"""
 
