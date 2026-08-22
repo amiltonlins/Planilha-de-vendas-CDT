@@ -1,0 +1,194 @@
+{
+  "mes": 8,
+  "ano": 2026,
+  "dia_referencia": 31,
+  "meta_empresa": 1000,
+  "limite_cenario_maior": 1000,
+  "status_validos": [
+    "aprovada",
+    "ativa"
+  ],
+  "calendario": {
+    "trabalha_sabado": true
+  },
+  "bonus_neoenergia": {
+    "percentual_minimo": 0.3,
+    "percentual_bonus": 0.15
+  },
+  "bonus_adimplencia": {
+    "percentual_minimo": 1.0,
+    "percentual_bonus": 0.1
+  },
+  "premiacao_semanal": [
+    {
+      "vendas": 10,
+      "premio": 50
+    },
+    {
+      "vendas": 14,
+      "premio": 100
+    },
+    {
+      "vendas": 20,
+      "premio": 150
+    },
+    {
+      "vendas": 25,
+      "premio": 200
+    },
+    {
+      "vendas": 30,
+      "premio": 300
+    }
+  ],
+  "reguas_comissao": {
+    "maior_ou_igual_1000": [
+      {
+        "vendas": 35,
+        "valor_por_venda": 17.5
+      },
+      {
+        "vendas": 40,
+        "valor_por_venda": 17.5
+      },
+      {
+        "vendas": 50,
+        "valor_por_venda": 18
+      },
+      {
+        "vendas": 60,
+        "valor_por_venda": 20
+      },
+      {
+        "vendas": 70,
+        "valor_por_venda": 24
+      },
+      {
+        "vendas": 80,
+        "valor_por_venda": 30
+      },
+      {
+        "vendas": 90,
+        "valor_por_venda": 35
+      },
+      {
+        "vendas": 100,
+        "valor_por_venda": 40
+      }
+    ],
+    "abaixo_1000": [
+      {
+        "vendas": 35,
+        "valor_por_venda": 8
+      },
+      {
+        "vendas": 40,
+        "valor_por_venda": 8
+      },
+      {
+        "vendas": 50,
+        "valor_por_venda": 10
+      },
+      {
+        "vendas": 60,
+        "valor_por_venda": 12
+      },
+      {
+        "vendas": 70,
+        "valor_por_venda": 15
+      },
+      {
+        "vendas": 80,
+        "valor_por_venda": 18
+      },
+      {
+        "vendas": 90,
+        "valor_por_venda": 20
+      },
+      {
+        "vendas": 100,
+        "valor_por_venda": 24
+      }
+    ]
+  },
+  "vendedores": [
+    {
+      "vendedor": "Ana Silva",
+      "setor": "CLIN",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": []
+    },
+    {
+      "vendedor": "Bruno Lima",
+      "setor": "TELE",
+      "categoria": "Vendedor",
+      "experiencia": true,
+      "meta_individual": 50,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": []
+    },
+    {
+      "vendedor": "Carla Souza",
+      "setor": "PAP",
+      "categoria": "Vendedor",
+      "experiencia": false,
+      "meta_individual": 70,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": []
+    },
+    {
+      "vendedor": "Canal Website",
+      "setor": "DIGITAL",
+      "categoria": "Website",
+      "experiencia": false,
+      "meta_individual": 40,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": []
+    },
+    {
+      "vendedor": "Equipe ADM",
+      "setor": "ADM",
+      "categoria": "ADM",
+      "experiencia": false,
+      "meta_individual": 35,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": []
+    },
+    {
+      "vendedor": "Diego Freela",
+      "setor": "PAP",
+      "categoria": "Freelance",
+      "experiencia": true,
+      "meta_individual": 45,
+      "ativo": true,
+      "trabalha_sabado": true,
+      "trabalha_domingo": false,
+      "data_inicio": "2026-01-01",
+      "data_desligamento": "",
+      "folgas": []
+    }
+  ]
+}
