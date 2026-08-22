@@ -1,0 +1,46 @@
+name: Aplicar ajustes finais equipes mobile header
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/patch_final_equipes_mobile_header.py
+      - .github/workflows/aplicar-ajustes-finais-equipes-mobile-header.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar patch
+        run: python scripts/patch_final_equipes_mobile_header.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py gerar_painel.py
+      - name: Validar equipes, sessão e elementos principais
+        run: |
+          python - <<'PY'
+          import app
+          assert app.TEAM_OPTIONS == ('Equipe Interna','Equipe Externa','Outros Canais')
+          assert app.normalized_team('PAP',{'setor':'PAP'}) == 'Equipe Externa'
+          assert app.normalized_team('ADM',{'setor':'ADM'}) == 'Outros Canais'
+          assert app.normalized_team('DIGITAL',{'setor':'DIGITAL'}) == 'Equipe Interna'
+          cfg={'vendedores':[{'vendedor':'MAGDA ALEXANDRA DA SILVA','ativo':True}]}
+          assert app.authenticate_dashboard_name(cfg,'Magda Alexandra')[1]=='ok'
+          html=app.ranking_html([{'vendedor':'Teste','equipe':'Equipe Interna','setor':'X','media':2.1,'vendas':10,'projecao':20,'meta_individual':20,'zeros':1,'neo':2,'neo_pct':.2,'base':100,'comissao_proj':200,'bonus_neo_proj':0,'bonus_adim_proj':20,'premio_total':50,'total_variavel_proj':270}])
+          assert 'Equipe Interna' in html and 'rank-mobile-status' in html and 'desktop-status' in html
+          PY
+      - name: Commitar app atualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Aplicar equipes, ranking mobile e cabeçalho integrado [skip ci]"
+          git push origin HEAD:main
