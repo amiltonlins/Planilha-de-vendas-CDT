@@ -253,6 +253,33 @@ def channel_summary_html(channels,total):
         cards.append(f'<div class="channel-group">{inner}</div>')
     return '<div class="channel-summary">'+''.join(cards)+'</div>'
 
+def projection_status_visual(projected_ratio, meta_value=None, projection_value=None):
+    try:
+        if meta_value in (None, 0, "") or projection_value in (None, ""):
+            return "🙂", "AGUARDANDO DADOS"
+        ratio=float(projected_ratio)
+        if ratio != ratio or ratio < 0:  # NaN ou inválido
+            return "🙂", "AGUARDANDO DADOS"
+    except (TypeError, ValueError, ZeroDivisionError):
+        return "🙂", "AGUARDANDO DADOS"
+
+    if ratio < 0.40:return "😭", "MUITO ABAIXO"
+    if ratio < 0.60:return "😟", "ATENÇÃO"
+    if ratio < 0.80:return "😐", "PRECISA ACELERAR"
+    if ratio < 0.90:return "🙂", "BOM RITMO"
+    if ratio < 1.00:return "😄", "QUASE LÁ!"
+    if ratio < 1.20:return "😎", "META NO CAMINHO!"
+    return "🤩", "VOANDO!"
+
+
+def projection_status_card(emoji,message):
+    return (
+        '<div class="seller-kpi projection-status">'
+        f'<div class="projection-status-emoji">{emoji}</div>'
+        f'<div class="projection-status-message">{html.escape(str(message))}</div>'
+        '</div>'
+    )
+
 def seller_kpi_card(label,value,sub,cls):
     return f'<div class="seller-kpi {cls}"><small>{html.escape(str(label))}</small><strong>{html.escape(str(value))}</strong><span>{html.escape(str(sub))}</span></div>'
 
@@ -276,7 +303,8 @@ def seller_kpis_html(x):
         ("SEMANAIS",money(x["premio_total"]),"Acumulado semanal","level3"),
         ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total mobile-duplicate"),
     ]
-    commercial_html=''.join(seller_kpi_card(*item) for item in commercial)
+    status_emoji,status_message=projection_status_visual(meta_pct,x.get("meta_individual"),x.get("projecao"))
+    commercial_html=''.join(seller_kpi_card(*item) for item in commercial)+projection_status_card(status_emoji,status_message)
     awards_html=''.join(seller_kpi_card(*item) for item in awards)
     mobile_primary=[
         ("VENDAS",x["vendas"],"Produção","primary"),
@@ -354,6 +382,10 @@ CSS="""<style>
 
 .perf-summary{background:white;border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;box-shadow:0 2px 10px rgba(15,23,42,.04)}.perf-chip{position:relative;border:1px solid #E2E8F0;border-radius:11px;padding:12px 14px;background:#F8FAFC;overflow:hidden}.perf-chip:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--chip)}.perf-chip span{display:block;font-size:.64rem;font-weight:900;color:#64748B;text-transform:uppercase;letter-spacing:.05em}.perf-chip strong{display:block;font-size:1.65rem;margin-top:6px;color:#0F172A}.channel-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.channel-group{background:white;border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;box-shadow:0 2px 10px rgba(15,23,42,.04)}.channel-mini{border:1px solid #E2E8F0;border-radius:11px;padding:13px 14px;background:#F8FAFC;min-width:0}.channel-mini span{display:block;font-size:.64rem;font-weight:900;color:#64748B;letter-spacing:.04em}.channel-mini strong{display:block;font-size:1.75rem;line-height:1.05;margin-top:7px;color:#0F172A}.channel-mini small{display:block;font-size:.66rem;color:#94A3B8;margin-top:5px}
 @media(max-width:720px){.perf-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px}.perf-chip{padding:10px 11px}.perf-chip strong{font-size:1.4rem}.channel-summary{grid-template-columns:1fr;gap:8px}.channel-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px}.channel-mini{padding:10px}.channel-mini strong{font-size:1.4rem}.rank-card{border-radius:12px}.rank-row{grid-template-columns:28px minmax(0,1fr)!important;gap:4px!important;padding:5px 3px!important}.rank-pos{font-size:.72rem}.rank-name{padding:9px!important;border-radius:10px!important;gap:7px!important}.rank-seller{padding-top:0!important;margin-bottom:3px}.rank-seller b{font-size:.9rem!important;line-height:1.15}.rank-seller small{font-size:.57rem!important}.rank-inside{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:5px!important}.rank-inside span{grid-column:span 2;min-height:42px!important;padding:5px 3px!important;border-left:0!important;border:1px solid rgba(255,255,255,.18);border-radius:7px;background:rgba(255,255,255,.06)}.rank-inside .main-kpi{grid-column:span 3!important;background:rgba(15,23,42,.20)}.rank-inside .main-kpi strong{font-size:1.55rem!important}.rank-inside .main-kpi small{font-size:.58rem!important;font-weight:800}.rank-inside strong{font-size:.82rem!important;line-height:1.05!important}.rank-inside small{font-size:.49rem!important;margin-top:3px!important}.rank-inside .neo-highlight{grid-column:span 2!important}.rank-inside .total-highlight{grid-column:span 3!important}.rank-inside .total-highlight strong{font-size:.98rem!important}}
+
+
+.projection-status{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:white;border:1px solid var(--line);box-shadow:none;min-height:100%}.projection-status-emoji{font-size:2.25rem;line-height:1;margin:1px 0 8px}.projection-status-message{font-size:.70rem;line-height:1.15;font-weight:900;letter-spacing:.035em;color:#475569;text-align:center;word-break:normal;overflow-wrap:break-word}
+@media(max-width:560px){.projection-status{padding:9px 7px!important;min-height:82px}.projection-status-emoji{font-size:1.8rem;margin-bottom:6px}.projection-status-message{font-size:.58rem;line-height:1.12}}
 
 </style>"""
 
