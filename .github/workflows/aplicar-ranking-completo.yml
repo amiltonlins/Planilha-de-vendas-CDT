@@ -6,12 +6,17 @@ on:
       - feat/ranking-completo-vendedores
     paths:
       - .github/workflows/aplicar-ranking-completo.yml
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.event_name == 'push' || github.head_ref == 'feat/ranking-completo-vendedores'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,5 +34,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py
-          git commit -m "Atualiza ranking completo e move relatório geral [skip ci]"
+          git diff --cached --quiet || git commit -m "Atualiza ranking completo e move relatório geral [skip ci]"
           git push origin HEAD:feat/ranking-completo-vendedores
