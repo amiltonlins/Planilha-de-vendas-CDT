@@ -1,1 +1,0 @@
-Aplicar somente o indicador visual de status da projeção.
