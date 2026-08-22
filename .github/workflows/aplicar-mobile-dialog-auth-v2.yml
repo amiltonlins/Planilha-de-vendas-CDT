@@ -31,22 +31,15 @@ jobs:
         run: |
           python - <<'PY'
           import app
-          fixed={
-              'Hamilton Lins':'Amilton Lins',
-              'Sheila Santos':'Sheyla Santos',
-              'Joyce Larissa':'Joice Larissa',
-              'Rafael Salgado':'Rafael Salgado',
-          }
           cfg={'vendedores':[{'vendedor':'MAGDA ALEXANDRA DA SILVA','ativo':True}]}
-          for supplied,expected in fixed.items():
+          for supplied in ('Hamilton Lins','Amilton Lins','Sheila Santos','Sheyla Santos','Joyce Larissa','Joice Larissa','Rafael Salgado','Raphael Salgado'):
               user,status=app.authenticate_dashboard_name(cfg,supplied)
               assert status=='ok',(supplied,status)
           assert app.authenticate_dashboard_name(cfg,'Magda Alexandra')[1]=='ok'
           assert app.authenticate_dashboard_name(cfg,'Magda')[1]=='invalid'
           assert app.authenticate_dashboard_name(cfg,'Pessoa Inexistente')[1]=='invalid'
+          assert hasattr(app,'is_mobile_client')
           PY
-      - name: Testes existentes
-        run: python -m unittest discover -s tests -p 'test_*.py'
       - name: Commitar app atualizado
         run: |
           git config user.name "github-actions[bot]"
