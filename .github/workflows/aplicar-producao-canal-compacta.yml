@@ -1,0 +1,31 @@
+name: Aplicar producao por canal compacta
+on:
+  push:
+    branches:
+      - feature/producao-canal-compacta
+    paths:
+      - scripts/apply_producao_canal_compacta.py
+      - .github/workflows/aplicar-producao-canal-compacta.yml
+permissions:
+  contents: write
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/producao-canal-compacta
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar alteracoes visuais
+        run: python scripts/apply_producao_canal_compacta.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py gerar_painel.py calendario_feriados.py
+      - name: Commitar app atualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Redesenhar producao por canal [skip ci]"
+          git push origin HEAD:feature/producao-canal-compacta
