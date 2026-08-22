@@ -1,0 +1,75 @@
+name: Aplicar reorganização funcional
+
+on:
+  push:
+    branches: [feat/reorganizacao-acesso-ranking-relatorio]
+    paths:
+      - scripts/patch_reorganizacao_funcional.py
+      - .github/workflows/aplicar-reorganizacao-funcional.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/reorganizacao-acesso-ranking-relatorio
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar alteração
+        run: python scripts/patch_reorganizacao_funcional.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py gerar_painel.py
+      - name: Validar autenticação e XLSX
+        run: |
+          python - <<'PY'
+          import json,tempfile
+          from pathlib import Path
+          import app
+          from gerar_painel import build_sheets,summarize,write_xlsx
+          base=json.loads(Path('config.json').read_text(encoding='utf-8'))
+          rows,cfg,metadata=app.load_published(base)
+          # fixos e normalização
+          for name in ('Amilton','amilton','  AMILTON  ','Sheyla','Joice','Raphael'):
+              user,status=app.authenticate_dashboard_name(cfg,name)
+              assert status=='ok',(name,status)
+          assert app.authenticate_dashboard_name(cfg,'usuario-inexistente')[1]=='invalid'
+          # vendedor ativo e inativo
+          active=next((x for x in cfg['vendedores'] if x.get('ativo')),None)
+          if active:
+              first=app.first_name(active['vendedor'])
+              user,status=app.authenticate_dashboard_name(cfg,first,active['vendedor'])
+              assert status in ('ok','duplicate')
+          test_cfg=json.loads(json.dumps(cfg))
+          if test_cfg['vendedores']:
+              test_cfg['vendedores'][0]['ativo']=False
+              first=app.first_name(test_cfg['vendedores'][0]['vendedor'])
+              fixed={app.normalize_text(x) for x in app.FIXED_DASHBOARD_USERS}
+              if app.normalize_text(first) not in fixed:
+                  assert app.authenticate_dashboard_name(test_cfg,first)[1] in ('invalid','duplicate')
+          # duplicidade de primeiro nome exige nome completo
+          dup={'vendedores':[{'vendedor':'Maria Silva','ativo':True},{'vendedor':'Maria Souza','ativo':True}]}
+          assert app.authenticate_dashboard_name(dup,'Maria')[1]=='duplicate'
+          assert app.authenticate_dashboard_name(dup,'Maria','Maria Silva')[1]=='ok'
+          # XLSX estruturalmente válido e relatorio geral presente
+          summary,all_days,elapsed,official=summarize(rows,cfg)
+          with tempfile.TemporaryDirectory() as d:
+              path=Path(d)/'Relatorio_Geral_Equipe_Afogados.xlsx'
+              sheet=next(s for s in build_sheets(rows,cfg,summary,all_days,elapsed,official) if s.name=='RELATORIO GERAL')
+              write_xlsx(path,[sheet])
+              data=path.read_bytes()
+              assert app.validate_xlsx_bytes(data,'RELATORIO GERAL') is True
+          PY
+      - name: Executar testes existentes
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Commitar app atualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Reorganizar acesso, ranking e relatório geral [skip ci]"
+          git push origin HEAD:feat/reorganizacao-acesso-ranking-relatorio
