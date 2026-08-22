@@ -26,7 +26,15 @@ jobs:
         with:
           python-version: '3.11'
       - name: Aplicar alterações
-        run: python scripts/patch_exec_bi.py
+        run: |
+          python scripts/patch_exec_bi.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app.py')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("st.markdown('<div class=\"section\">Relatório geral da equipe</div>'',unsafe_allow_html=True)","st.markdown('<div class=\"section\">Relatório geral da equipe</div>',unsafe_allow_html=True)")
+          p.write_text(s,encoding='utf-8')
+          PY
       - name: Validar sintaxe
         run: |
           python -m py_compile app.py
