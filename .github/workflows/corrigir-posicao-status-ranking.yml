@@ -1,0 +1,38 @@
+name: Corrigir posição do status no ranking
+
+on:
+  push:
+    branches:
+      - fix/status-projecao-final-ranking
+    paths:
+      - .github/workflows/corrigir-posicao-status-ranking.yml
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event_name == 'push' || github.head_ref == 'fix/status-projecao-final-ranking'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/status-projecao-final-ranking
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restaurar ordem e mover status para o espaço final
+        run: python scripts/patch_status_ranking_posicao.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py
+      - name: Commitar app atualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git diff --cached --quiet || git commit -m "Restaura ordem do ranking e move status para o final [skip ci]"
+          git push origin HEAD:fix/status-projecao-final-ranking
