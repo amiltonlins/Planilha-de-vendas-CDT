@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Painel Comercial Afogados — dashboard, histórico diário e gestão de vendedores."""
 from __future__ import annotations
-import base64, copy, csv, hmac, html, io, json, os, re, tempfile, time, unicodedata, zipfile
+import base64, copy, csv, hmac, html, io, json, os, re, tempfile, time, unicodedata, uuid, zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -164,6 +164,39 @@ def prepare_config(base,rows,month,year):
             "data_inicio":previous.get("data_inicio",f"{year}-01-01"),"data_desligamento":previous.get("data_desligamento",""),"folgas":previous.get("folgas",[])})
     cfg["vendedores"]=sellers; return cfg
 
+def ensure_import_history(rows,history):
+    history=[dict(x) for x in (history or [])]
+    for i,h in enumerate(history):
+        if not h.get("importacao_id"):
+            seed=f'{h.get("data_importacao","")}|{h.get("arquivo","")}|{i}'
+            h["importacao_id"]="legacy-"+str(uuid.uuid5(uuid.NAMESPACE_URL,seed))
+        h.setdefault("status","Ativa")
+        h.setdefault("vendedores",0)
+        h.setdefault("usuario","")
+    latest_by_day={}
+    for i,h in enumerate(history):
+        if h.get("status")=="Excluída":continue
+        for day in h.get("dias",[]):latest_by_day[day]=i
+    for i,h in enumerate(history):
+        if h.get("status")=="Excluída":continue
+        days=h.get("dias",[])
+        h["status"]="Ativa" if any(latest_by_day.get(day)==i for day in days) else "Substituída"
+    active_by_day={}
+    for h in history:
+        if h.get("status")!="Ativa":continue
+        for day in h.get("dias",[]):active_by_day[day]=h["importacao_id"]
+    for row in rows:
+        if not row.get("importacao_id"):
+            row["importacao_id"]=active_by_day.get(row["data_venda"].isoformat(),"")
+    return rows,history
+
+def mark_replaced_imports(history,imported_days):
+    day_keys={d.isoformat() if hasattr(d,"isoformat") else str(d) for d in imported_days}
+    for h in history:
+        if h.get("status","Ativa")=="Ativa" and day_keys.intersection(set(h.get("dias",[]))):
+            h["status"]="Substituída"
+    return history
+
 def merge_daily_history(current_rows,incoming_rows):
     if not incoming_rows:return current_rows,[]
     imported_days={x["data_venda"] for x in incoming_rows}
@@ -186,6 +219,8 @@ def load_published(base):
     if PUBLISHED_PATH.exists():
         payload=json.loads(PUBLISHED_PATH.read_text(encoding="utf-8")); rows=payload.get("vendas",[])
         for row in rows:row["data_venda"]=datetime.strptime(row["data_venda"],"%Y-%m-%d").date()
+        rows,history=ensure_import_history(rows,payload.get("historico_importacoes",[]))
+        payload["historico_importacoes"]=history
         return rows,merge_registry(base,payload.get("config",base)),payload
     raw=rows_from_csv((ROOT/"dados_exemplo.csv").read_bytes()); rows,_=canonicalize(raw,base); cfg=prepare_config(base,rows,base["mes"],base["ano"])
     return rows,cfg,{"atualizado_em":datetime.now().isoformat(timespec="seconds"),"arquivo":"dados_exemplo.csv","demonstracao":True,"historico_importacoes":[]}
@@ -757,13 +792,18 @@ def render_management(st,base,current_rows,current_cfg,metadata):
     st.info("HISTÓRICO DIÁRIO ATIVO: envie somente o relatório do dia anterior. Se uma data já existir, ela será substituída; os demais dias permanecerão acumulados.")
     uploaded=st.file_uploader("IMPORTAR RELATÓRIO DIÁRIO",type=["xlsx","csv"],key="gestao_upload")
     rows=current_rows; cfg=merge_registry(base,current_cfg); source=metadata.get("arquivo","base atual")
-    history=list(metadata.get("historico_importacoes",[])); imported_days=[]
+    rows,history=ensure_import_history(rows,list(metadata.get("historico_importacoes",[]))); imported_days=[]; pending_import_id=None; pending_import_count=0; pending_seller_count=0
     if uploaded:
         try:
             raw=rows_from_xlsx(uploaded.getvalue()) if uploaded.name.lower().endswith(".xlsx") else rows_from_csv(uploaded.getvalue())
             incoming,_=canonicalize(raw,base)
-            if metadata.get("demonstracao"):rows=[]
+            pending_import_id=str(uuid.uuid4())
+            for row in incoming:row["importacao_id"]=pending_import_id
+            if metadata.get("demonstracao"):rows=[]; history=[]
+            imported_days=sorted({x["data_venda"] for x in incoming})
+            history=mark_replaced_imports(history,imported_days)
             rows,imported_days=merge_daily_history(rows,incoming)
+            pending_import_count=len(incoming); pending_seller_count=len({normalize_text(x["vendedor"]) for x in incoming})
             ref=max(imported_days); month_rows=[x for x in rows if x["data_venda"].year==ref.year and x["data_venda"].month==ref.month]
             cfg=prepare_config(merge_registry(base,current_cfg),month_rows,ref.month,ref.year)
             cfg["dia_referencia"]=max(x["data_venda"].day for x in month_rows); source=uploaded.name
@@ -795,13 +835,54 @@ def render_management(st,base,current_rows,current_cfg,metadata):
                 a,b,c=st.columns(3); s["meta_individual"]=int(a.number_input("Meta individual",1,value=int(s.get("meta_individual",70)),key=f"gme{i}")); s["trabalha_sabado"]=b.checkbox("Trabalha sábado",s.get("trabalha_sabado",True),key=f"gsa{i}"); s["trabalha_domingo"]=c.checkbox("Trabalha domingo",s.get("trabalha_domingo",False),key=f"gdo{i}"); s["classificado"]=s["pertence_franquia"] or normalize_text(s.get("categoria")) in {"website","adm","freelance"}
         confirmed=st.form_submit_button("CONFIRMAR E PUBLICAR ATUALIZAÇÃO")
     if confirmed:
-        if imported_days:
-            history.append({"data_importacao":datetime.now().isoformat(timespec="seconds"),"arquivo":source,"dias":[d.isoformat() for d in imported_days],"registros_arquivo":sum(x["data_venda"] in imported_days for x in rows)}); history=history[-90:]
+        if imported_days and pending_import_id:
+            history.append({"importacao_id":pending_import_id,"data_importacao":datetime.now().isoformat(timespec="seconds"),"arquivo":source,"dias":[d.isoformat() for d in imported_days],"registros_arquivo":pending_import_count,"vendedores":pending_seller_count,"usuario":st.session_state.get("dashboard_usuario","") or "","status":"Ativa"}); history=history[-180:]
         save_published(rows,cfg,source,history); st.success("Histórico atualizado e dashboard publicado."); st.rerun()
+    if st.session_state.pop("import_delete_flash",None):st.success(st.session_state.pop("import_delete_flash_text","Importação excluída com sucesso."))
     if history:
-        st.markdown("#### HISTÓRICO DE IMPORTAÇÕES"); view=[]
-        for h in reversed(history[-20:]):view.append({"Importado em":h.get("data_importacao","").replace("T"," "),"Arquivo":h.get("arquivo",""),"Dia(s)":", ".join(h.get("dias",[])),"Registros":h.get("registros_arquivo",0)})
-        st.dataframe(view,use_container_width=True,hide_index=True)
+        st.markdown("#### HISTÓRICO DE IMPORTAÇÕES")
+        st.caption("Excluir uma importação remove efetivamente as vendas daquele lote e recalcula o dashboard. Importações substituídas permanecem apenas para auditoria.")
+        for h in reversed(history[-30:]):
+            status=h.get("status","Ativa"); import_id=h.get("importacao_id",""); days=", ".join(h.get("dias",[])); regs=int(h.get("registros_arquivo",0) or 0); sellers_count=int(h.get("vendedores",0) or 0)
+            with st.container(border=True):
+                a,b,c,d=st.columns([2.1,2.2,1.1,1.1])
+                a.markdown(f'**{h.get("arquivo","Importação")}**')
+                a.caption(h.get("data_importacao","").replace("T"," "))
+                b.markdown(f'**Período:** {days or "—"}')
+                b.caption(f'Usuário: {h.get("usuario","") or "—"}')
+                c.metric("Vendas",regs); d.metric("Vendedores",sellers_count)
+                st.caption(f'Status: **{status}**')
+                if status=="Ativa" and import_id:
+                    if st.button("EXCLUIR IMPORTAÇÃO",key=f'del_import_{import_id}',type="secondary"):
+                        st.session_state["confirm_delete_import_id"]=import_id; st.rerun()
+                elif status=="Substituída":
+                    st.caption("Esta importação foi substituída por uma importação posterior do mesmo dia e não possui vendas ativas no dashboard.")
+                else:
+                    st.caption("Importação excluída. Nenhuma venda deste lote permanece ativa.")
+
+        confirm_id=st.session_state.get("confirm_delete_import_id")
+        target=next((h for h in history if h.get("importacao_id")==confirm_id and h.get("status")=="Ativa"),None) if confirm_id else None
+        if target:
+            affected=[x for x in rows if x.get("importacao_id")==confirm_id]
+            affected_sellers=len({normalize_text(x.get("vendedor")) for x in affected})
+            @st.dialog("Confirmar exclusão da importação")
+            def _confirm_delete_import():
+                st.warning(f'Tem certeza de que deseja excluir esta importação? Serão removidas {len(affected)} vendas referentes a {", ".join(target.get("dias",[])) or "este lote"} e todos os indicadores serão recalculados.')
+                a,b=st.columns(2)
+                if a.button("CANCELAR",use_container_width=True):
+                    st.session_state.pop("confirm_delete_import_id",None); st.rerun()
+                if b.button("CONFIRMAR EXCLUSÃO",type="primary",use_container_width=True):
+                    new_rows=[x for x in rows if x.get("importacao_id")!=confirm_id]
+                    target["status"]="Excluída"; target["data_exclusao"]=datetime.now().isoformat(timespec="seconds"); target["excluido_por"]=st.session_state.get("dashboard_usuario","") or ""
+                    remaining_month=[x for x in new_rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]]
+                    if remaining_month:cfg["dia_referencia"]=max(x["data_venda"].day for x in remaining_month)
+                    else:cfg["dia_referencia"]=1
+                    save_published(new_rows,cfg,metadata.get("arquivo","base atual"),history)
+                    st.session_state.pop("confirm_delete_import_id",None)
+                    st.session_state["import_delete_flash"]=True
+                    st.session_state["import_delete_flash_text"]=f'IMPORTAÇÃO EXCLUÍDA COM SUCESSO · {len(affected)} vendas removidas · {affected_sellers} vendedores impactados · dashboard recalculado.'
+                    st.rerun()
+            _confirm_delete_import()
     if st.button("SAIR DA GESTÃO"):st.session_state.gestor_autenticado=False; st.rerun()
 
 def render_app():
