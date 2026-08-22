@@ -13,3 +13,4 @@ if 'Navegação nativa: troca apenas a área' not in s:
     s=s.replace('</style>',css+'\n</style>',1)
 
 p.write_text(s,encoding='utf-8')
+# executar após workflow já existir
