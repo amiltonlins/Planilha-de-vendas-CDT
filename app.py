@@ -208,6 +208,59 @@ def table_html(records,columns,row_color=None,daily=False):
         body.append(f'<tr>{"".join(cells)}</tr>')
     return f'<div class="table-wrap"><table class="report"><thead><tr>{heads}</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
 
+def executive_kpis_html(cfg,total,projection,neo,team):
+    meta=cfg["meta_empresa"]
+    ating=total/meta if meta else 0
+    faltam=max(0,meta-total)
+    neo_pct=neo/total if total else 0
+    zeros=sum(x["zeros"] for x in team)
+    return (
+        '<div class="exec-grid">'
+        f'<div class="exec-card hero"><small>VENDAS REALIZADAS</small><strong>{total}</strong><span>Resultado atual</span></div>'
+        f'<div class="exec-card"><small>META DO MÊS</small><strong>{meta}</strong><span>Objetivo comercial</span></div>'
+        f'<div class="exec-card projection"><small>PROJEÇÃO</small><strong>{projection}</strong><span>Fechamento estimado</span></div>'
+        f'<div class="exec-card attainment"><small>% DA META</small><strong>{pct(ating)}</strong><span>Atingimento atual</span></div>'
+        f'<div class="exec-card secondary"><small>FALTAM PARA META</small><strong>{faltam}</strong><span>Vendas necessárias</span></div>'
+        f'<div class="exec-card secondary"><small>VENDAS NEO</small><strong>{neo}</strong><span>{pct(neo_pct)} do total</span></div>'
+        f'<div class="exec-card secondary"><small>% NEO</small><strong>{pct(neo_pct)}</strong><span>Participação</span></div>'
+        f'<div class="exec-card secondary critical"><small>ZEROS</small><strong>{zeros}</strong><span>Dias sem venda</span></div>'
+        '</div>'
+    )
+
+def seller_kpi_card(label,value,sub,cls):
+    return f'<div class="seller-kpi {cls}"><small>{html.escape(str(label))}</small><strong>{html.escape(str(value))}</strong><span>{html.escape(str(sub))}</span></div>'
+
+def seller_kpis_html(x):
+    meta_pct=x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0
+    status,_,_=performance(x["media"])
+    commercial=[
+        ("VENDAS",x["vendas"],"Produção","primary"),
+        ("PROJEÇÃO",x["projecao"],f'Meta {x["meta_individual"]}',"level2"),
+        ("MÉDIA/DIA",f'{x["media"]:.2f}',f'{x["dias"]} dias',"level2"),
+        ("% META",pct(meta_pct),status,"level2"),
+        ("ZEROS",x["zeros"],f'Semana {x["zeros_semana"]}',"level3"),
+        ("NEO",x["neo"],"Neoenergia","level3"),
+        ("% NEO",pct(x["neo_pct"]),"Participação","level3"),
+    ]
+    awards=[
+        ("PREMIAÇÃO ATUAL",money(x["base"]),"Já acumulada","primary"),
+        ("PREMIAÇÃO PROJETADA",money(x["comissao_proj"]),"Base projetada","level2"),
+        ("BÔNUS NEO PROJETADO",money(x["bonus_neo_proj"]),"Projeção","level3"),
+        ("BÔNUS (SE) 100% ADIM",money(x["bonus_adim_proj"]),"Condicional","level3"),
+        ("SEMANAIS",money(x["premio_total"]),"Acumulado semanal","level3"),
+        ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total"),
+    ]
+    commercial_html=''.join(seller_kpi_card(*item) for item in commercial)
+    awards_html=''.join(seller_kpi_card(*item) for item in awards)
+    return (
+        '<div class="seller-groups">'
+        '<div class="seller-group-title">DESEMPENHO COMERCIAL</div>'
+        f'<div class="seller-kpi-grid">{commercial_html}</div>'
+        '<div class="seller-group-title award">PREMIAÇÃO</div>'
+        f'<div class="seller-kpi-grid award-grid">{awards_html}</div>'
+        '</div>'
+    )
+
 def ranking_html(ranking):
     medals=("🥇","🥈","🥉")
     rows=[]
@@ -227,11 +280,11 @@ def ranking_html(ranking):
             f'<span><strong>{pct(meta_pct)}</strong><small>% META</small></span>'
             f'<span class="neo-highlight"><strong>{x["neo"]}</strong><small>NEO</small></span>'
             f'<span class="neo-highlight"><strong>{pct(x["neo_pct"])}</strong><small>% NEO</small></span>'
-            f'<span><strong>{money(x["base"])}</strong><small>COMISSÃO ATUAL</small></span>'
-            f'<span><strong>{money(x["comissao_proj"])}</strong><small>COMISSÃO PROJ.</small></span>'
+            f'<span><strong>{money(x["base"])}</strong><small>PREMIAÇÃO ATUAL</small></span>'
+            f'<span><strong>{money(x["comissao_proj"])}</strong><small>PREMIAÇÃO PROJ.</small></span>'
             f'<span><strong>{money(x["bonus_neo_proj"])}</strong><small>BÔNUS NEO PROJ.</small></span>'
-            f'<span><strong>{money(x["bonus_adim_proj"])}</strong><small>BÔNUS ADIM. PROJ.</small></span>'
-            f'<span><strong>{money(x["premio_total"])}</strong><small>PRÊMIOS</small></span>'
+            f'<span><strong>{money(x["bonus_adim_proj"])}</strong><small>BÔNUS (SE) 100% ADIM</small></span>'
+            f'<span><strong>{money(x["premio_total"])}</strong><small>SEMANAIS</small></span>'
             f'<span class="total-highlight"><strong>{money(x["total_variavel_proj"])}</strong><small>TOTAL VAR. PROJ.</small></span>'
             f'</div></div></div>'
         )
@@ -256,6 +309,11 @@ CSS="""<style>
 .table-wrap{overflow:auto;max-height:590px;border:1px solid var(--line);border-radius:12px;background:white}.report{border-collapse:separate;border-spacing:0;white-space:nowrap;width:100%;font-size:.72rem}.report th{position:sticky;top:0;background:#0F172A;color:white;padding:8px 9px;z-index:2;font-size:.65rem}.report td{border-right:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;padding:6px 8px;text-align:center}.report tr:hover td{background-color:#F8FAFC}.empty-bi{background:white;border:1px dashed #CBD5E1;border-radius:12px;padding:22px;text-align:center;color:#64748B}
 .stButton button,.stDownloadButton button{border-radius:9px;background:#0F172A;color:white;border:0;font-weight:750;min-height:40px}.stButton button:hover,.stDownloadButton button:hover{background:#1E293B;color:white;border:0}[data-testid="stPopover"] button{border-radius:10px!important;background:#0F172A!important;color:white!important;border:1px solid #334155!important;min-width:48px!important;font-size:1.35rem!important}[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:12px;overflow:hidden}.element-container{margin-bottom:.2rem}
 @media(max-width:1250px){.block-container{padding:.7rem}.rank-row{grid-template-columns:45px 1fr}.rank-name{grid-template-columns:1fr}.rank-inside{grid-template-columns:repeat(4,1fr)}.metric strong{font-size:1.35rem}}@media(max-width:720px){.bi-topbar{padding:14px}.bi-topbar h1{font-size:1.05rem}.rank-row{grid-template-columns:38px 1fr;padding:7px 4px}.rank-inside{grid-template-columns:repeat(2,1fr)}.block-container{padding:.5rem}}
+
+.exec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 14px}.exec-card{background:white;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(15,23,42,.05);min-width:0}.exec-card small{display:block;font-size:.64rem;font-weight:900;letter-spacing:.055em;color:#64748B}.exec-card strong{display:block;font-size:1.8rem;line-height:1.05;margin-top:7px;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.exec-card span{display:block;font-size:.67rem;color:#94A3B8;margin-top:5px}.exec-card.hero{grid-column:span 2;background:linear-gradient(120deg,#0F172A,#172554);border-color:#172554}.exec-card.hero small,.exec-card.hero strong,.exec-card.hero span{color:white}.exec-card.hero strong{font-size:2.35rem}.exec-card.projection{border-top:4px solid #F59E0B}.exec-card.attainment{border-top:4px solid #22C55E}.exec-card.critical{border-top:4px solid #EF4444}.seller-groups{margin-top:12px}.seller-group-title{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:#475569;margin:14px 0 7px}.seller-group-title.award{margin-top:18px}.seller-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.seller-kpi{background:white;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.seller-kpi small{display:block;font-size:.59rem;font-weight:900;color:#64748B;letter-spacing:.035em}.seller-kpi strong{display:block;font-size:1.2rem;color:#0F172A;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.seller-kpi span{display:block;font-size:.63rem;color:#94A3B8;margin-top:4px}.seller-kpi.primary{background:#0F172A;border-color:#0F172A}.seller-kpi.primary small,.seller-kpi.primary strong,.seller-kpi.primary span{color:white}.seller-kpi.primary strong{font-size:1.55rem}.seller-kpi.total{background:linear-gradient(120deg,#0F172A,#172554)}
+@media(max-width:900px){.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.exec-card.hero{grid-column:span 2}.exec-card.hero strong{font-size:2rem}.seller-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rank-inside{grid-template-columns:repeat(2,minmax(0,1fr))}.rank-name{grid-template-columns:1fr}.rank-inside strong{white-space:normal;overflow-wrap:anywhere}.report{font-size:.68rem}}
+@media(max-width:560px){.block-container{padding:.45rem!important}.bi-topbar{border-radius:10px;padding:12px}.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.exec-card{padding:11px 10px;border-radius:11px}.exec-card.hero{grid-column:span 2}.exec-card strong{font-size:1.35rem}.exec-card.hero strong{font-size:1.9rem}.exec-card small{font-size:.56rem}.exec-card span{font-size:.58rem}.seller-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.seller-kpi{padding:10px 9px}.seller-kpi strong{font-size:1.05rem}.seller-kpi.primary strong{font-size:1.3rem}.rank-row{grid-template-columns:34px minmax(0,1fr)!important;padding:6px 2px!important}.rank-pos{font-size:.8rem}.rank-name{padding:9px!important;gap:8px!important}.rank-inside{grid-template-columns:repeat(2,minmax(0,1fr))!important}.rank-inside span{min-width:0}.rank-inside strong{font-size:.86rem!important;white-space:normal!important;overflow-wrap:anywhere}.rank-inside .neo-highlight strong{font-size:1.05rem!important}.rank-seller b{white-space:normal!important}.metric strong{white-space:normal;overflow-wrap:anywhere}.stDownloadButton button{width:100%}}
+
 </style>"""
 
 def render_management(st,base,current_rows,current_cfg,metadata):
@@ -332,7 +390,7 @@ def render_app():
     with top_menu:
         with st.popover("⋮"):
             st.markdown("**NAVEGAÇÃO**")
-            areas=["VISÃO GERAL","VENDEDORES","SEMANAL","COMISSÕES","GESTÃO"]
+            areas=["VISÃO GERAL","VENDEDORES","SEMANAL","PREMIAÇÕES","GESTÃO"]
             st.session_state.area=st.radio("Área",areas,index=areas.index(st.session_state.area),label_visibility="collapsed")
             st.caption("Menu gerencial")
     area=st.session_state.area
@@ -343,14 +401,10 @@ def render_app():
     st.caption(f"Última atualização: {updated:%d/%m/%Y às %H:%M}  •  Dados acumulados até: {data_until:%d/%m/%Y}  •  Competência: {cfg['mes']:02d}/{cfg['ano']}")
     team=regular(summary); total=sum(x["vendas"] for x in summary); projection=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary); color=lambda x:performance(x["media"])[1]
     if area=="VISÃO GERAL":
-        cards(st,[("META DO MÊS",cfg["meta_empresa"],"yellow","Objetivo comercial"),("VENDAS REALIZADAS",total,"cyan","Histórico acumulado"),("PROJEÇÃO",projection,"yellow","Fechamento estimado"),("% DA META",pct(total/cfg["meta_empresa"] if cfg["meta_empresa"] else 0),"green","Realizado"),("FALTAM PARA META",max(0,cfg["meta_empresa"]-total),"red","Vendas necessárias"),("VENDAS NEO",neo,"cyan","Neoenergia"),("% NEO",pct(neo/total if total else 0),"green","Participação"),("ZEROS",sum(x["zeros"] for x in team),"red","Dias sem venda")])
-        left,right=st.columns([1.7,1],gap="small")
-        with left:
-            st.markdown('<div class="section">Evolução comercial</div>',unsafe_allow_html=True); cumulative,ideal=daily_series(rows,cfg,data_until); st.line_chart({"Realizado acumulado":cumulative,"Ritmo da meta":ideal},height=245)
-        with right:
-            st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
-            for x in team:counts[performance(x["media"])[0]]+=1
-            tones={"Azul":"cyan","Verde":"green","Amarelo":"yellow","Vermelho":"red"}; cards(st,[(k.upper(),v,tones[k],"vendedores") for k,v in counts.items()],2)
+        st.markdown(executive_kpis_html(cfg,total,projection,neo,team),unsafe_allow_html=True)
+        st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
+        for x in team:counts[performance(x["media"])[0]]+=1
+        tones={"Azul":"cyan","Verde":"green","Amarelo":"yellow","Vermelho":"red"}; cards(st,[(k.upper(),v,tones[k],"vendedores") for k,v in counts.items()],4)
         st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True); ranking=sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
         st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","ADM","FREELANCE","CANAL NACIONAL")}
         for item in summary:channels[channel_name(item)]+=item["vendas"]
@@ -359,9 +413,9 @@ def render_app():
         if not team:st.warning("Nenhum vendedor local ativo. Entre em GESTÃO e classifique/ative os vendedores.");return
         chosen=st.selectbox("SELECIONE O VENDEDOR",[x["vendedor"] for x in team]); x=next(v for v in team if v["vendedor"]==chosen); status,c,tone=performance(x["media"])
         st.markdown(f'<div class="bi-panel" style="border-left:5px solid {c}"><b>{html.escape(x["vendedor"])}</b><br><span style="color:#64748B;font-size:.75rem">{html.escape(x["setor"])} · Performance {status}</span></div>',unsafe_allow_html=True)
-        cards(st,[("VENDAS",x["vendas"],"cyan",""),("MÉDIA",f'{x["media"]:.2f}',tone,f'{x["dias"]} dias'),("PROJEÇÃO",x["projecao"],tone,f'Meta {x["meta_individual"]}'),("% DA META",pct(x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0),tone,""),("ZEROS",x["zeros"],"red",f'Semana {x["zeros_semana"]}'),("NEO",x["neo"],"cyan",""),("% NEO",pct(x["neo_pct"]),"green",""),("COMISSÃO ATUAL",money(x["base"]),"green",""),("COMISSÃO PROJETADA",money(x["comissao_proj"]),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(x["bonus_neo_proj"]),"green",""),("BÔNUS ADIM. PROJ.",money(x["bonus_adim_proj"]),"green",""),("PRÊMIOS",money(x["premio_total"]),"green","Acumulados"),("TOTAL VAR. ATUAL",money(x["total"]),"cyan",""),("TOTAL VAR. PROJETADO",money(x["total_variavel_proj"]),"yellow","")])
+        st.markdown(seller_kpis_html(x),unsafe_allow_html=True)
         st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
-        cols=[("setor","SETOR"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","COMISSÃO ATUAL"),("proj_fmt","COMISSÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS ADIM. PROJ."),("premio_fmt","PRÊMIOS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]; display=[]
+        cols=[("setor","SETOR"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]; display=[]
         for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):display.append(item|{"media":f'{item["media"]:.2f}',"meta_pct":pct(item["projecao"]/item["meta_individual"] if item["meta_individual"] else 0),"neo_pct_fmt":pct(item["neo_pct"]),"base_fmt":money(item["base"]),"proj_fmt":money(item["comissao_proj"]),"neo_proj_fmt":money(item["bonus_neo_proj"]),"adim_proj_fmt":money(item["bonus_adim_proj"]),"premio_fmt":money(item["premio_total"]),"total_proj_fmt":money(item["total_variavel_proj"])})
         st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
         try:
@@ -377,13 +431,13 @@ def render_app():
         max_weeks=max(len(x["semanas"]) for x in team); data=[]
         for x in team:
             row={"Vendedor":x["vendedor"]}
-            for i in range(max_weeks):row[f"Semana {i+1}"]=x["semanas"][i]; row[f"Prêmio S{i+1}"]=money(x["premios"][i])
-            row["Premiação acumulada"]=money(x["premio_total"]); data.append(row)
+            for i in range(max_weeks):row[f"Semana {i+1}"]=x["semanas"][i]; row[f"Semanal S{i+1}"]=money(x["premios"][i])
+            row["Semanais acumulados"]=money(x["premio_total"]); data.append(row)
         st.dataframe(data,use_container_width=True,hide_index=True,height=520)
-    elif area=="COMISSÕES":
-        st.markdown('<div class="section">Comissões e cenários</div>',unsafe_allow_html=True); projected="maior_ou_igual_1000" if projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
-        cards(st,[("CENÁRIO ATUAL","≥ 1.000" if official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{projection} vendas"),("COMISSÃO BASE ATUAL",money(sum(x["base"] for x in team)),"cyan",""),("COMISSÃO PROJETADA",money(sum(x["comissao_proj"] for x in team)),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(sum(x["bonus_neo_proj"] for x in team)),"green",""),("BÔNUS ADIM. PROJ.",money(sum(x["bonus_adim_proj"] for x in team)),"green",""),("PRÊMIOS ACUMULADOS",money(sum(x["premio_total"] for x in team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in team)),"yellow","")])
-        st.dataframe([{"Vendedor":x["vendedor"],"Vendas":x["vendas"],"Projeção":x["projecao"],"Mínimo":x["minimo"],"R$/venda":x["taxa"],"Base atual":x["base"],"Comissão projetada":x["comissao_proj"],"Bônus Neo proj.":x["bonus_neo_proj"],"Bônus M2 proj.":x["bonus_adim_proj"],"Prêmios":x["premio_total"],"Total atual":x["total"],"Total var. projetado":x["total_variavel_proj"]} for x in sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True)],use_container_width=True,hide_index=True)
+    elif area=="PREMIAÇÕES":
+        st.markdown('<div class="section">Premiações e cenários</div>',unsafe_allow_html=True); projected="maior_ou_igual_1000" if projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
+        cards(st,[("CENÁRIO ATUAL","≥ 1.000" if official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{projection} vendas"),("PREMIAÇÃO BASE ATUAL",money(sum(x["base"] for x in team)),"cyan",""),("PREMIAÇÃO PROJETADA",money(sum(x["comissao_proj"] for x in team)),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(sum(x["bonus_neo_proj"] for x in team)),"green",""),("BÔNUS (SE) 100% ADIM",money(sum(x["bonus_adim_proj"] for x in team)),"green",""),("SEMANAIS ACUMULADOS",money(sum(x["premio_total"] for x in team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in team)),"yellow","")])
+        st.dataframe([{"Vendedor":x["vendedor"],"Vendas":x["vendas"],"Projeção":x["projecao"],"Mínimo":x["minimo"],"R$/venda":x["taxa"],"Base atual":x["base"],"Premiação projetada":x["comissao_proj"],"Bônus Neo proj.":x["bonus_neo_proj"],"BÔNUS (SE) 100% ADIM":x["bonus_adim_proj"],"Semanais":x["premio_total"],"Total atual":x["total"],"Total var. projetado":x["total_variavel_proj"]} for x in sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True)],use_container_width=True,hide_index=True)
     st.markdown('<div class="section">Relatório completo</div>',unsafe_allow_html=True)
     try:
         with tempfile.TemporaryDirectory() as folder:
