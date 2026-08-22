@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Migração visual: performance baseada em média diária.
 app_path=Path('app.py')
 text=app_path.read_text(encoding='utf-8')
 
@@ -26,7 +27,6 @@ new_block='''        st.markdown('<div class="section">Ranking da equipe</div>',
 if old_block not in text: raise SystemExit('Bloco de ranking/gráficos não encontrado')
 text=text.replace(old_block,new_block)
 
-# Download específico do Relatório Geral
 needle='''        st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)'''
 replacement='''        st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)\n        try:\n            with tempfile.TemporaryDirectory() as folder:\n                general_path=Path(folder)/"Relatorio_Geral_Equipe_Afogados.xlsx"\n                general_sheet=next(s for s in build_sheets(rows,cfg,summary,all_days,elapsed,official) if s.name=="RELATORIO GERAL")\n                write_xlsx(general_path,[general_sheet]); general_book=general_path.read_bytes()\n            st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")\n        except Exception as exc:st.warning(f"Não foi possível gerar o Relatório Geral agora: {exc}")'''
 if needle not in text: raise SystemExit('Tabela geral não encontrada')
@@ -34,7 +34,6 @@ text=text.replace(needle,replacement,1)
 
 app_path.write_text(text,encoding='utf-8')
 
-# Ajusta cores do Excel para média diária
 p=Path('gerar_painel.py')
 g=p.read_text(encoding='utf-8')
 old='''    def performance_scale(self, ref, first_row, projection_col="H", target_col="AG"):\n        \"\"\"Colore vendedor/projeção pela proporção entre projeção e meta.\"\"\"\n        self.performance_conditionals.append((ref, first_row, projection_col, target_col))'''
