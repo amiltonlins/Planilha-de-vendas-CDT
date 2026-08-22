@@ -7,12 +7,17 @@ on:
     paths:
       - scripts/patch_status_projecao.py
       - .github/workflows/aplicar-status-projecao.yml
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.event_name == 'push' || github.head_ref == 'feat/ajustes-mobile-canais-performance'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
