@@ -474,7 +474,7 @@ def render_app():
     area=st.session_state.area
     import urllib.parse
     nav=''.join(
-        f'<a class="top-nav-item {"active" if item==area else ""}" href="?area={urllib.parse.quote(item)}">{html.escape(item)}</a>'
+        f'<a class="top-nav-item {"active" if item==area else ""}" href="?area={urllib.parse.quote(item)}" target="_self">{html.escape(item)}</a>'
         for item in areas
     )
     st.markdown(
