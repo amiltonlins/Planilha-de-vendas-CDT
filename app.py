@@ -399,21 +399,49 @@ def general_report_display(team):
             "total_proj_fmt":money(item["total_variavel_proj"])})
     return display
 
+def general_report_xlsx_bytes(team,all_days):
+    """Gera XLSX padrão e validável pelo Microsoft Excel."""
+    from openpyxl import Workbook, load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+    output=io.BytesIO()
+    wb=Workbook()
+    ws=wb.active
+    ws.title="RELATORIO GERAL"
+    headers=["EQUIPE","VENDEDOR","TOTAL","PROJEÇÃO","MÉDIA","ZEROS","% META","NEO","% NEO","PREMIAÇÃO ATUAL","PREMIAÇÃO PROJETADA","BÔNUS NEO PROJ.","BÔNUS (SE) 100% ADIM","SEMANAIS","TOTAL VAR. PROJ."]+[str(d.day) for d in all_days]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.fill=PatternFill("solid",fgColor="0F172A")
+        cell.font=Font(color="FFFFFF",bold=True)
+        cell.alignment=Alignment(horizontal="center")
+    for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):
+        meta_pct=item["projecao"]/item["meta_individual"] if item.get("meta_individual") else 0
+        values=[item.get("equipe",""),item.get("vendedor",""),int(item.get("vendas",0) or 0),int(item.get("projecao",0) or 0),float(item.get("media",0) or 0),int(item.get("zeros",0) or 0),meta_pct,int(item.get("neo",0) or 0),float(item.get("neo_pct",0) or 0),float(item.get("base",0) or 0),float(item.get("comissao_proj",0) or 0),float(item.get("bonus_neo_proj",0) or 0),float(item.get("bonus_adim_proj",0) or 0),float(item.get("premio_total",0) or 0),float(item.get("total_variavel_proj",0) or 0)]
+        elapsed_days=item.get("dias_decorridos",set())
+        daily=item.get("diario",{})
+        for d in all_days:
+            values.append(int(daily.get(d.day,0) or 0) if d.day in elapsed_days else None)
+        ws.append(values)
+    ws.freeze_panes="A2"
+    ws.auto_filter.ref=ws.dimensions
+    ws.column_dimensions["A"].width=18
+    ws.column_dimensions["B"].width=34
+    for col in range(3,16):ws.column_dimensions[get_column_letter(col)].width=18
+    for col in range(16,16+len(all_days)):ws.column_dimensions[get_column_letter(col)].width=5
+    for row in ws.iter_rows(min_row=2):
+        row[6].number_format='0.0%'
+        row[8].number_format='0.0%'
+        for idx in range(9,15):row[idx].number_format='R$ #,##0.00'
+    wb.save(output)
+    data=output.getvalue()
+    load_workbook(io.BytesIO(data),read_only=True,data_only=True).close()
+    return data
+
 def render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color):
     st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
     cols=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
     display=general_report_display(team)
     st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
-    try:
-        with tempfile.TemporaryDirectory() as folder:
-            general_path=Path(folder)/"Relatorio_Geral_Equipe_Afogados.xlsx"
-            general_sheet=next(s for s in build_sheets(rows,cfg,summary,all_days,elapsed,official) if s.name=="RELATORIO GERAL")
-            write_xlsx(general_path,[general_sheet])
-            general_book=general_path.read_bytes()
-        validate_xlsx_bytes(general_book,"RELATORIO GERAL")
-        st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=False)
-    except Exception as exc:
-        st.error(f"Não foi possível gerar um XLSX válido do Relatório Geral: {exc}")
 
 def manager_password(st):
     try:return str(st.secrets["GESTOR_SENHA"])
@@ -478,18 +506,9 @@ def performance_summary_html(counts):
     return f'<div class="perf-summary">{chips}</div>'
 
 def channel_summary_html(channels,total):
-    groups=[
-        (("VENDEDORES FRANQUIA",channels.get("VENDEDORES FRANQUIA",0)),("WEBSITE",channels.get("WEBSITE",0))),
-        (("FREELANCE",channels.get("FREELANCE",0)),("CANAL NACIONAL",channels.get("CANAL NACIONAL",0))),
-    ]
-    cards=[]
-    for pair in groups:
-        inner=''.join(
-            f'<div class="channel-mini"><span>{name}</span><strong>{value}</strong><small>{pct(value/total if total else 0)} do total</small></div>'
-            for name,value in pair
-        )
-        cards.append(f'<div class="channel-group">{inner}</div>')
-    return '<div class="channel-summary">'+''.join(cards)+'</div>'
+    pair=(("VENDEDORES FRANQUIA",channels.get("VENDEDORES FRANQUIA",0)),("CANAL NACIONAL",channels.get("CANAL NACIONAL",0)))
+    inner=''.join(f'<div class="channel-mini"><span>{name}</span><strong>{value}</strong><small>{pct(value/total if total else 0)} do total</small></div>' for name,value in pair)
+    return '<div class="channel-summary"><div class="channel-group">'+inner+'</div></div>'
 
 def projection_status_visual(projected_ratio, meta_value=None, projection_value=None):
     try:
@@ -890,6 +909,17 @@ def render_management(st,base,current_rows,current_cfg,metadata):
                 seller["classificado"]=True
         confirmed=st.form_submit_button("SALVAR CONFIGURAÇÕES",use_container_width=True)
 
+    st.markdown("#### RELATÓRIO GERAL DA EQUIPE")
+    try:
+        management_summary,management_days,management_elapsed,management_official=summarize(rows,cfg)
+        apply_team_labels(management_summary,cfg)
+        management_team=regular(management_summary)
+        general_book=general_report_xlsx_bytes(management_team,management_days)
+        validate_xlsx_bytes(general_book,"RELATORIO GERAL")
+        st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,key="gestao_download_relatorio_geral")
+    except Exception as exc:
+        st.error(f"Não foi possível gerar o Relatório Geral em Excel: {exc}")
+
     st.markdown("#### CONFERÊNCIA DA IMPORTAÇÃO")
     audit=[]
     for seller in cfg["vendedores"]:
@@ -1002,16 +1032,15 @@ def render_app():
     data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1)); updated=datetime.fromisoformat(metadata["atualizado_em"])
     st.caption(f"Última atualização: {updated:%d/%m/%Y às %H:%M}  •  Dados acumulados até: {data_until:%d/%m/%Y}  •  Competência: {cfg['mes']:02d}/{cfg['ano']}")
     team=regular(summary); total=sum(x["vendas"] for x in summary); projection=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary); color=lambda x:performance(x["media"])[1]
+    # Abrir detalhamento somente após clique explícito no vendedor.
+    # Limpa estado legado para filtros/equipe não reabrirem o último popup.
+    st.session_state.pop("seller_detail",None)
     requested_seller=st.query_params.get("seller")
     if requested_seller:
-        st.session_state.seller_detail=requested_seller
         try:del st.query_params["seller"]
         except KeyError:pass
-    detail_name=st.session_state.get("seller_detail")
-    if detail_name:
-        detail=next((x for x in team if normalize_text(x["vendedor"])==normalize_text(detail_name)),None)
+        detail=next((x for x in team if normalize_text(x["vendedor"])==normalize_text(requested_seller)),None)
         if detail:open_seller_dialog(st,detail)
-        else:st.session_state.pop("seller_detail",None)
     if area=="VISÃO GERAL":
         st.markdown(executive_kpis_html(cfg,total,projection,neo,team),unsafe_allow_html=True)
         st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
@@ -1021,10 +1050,10 @@ def render_app():
         team_filter=st.selectbox("Filtrar ranking por equipe",("TODAS AS EQUIPES",)+TEAM_OPTIONS,key="ranking_team_filter",label_visibility="collapsed")
         filtered_team=team if team_filter=="TODAS AS EQUIPES" else [x for x in team if x.get("equipe")==team_filter]
         ranking=sorted(filtered_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking,auth_token),unsafe_allow_html=True)
-        st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","FREELANCE","CANAL NACIONAL")}
+        st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","CANAL NACIONAL")}
         for item in summary:
             name=channel_name(item)
-            if name!="ADM" and name in channels:channels[name]+=item["vendas"]
+            if name in channels:channels[name]+=item["vendas"]
         st.markdown(channel_summary_html(channels,total),unsafe_allow_html=True)
         team_totals=team_sales_totals(summary,cfg)
         internal_sales=team_totals["Equipe Interna"]
@@ -1071,11 +1100,5 @@ def render_app():
         st.markdown('<div class="section">Premiações e cenários</div>',unsafe_allow_html=True); projected="maior_ou_igual_1000" if projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
         cards(st,[("CENÁRIO ATUAL","≥ 1.000" if official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{projection} vendas"),("PREMIAÇÃO BASE ATUAL",money(sum(x["base"] for x in team)),"cyan",""),("PREMIAÇÃO PROJETADA",money(sum(x["comissao_proj"] for x in team)),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(sum(x["bonus_neo_proj"] for x in team)),"green",""),("BÔNUS (SE) 100% ADIM",money(sum(x["bonus_adim_proj"] for x in team)),"green",""),("SEMANAIS ACUMULADOS",money(sum(x["premio_total"] for x in team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in team)),"yellow","")])
         st.dataframe([{"Vendedor":x["vendedor"],"Vendas":x["vendas"],"Projeção":x["projecao"],"Mínimo":x["minimo"],"R$/venda":x["taxa"],"Base atual":x["base"],"Premiação projetada":x["comissao_proj"],"Bônus Neo proj.":x["bonus_neo_proj"],"BÔNUS (SE) 100% ADIM":x["bonus_adim_proj"],"Semanais":x["premio_total"],"Total atual":x["total"],"Total var. projetado":x["total_variavel_proj"]} for x in sorted(team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True)],use_container_width=True,hide_index=True)
-    st.markdown('<div class="section">Relatório completo</div>',unsafe_allow_html=True)
-    try:
-        with tempfile.TemporaryDirectory() as folder:
-            path=Path(folder)/"Painel_Comercial_Afogados.xlsx"; write_xlsx(path,build_sheets(rows,cfg,summary,all_days,elapsed,official)); book=path.read_bytes()
-        st.download_button("BAIXAR RELATÓRIO COMPLETO EM EXCEL",book,"Painel_Comercial_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    except Exception as exc:st.warning(f"Não foi possível gerar o Excel agora: {exc}")
 
 if __name__=="__main__":render_app()
