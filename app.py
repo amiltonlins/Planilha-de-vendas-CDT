@@ -234,8 +234,8 @@ def seller_kpis_html(x):
     meta_pct=x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0
     status,_,_=performance(x["media"])
     commercial=[
-        ("VENDAS",x["vendas"],"Produção","primary"),
-        ("PROJEÇÃO",x["projecao"],f'Meta {x["meta_individual"]}',"level2"),
+        ("VENDAS",x["vendas"],"Produção","primary mobile-duplicate"),
+        ("PROJEÇÃO",x["projecao"],f'Meta {x["meta_individual"]}',"level2 mobile-duplicate"),
         ("MÉDIA/DIA",f'{x["media"]:.2f}',f'{x["dias"]} dias',"level2"),
         ("% META",pct(meta_pct),status,"level2"),
         ("ZEROS",x["zeros"],f'Semana {x["zeros_semana"]}',"level3"),
@@ -243,16 +243,24 @@ def seller_kpis_html(x):
         ("% NEO",pct(x["neo_pct"]),"Participação","level3"),
     ]
     awards=[
-        ("PREMIAÇÃO ATUAL",money(x["base"]),"Já acumulada","primary"),
+        ("PREMIAÇÃO ATUAL",money(x["base"]),"Já acumulada","primary mobile-duplicate"),
         ("PREMIAÇÃO PROJETADA",money(x["comissao_proj"]),"Base projetada","level2"),
         ("BÔNUS NEO PROJETADO",money(x["bonus_neo_proj"]),"Projeção","level3"),
         ("BÔNUS (SE) 100% ADIM",money(x["bonus_adim_proj"]),"Condicional","level3"),
         ("SEMANAIS",money(x["premio_total"]),"Acumulado semanal","level3"),
-        ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total"),
+        ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total mobile-duplicate"),
     ]
     commercial_html=''.join(seller_kpi_card(*item) for item in commercial)
     awards_html=''.join(seller_kpi_card(*item) for item in awards)
+    mobile_primary=[
+        ("VENDAS",x["vendas"],"Produção","primary"),
+        ("PREMIAÇÃO ATUAL",money(x["base"]),"Já acumulada","primary"),
+        ("PROJEÇÃO",x["projecao"],f'Meta {x["meta_individual"]}',"primary mobile-projection"),
+        ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total"),
+    ]
+    mobile_html=''.join(seller_kpi_card(*item) for item in mobile_primary)
     return (
+        f'<div class="seller-mobile-primary">{mobile_html}</div>'
         '<div class="seller-groups">'
         '<div class="seller-group-title">DESEMPENHO COMERCIAL</div>'
         f'<div class="seller-kpi-grid">{commercial_html}</div>'
@@ -313,6 +321,9 @@ CSS="""<style>
 .exec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 14px}.exec-card{background:white;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(15,23,42,.05);min-width:0}.exec-card small{display:block;font-size:.64rem;font-weight:900;letter-spacing:.055em;color:#64748B}.exec-card strong{display:block;font-size:1.8rem;line-height:1.05;margin-top:7px;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.exec-card span{display:block;font-size:.67rem;color:#94A3B8;margin-top:5px}.exec-card.hero{grid-column:span 2;background:linear-gradient(120deg,#0F172A,#172554);border-color:#172554}.exec-card.hero small,.exec-card.hero strong,.exec-card.hero span{color:white}.exec-card.hero strong{font-size:2.35rem}.exec-card.projection{border-top:4px solid #F59E0B}.exec-card.attainment{border-top:4px solid #22C55E}.exec-card.critical{border-top:4px solid #EF4444}.seller-groups{margin-top:12px}.seller-group-title{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:#475569;margin:14px 0 7px}.seller-group-title.award{margin-top:18px}.seller-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.seller-kpi{background:white;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.seller-kpi small{display:block;font-size:.59rem;font-weight:900;color:#64748B;letter-spacing:.035em}.seller-kpi strong{display:block;font-size:1.2rem;color:#0F172A;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.seller-kpi span{display:block;font-size:.63rem;color:#94A3B8;margin-top:4px}.seller-kpi.primary{background:#0F172A;border-color:#0F172A}.seller-kpi.primary small,.seller-kpi.primary strong,.seller-kpi.primary span{color:white}.seller-kpi.primary strong{font-size:1.55rem}.seller-kpi.total{background:linear-gradient(120deg,#0F172A,#172554)}
 @media(max-width:900px){.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.exec-card.hero{grid-column:span 2}.exec-card.hero strong{font-size:2rem}.seller-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rank-inside{grid-template-columns:repeat(2,minmax(0,1fr))}.rank-name{grid-template-columns:1fr}.rank-inside strong{white-space:normal;overflow-wrap:anywhere}.report{font-size:.68rem}}
 @media(max-width:560px){.block-container{padding:.45rem!important}.bi-topbar{border-radius:10px;padding:12px}.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.exec-card{padding:11px 10px;border-radius:11px}.exec-card.hero{grid-column:span 2}.exec-card strong{font-size:1.35rem}.exec-card.hero strong{font-size:1.9rem}.exec-card small{font-size:.56rem}.exec-card span{font-size:.58rem}.seller-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.seller-kpi{padding:10px 9px}.seller-kpi strong{font-size:1.05rem}.seller-kpi.primary strong{font-size:1.3rem}.rank-row{grid-template-columns:34px minmax(0,1fr)!important;padding:6px 2px!important}.rank-pos{font-size:.8rem}.rank-name{padding:9px!important;gap:8px!important}.rank-inside{grid-template-columns:repeat(2,minmax(0,1fr))!important}.rank-inside span{min-width:0}.rank-inside strong{font-size:.86rem!important;white-space:normal!important;overflow-wrap:anywhere}.rank-inside .neo-highlight strong{font-size:1.05rem!important}.rank-seller b{white-space:normal!important}.metric strong{white-space:normal;overflow-wrap:anywhere}.stDownloadButton button{width:100%}}
+
+.seller-mobile-primary{display:none}
+@media(max-width:560px){.seller-mobile-primary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:12px}.seller-kpi-grid .mobile-duplicate{display:none}.seller-mobile-primary .seller-kpi{min-width:0}.seller-mobile-primary .seller-kpi strong{white-space:normal;overflow-wrap:anywhere}.seller-groups{margin-top:8px}}
 
 </style>"""
 
