@@ -38,3 +38,5 @@ jobs:
           git add app.py
           git diff --cached --quiet || git commit -m "Preservar autenticação na navegação do vendedor [skip ci]"
           git push origin HEAD:main
+
+# trigger 2
