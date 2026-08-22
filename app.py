@@ -177,6 +177,85 @@ def performance(media):
 
 def money(value):return f"R$ {value:,.2f}".replace(",","X").replace(".",",").replace("X",".")
 def pct(value):return f"{value:.1%}".replace(".",",")
+FIXED_DASHBOARD_USERS=("Amilton","Sheyla","Joice","Raphael")
+
+def first_name(value):
+    return str(value or "").strip().split()[0] if str(value or "").strip() else ""
+
+def authorized_dashboard_users(cfg):
+    identities={}
+    for name in FIXED_DASHBOARD_USERS:
+        identities.setdefault(normalize_text(first_name(name)),[]).append({"display":name,"full":name,"fixed":True})
+    for seller in cfg.get("vendedores",[]):
+        if not seller.get("ativo",False):continue
+        full=str(seller.get("vendedor","")).strip()
+        first=first_name(full)
+        if not first:continue
+        identities.setdefault(normalize_text(first),[]).append({"display":first,"full":full,"fixed":False})
+    return identities
+
+def authenticate_dashboard_name(cfg,provided_first,provided_full=""):
+    key=normalize_text(provided_first)
+    if not key:return None,"invalid"
+    matches=authorized_dashboard_users(cfg).get(key,[])
+    fixed=[x for x in matches if x["fixed"]]
+    if fixed:return fixed[0]["display"],"ok"
+    if not matches:return None,"invalid"
+    unique={normalize_text(x["full"]):x for x in matches}
+    if len(unique)==1:return next(iter(unique.values()))["display"],"ok"
+    full_key=normalize_text(provided_full)
+    if not full_key:return None,"duplicate"
+    selected=unique.get(full_key)
+    return (selected["display"],"ok") if selected else (None,"invalid")
+
+def validate_xlsx_bytes(data,required_sheet=None):
+    if not data:raise ValueError("Arquivo XLSX vazio.")
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            if archive.testzip() is not None:raise ValueError("Estrutura ZIP do XLSX inválida.")
+            names=set(archive.namelist())
+            for required in ("[Content_Types].xml","xl/workbook.xml","xl/_rels/workbook.xml.rels"):
+                if required not in names:raise ValueError(f"Componente XLSX ausente: {required}")
+            ET.fromstring(archive.read("xl/workbook.xml"))
+        sheets=list(_xlsx_sheets(data))
+        if not sheets:raise ValueError("O XLSX não contém planilhas legíveis.")
+        if required_sheet and required_sheet not in {name for name,_ in sheets}:raise ValueError(f"A aba {required_sheet} não foi encontrada no XLSX.")
+    except (zipfile.BadZipFile,ET.ParseError,KeyError,IndexError,ValueError) as exc:
+        if isinstance(exc,ValueError):raise
+        raise ValueError(f"XLSX inválido: {exc}") from exc
+    return True
+
+def general_report_display(team):
+    display=[]
+    for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):
+        display.append(item|{
+            "media":f'{item["media"]:.2f}',
+            "meta_pct":pct(item["projecao"]/item["meta_individual"] if item["meta_individual"] else 0),
+            "neo_pct_fmt":pct(item["neo_pct"]),
+            "base_fmt":money(item["base"]),
+            "proj_fmt":money(item["comissao_proj"]),
+            "neo_proj_fmt":money(item["bonus_neo_proj"]),
+            "adim_proj_fmt":money(item["bonus_adim_proj"]),
+            "premio_fmt":money(item["premio_total"]),
+            "total_proj_fmt":money(item["total_variavel_proj"])})
+    return display
+
+def render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color):
+    st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
+    cols=[("setor","SETOR"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
+    display=general_report_display(team)
+    st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
+    try:
+        with tempfile.TemporaryDirectory() as folder:
+            general_path=Path(folder)/"Relatorio_Geral_Equipe_Afogados.xlsx"
+            general_sheet=next(s for s in build_sheets(rows,cfg,summary,all_days,elapsed,official) if s.name=="RELATORIO GERAL")
+            write_xlsx(general_path,[general_sheet])
+            general_book=general_path.read_bytes()
+        validate_xlsx_bytes(general_book,"RELATORIO GERAL")
+        st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=False)
+    except Exception as exc:
+        st.error(f"Não foi possível gerar um XLSX válido do Relatório Geral: {exc}")
+
 def manager_password(st):
     try:return str(st.secrets["GESTOR_SENHA"])
     except (KeyError,FileNotFoundError):return os.environ.get("GESTOR_SENHA","")
@@ -332,7 +411,8 @@ def ranking_html(ranking):
         status_emoji,status_message=projection_status_visual(meta_pct,x.get("meta_individual"),x.get("projecao"))
         rows.append(
             f'<div class="rank-row"><div class="rank-pos">{medal}</div>'
-            f'<div class="rank-name" style="background:{color}">'
+            f'<a class="rank-click" href="?seller={html.escape(str(x["vendedor"]),quote=True)}" target="_self">'
+            f'<div class="rank-name" style="background:{color}">' 
             f'<div class="rank-seller"><b>{html.escape(x["vendedor"])}</b><small>{html.escape(x["setor"])}</small></div>'
             f'<div class="rank-inside">'
             f'<span class="main-kpi"><strong>{x["vendas"]}</strong><small>VENDAS</small></span>'
@@ -349,7 +429,7 @@ def ranking_html(ranking):
             f'<span><strong>{money(x["premio_total"])}</strong><small>SEMANAIS</small></span>'
             f'<span class="total-highlight"><strong>{money(x["total_variavel_proj"])}</strong><small>TOTAL VAR. PROJ.</small></span>'
             f'<span class="rank-projection-status"><strong class="rank-status-emoji">{status_emoji}</strong><small>{html.escape(status_message)}</small></span>'
-            f'</div></div></div>'
+            f'</div></div></a></div>'
         )
     return '<div class="rank-card">'+''.join(rows)+'</div>' if rows else '<div class="empty-bi">Nenhum vendedor local ativo para exibir no ranking.</div>'
 
@@ -405,7 +485,42 @@ CSS="""<style>
 [data-testid="stSegmentedControl"] button:hover{background:rgba(255,255,255,.10)!important;color:white!important}
 @media(max-width:720px){[data-testid="stSegmentedControl"]{padding:0 8px 10px;overflow-x:auto}[data-testid="stSegmentedControl"]>div{min-width:max-content}[data-testid="stSegmentedControl"] button{font-size:.58rem!important;padding-left:8px!important;padding-right:8px!important}}
 
+
+.rank-click{display:block;color:inherit!important;text-decoration:none!important;min-width:0}.rank-click:hover .rank-name{filter:brightness(1.03);box-shadow:0 4px 12px rgba(15,23,42,.18);transform:translateY(-1px)}.rank-name{transition:filter .12s ease,box-shadow .12s ease,transform .12s ease}.login-shell{min-height:58vh;display:flex;align-items:center;justify-content:center;padding:32px 12px 10px}.login-card{width:min(520px,100%);background:linear-gradient(120deg,#0F172A,#172554);border-radius:18px;padding:28px 26px;color:white;box-shadow:0 14px 44px rgba(15,23,42,.18);margin-bottom:4px}.login-brand{font-weight:900;font-size:1.35rem;letter-spacing:-.02em}.login-title{font-size:1rem;font-weight:800;margin-top:24px}.login-sub{color:#CBD5E1;font-size:.78rem;margin-top:5px}
+@media(max-width:560px){.login-shell{min-height:36vh;padding:18px 4px 4px}.login-card{padding:22px 18px;border-radius:14px}.login-brand{font-size:1.05rem}.rank-click{width:100%}[data-testid="stDialog"] [role="dialog"]{max-width:calc(100vw - 14px)!important;width:calc(100vw - 14px)!important;max-height:92vh!important}[data-testid="stDialog"] .seller-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}[data-testid="stDialog"] .seller-mobile-primary{display:grid!important}}
+
 </style>"""
+
+def render_login(st,cfg):
+    st.markdown('<div class="login-shell"><div class="login-card"><div class="login-brand">PAINEL COMERCIAL — AFOGADOS</div><div class="login-title">Acesso ao painel</div><div class="login-sub">Informe seu primeiro nome para continuar.</div></div></div>',unsafe_allow_html=True)
+    duplicate=st.session_state.get("login_duplicate_first","")
+    with st.form("dashboard_login",clear_on_submit=False):
+        first=st.text_input("Primeiro nome",value=duplicate or "",placeholder="Digite seu primeiro nome")
+        full=st.text_input("Nome completo",placeholder="Digite seu nome completo",help="Solicitado somente quando existe mais de uma pessoa ativa com o mesmo primeiro nome") if duplicate else ""
+        submitted=st.form_submit_button("ENTRAR",use_container_width=True)
+    if submitted:
+        display,status=authenticate_dashboard_name(cfg,first,full)
+        if status=="duplicate":
+            st.session_state.login_duplicate_first=first.strip()
+            st.rerun()
+        elif status=="ok":
+            st.session_state.dashboard_autenticado=True
+            st.session_state.dashboard_usuario=display
+            st.session_state.pop("login_duplicate_first",None)
+            st.rerun()
+        else:
+            st.error("Usuário não autorizado.")
+
+def open_seller_dialog(st,x):
+    @st.dialog(x["vendedor"],width="large")
+    def _dialog():
+        status,c,_=performance(x["media"])
+        st.markdown(f'<div class="bi-panel" style="border-left:5px solid {c}"><b>{html.escape(x["vendedor"])}</b><br><span style="color:#64748B;font-size:.75rem">{html.escape(x["setor"])} · Performance {status}</span></div>',unsafe_allow_html=True)
+        st.markdown(seller_kpis_html(x),unsafe_allow_html=True)
+        if st.button("FECHAR",key="close_seller_dialog",use_container_width=True):
+            st.session_state.pop("seller_detail",None)
+            st.rerun()
+    _dialog()
 
 def render_management(st,base,current_rows,current_cfg,metadata):
     st.markdown('<div class="section">GESTÃO · ACESSO RESTRITO</div>',unsafe_allow_html=True)
@@ -475,30 +590,47 @@ def render_app():
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     try:rows,cfg,metadata=load_published(base)
     except Exception as exc:st.error(f"A base publicada não pôde ser carregada: {exc}");return
-    areas=["VISÃO GERAL","VENDEDORES","SEMANAL","PREMIAÇÕES","GESTÃO"]
-    if "area" not in st.session_state:st.session_state.area="VISÃO GERAL"
-    st.markdown(
-        '<div class="bi-topbar bi-topbar-nav">'
-        '<div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div>'
-        '</div>',unsafe_allow_html=True
-    )
-    selected_area=st.segmented_control(
-        "Navegação",
-        areas,
-        default=st.session_state.area,
-        key="top_nav_area",
-        label_visibility="collapsed",
-    )
+    if not st.session_state.get("dashboard_autenticado",False):
+        render_login(st,cfg)
+        return
+    areas=["VISÃO GERAL","SEMANAL","PREMIAÇÕES"]
+    if st.session_state.get("area") not in areas+ ["GESTÃO"]:st.session_state.area="VISÃO GERAL"
+    head_main,head_menu=st.columns([18,1])
+    with head_main:
+        st.markdown('<div class="bi-topbar bi-topbar-nav"><div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div></div>',unsafe_allow_html=True)
+    with head_menu:
+        with st.popover("⋮"):
+            st.caption(f'Usuário: {st.session_state.get("dashboard_usuario","")}')
+            if st.button("GESTÃO",use_container_width=True,key="menu_gestao"):
+                st.session_state.area="GESTÃO";st.rerun()
+            if st.button("SAIR",use_container_width=True,key="menu_sair"):
+                for key in ("dashboard_autenticado","dashboard_usuario","seller_detail","gestor_autenticado","login_duplicate_first"):
+                    st.session_state.pop(key,None)
+                st.session_state.area="VISÃO GERAL"
+                st.rerun()
+    if st.session_state.area=="GESTÃO":
+        render_management(st,base,rows,cfg,metadata)
+        return
+    selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
     if selected_area and selected_area != st.session_state.area:
         st.session_state.area=selected_area
         st.rerun()
     area=st.session_state.area
-    if area=="GESTÃO":render_management(st,base,rows,cfg,metadata);return
     try:summary,all_days,elapsed,official=summarize(rows,cfg)
     except Exception as exc:st.error(f"Falha ao processar relatório: {exc}");return
     data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1)); updated=datetime.fromisoformat(metadata["atualizado_em"])
     st.caption(f"Última atualização: {updated:%d/%m/%Y às %H:%M}  •  Dados acumulados até: {data_until:%d/%m/%Y}  •  Competência: {cfg['mes']:02d}/{cfg['ano']}")
     team=regular(summary); total=sum(x["vendas"] for x in summary); projection=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary); color=lambda x:performance(x["media"])[1]
+    requested_seller=st.query_params.get("seller")
+    if requested_seller:
+        st.session_state.seller_detail=requested_seller
+        try:del st.query_params["seller"]
+        except KeyError:pass
+    detail_name=st.session_state.get("seller_detail")
+    if detail_name:
+        detail=next((x for x in team if normalize_text(x["vendedor"])==normalize_text(detail_name)),None)
+        if detail:open_seller_dialog(st,detail)
+        else:st.session_state.pop("seller_detail",None)
     if area=="VISÃO GERAL":
         st.markdown(executive_kpis_html(cfg,total,projection,neo,team),unsafe_allow_html=True)
         st.markdown('<div class="section">Distribuição de performance</div>',unsafe_allow_html=True); counts={k:0 for k in ("Azul","Verde","Amarelo","Vermelho")}
@@ -510,22 +642,7 @@ def render_app():
             name=channel_name(item)
             if name!="ADM" and name in channels:channels[name]+=item["vendas"]
         st.markdown(channel_summary_html(channels,total),unsafe_allow_html=True)
-    elif area=="VENDEDORES":
-        if not team:st.warning("Nenhum vendedor local ativo. Entre em GESTÃO e classifique/ative os vendedores.");return
-        chosen=st.selectbox("SELECIONE O VENDEDOR",[x["vendedor"] for x in team]); x=next(v for v in team if v["vendedor"]==chosen); status,c,tone=performance(x["media"])
-        st.markdown(f'<div class="bi-panel" style="border-left:5px solid {c}"><b>{html.escape(x["vendedor"])}</b><br><span style="color:#64748B;font-size:.75rem">{html.escape(x["setor"])} · Performance {status}</span></div>',unsafe_allow_html=True)
-        st.markdown(seller_kpis_html(x),unsafe_allow_html=True)
-        st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
-        cols=[("setor","SETOR"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]; display=[]
-        for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):display.append(item|{"media":f'{item["media"]:.2f}',"meta_pct":pct(item["projecao"]/item["meta_individual"] if item["meta_individual"] else 0),"neo_pct_fmt":pct(item["neo_pct"]),"base_fmt":money(item["base"]),"proj_fmt":money(item["comissao_proj"]),"neo_proj_fmt":money(item["bonus_neo_proj"]),"adim_proj_fmt":money(item["bonus_adim_proj"]),"premio_fmt":money(item["premio_total"]),"total_proj_fmt":money(item["total_variavel_proj"])})
-        st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
-        try:
-            with tempfile.TemporaryDirectory() as folder:
-                general_path=Path(folder)/"Relatorio_Geral_Equipe_Afogados.xlsx"
-                general_sheet=next(s for s in build_sheets(rows,cfg,summary,all_days,elapsed,official) if s.name=="RELATORIO GERAL")
-                write_xlsx(general_path,[general_sheet]); general_book=general_path.read_bytes()
-            st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        except Exception as exc:st.warning(f"Não foi possível gerar o Relatório Geral agora: {exc}")
+        render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color)
     elif area=="SEMANAL":
         st.markdown('<div class="section">Acompanhamento semanal · segunda a domingo</div>',unsafe_allow_html=True)
         if not team:st.warning("Nenhum vendedor local ativo.");return
