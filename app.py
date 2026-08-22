@@ -163,9 +163,12 @@ def table_html(records,columns,row_color=None,daily=False):
    value=rec.get(key,""); style=""
    if key in ("vendedor","projecao") and row_color:style=f"background:{color};color:white;font-weight:800"
    if daily and isinstance(key,int):
-    if key not in rec["dias_decorridos"]:style="background:#F1F5F9;color:#94A3B8"; value=""
-    elif key in rec["dias_agendados"] and rec["diario"].get(key,0)==0:style="background:#FEE2E2;color:#B91C1C;font-weight:800"; value=0
-    elif rec["diario"].get(key,0)>=3:style="background:#CFFAFE;color:#155E75;font-weight:800"
+    dias_decorridos=rec.get("dias_decorridos",set())
+    dias_agendados=rec.get("dias_agendados",set())
+    diario=rec.get("diario",{})
+    if key not in dias_decorridos:style="background:#F1F5F9;color:#94A3B8"; value=""
+    elif key in dias_agendados and diario.get(key,0)==0:style="background:#FEE2E2;color:#B91C1C;font-weight:800"; value=0
+    elif diario.get(key,0)>=3:style="background:#CFFAFE;color:#155E75;font-weight:800"
    cells.append(f'<td style="{style}">{html.escape(str(value))}</td>')
   body.append(f'<tr>{"".join(cells)}</tr>')
  return f'<div class="table-wrap"><table class="report"><thead><tr>{heads}</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
