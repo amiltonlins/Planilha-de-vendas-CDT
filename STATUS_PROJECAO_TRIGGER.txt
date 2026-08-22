@@ -1,0 +1,1 @@
+Trigger da implementação visual do status da projeção.
