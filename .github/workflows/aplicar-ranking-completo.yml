@@ -1,11 +1,6 @@
 name: Aplicar reorganização executiva BI
 
 on:
-  push:
-    branches:
-      - feat/ranking-completo-vendedores
-    paths:
-      - .github/workflows/aplicar-ranking-completo.yml
   pull_request:
     branches:
       - main
@@ -16,7 +11,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.event_name == 'push' || github.head_ref == 'feat/ranking-completo-vendedores'
+    if: github.head_ref == 'feat/ranking-completo-vendedores'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
