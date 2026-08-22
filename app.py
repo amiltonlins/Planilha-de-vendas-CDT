@@ -397,6 +397,14 @@ CSS="""<style>
 @media(max-width:980px){.bi-topbar-nav{align-items:flex-start;flex-direction:column;gap:12px}.top-nav{justify-content:flex-start;width:100%}.top-nav-item{padding:8px 10px;font-size:.62rem}}
 @media(max-width:560px){.bi-topbar-nav{gap:10px}.top-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.top-nav-item{width:100%;padding:8px 6px;font-size:.58rem}.top-nav-item:last-child{grid-column:span 2}.bi-brand p{font-size:.68rem!important}}
 
+
+/* Navegação nativa: troca apenas a área da aplicação, sem abrir nova página/aba. */
+[data-testid="stSegmentedControl"]{margin-top:-18px;margin-bottom:10px;background:#172554;border-radius:0 0 14px 14px;padding:0 16px 14px}
+[data-testid="stSegmentedControl"] button{color:#CBD5E1!important;border-color:rgba(255,255,255,.16)!important;font-weight:800!important;font-size:.68rem!important}
+[data-testid="stSegmentedControl"] button[aria-pressed="true"]{background:#FFFFFF!important;color:#0F172A!important;border-color:#FFFFFF!important}
+[data-testid="stSegmentedControl"] button:hover{background:rgba(255,255,255,.10)!important;color:white!important}
+@media(max-width:720px){[data-testid="stSegmentedControl"]{padding:0 8px 10px;overflow-x:auto}[data-testid="stSegmentedControl"]>div{min-width:max-content}[data-testid="stSegmentedControl"] button{font-size:.58rem!important;padding-left:8px!important;padding-right:8px!important}}
+
 </style>"""
 
 def render_management(st,base,current_rows,current_cfg,metadata):
@@ -469,20 +477,22 @@ def render_app():
     except Exception as exc:st.error(f"A base publicada não pôde ser carregada: {exc}");return
     areas=["VISÃO GERAL","VENDEDORES","SEMANAL","PREMIAÇÕES","GESTÃO"]
     if "area" not in st.session_state:st.session_state.area="VISÃO GERAL"
-    requested=st.query_params.get("area")
-    if requested in areas:st.session_state.area=requested
-    area=st.session_state.area
-    import urllib.parse
-    nav=''.join(
-        f'<a class="top-nav-item {"active" if item==area else ""}" href="?area={urllib.parse.quote(item)}" target="_self">{html.escape(item)}</a>'
-        for item in areas
-    )
     st.markdown(
         '<div class="bi-topbar bi-topbar-nav">'
         '<div class="bi-brand"><h1>PAINEL COMERCIAL — AFOGADOS</h1><p>Visão executiva de produção, performance, histórico e remuneração variável</p></div>'
-        f'<nav class="top-nav">{nav}</nav>'
         '</div>',unsafe_allow_html=True
     )
+    selected_area=st.segmented_control(
+        "Navegação",
+        areas,
+        default=st.session_state.area,
+        key="top_nav_area",
+        label_visibility="collapsed",
+    )
+    if selected_area and selected_area != st.session_state.area:
+        st.session_state.area=selected_area
+        st.rerun()
+    area=st.session_state.area
     if area=="GESTÃO":render_management(st,base,rows,cfg,metadata);return
     try:summary,all_days,elapsed,official=summarize(rows,cfg)
     except Exception as exc:st.error(f"Falha ao processar relatório: {exc}");return
