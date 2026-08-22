@@ -149,18 +149,19 @@ def summarize(rows, cfg):
     total=sum(len(x) for x in by.values()); official="maior_ou_igual_1000" if total>=cfg["limite_cenario_maior"] else "abaixo_1000"
     result=[]
     for seller in cfg["vendedores"]:
-        if not seller.get("ativo", True): continue
         name=seller["vendedor"]; sales=by[name]; qty=len(sales); selling_days={x["data_venda"] for x in sales}
+        category=seller.get("categoria","Vendedor"); franchise=seller.get("pertence_franquia",True); active=seller.get("ativo",True)
+        local_seller=active and franchise and category.lower() not in ("website","adm","freelance","canal nacional")
         scheduled=workdays(year,month,seller.get("trabalha_sabado",cfg.get("calendario",{}).get("trabalha_sabado",True)),seller.get("trabalha_domingo",False),seller.get("data_inicio"),seller.get("data_desligamento"),seller.get("folgas",[]))
         elapsed=[d for d in scheduled if d<=cutoff]; days_worked=len(elapsed); avg=qty/days_worked if days_worked else 0; projection=round(avg*len(scheduled)) if days_worked else 0; minimum=35 if seller["experiencia"] else 40
         weeks=[sum(a<=x["data_venda"]<=b for x in sales) for a,b in weeks_ranges]
-        prizes=[weekly_prize(x,cfg["premiacao_semanal"]) for x in weeks]
+        prizes=[weekly_prize(x,cfg["premiacao_semanal"]) if local_seller else 0 for x in weeks]
         neo=sum(x["neoenergia"].strip().lower() in ("sim","1","true","neoenergia celpe") for x in sales); neo_pct=neo/qty if qty else 0
-        ruler=cfg["reguas_comissao"][official]; rate=tier_value(qty,ruler) if qty>=minimum else 0; base=qty*rate
+        ruler=cfg["reguas_comissao"][official]; rate=tier_value(qty,ruler) if local_seller and qty>=minimum else 0; base=qty*rate
         adim=all(x["adimplencia_m2"].strip().replace(",",".") in ("1","1.0","100%") for x in sales) if sales else False
         bonus_neo=base*cfg["bonus_neoenergia"]["percentual_bonus"] if neo_pct>=cfg["bonus_neoenergia"]["percentual_minimo"] else 0
         bonus_adim=base*cfg["bonus_adimplencia"]["percentual_bonus"] if adim else 0
-        zero_days=[d for d in elapsed if d not in selling_days]
+        zero_days=[d for d in elapsed if d not in selling_days] if local_seller else []
         current_sequence=0
         for d in reversed(elapsed):
             if d in selling_days: break
@@ -173,10 +174,10 @@ def summarize(rows, cfg):
         next_tier=next((int(x["vendas"]) for x in ruler if int(x["vendas"])>qty),None); next_gain=0
         if next_tier: next_gain=next_tier*tier_value(next_tier,ruler)-base
         daily={d.day:sum(x["data_venda"]==d for x in sales) for d in calendar_days}
-        result.append({"vendedor":name,"setor":seller.get("setor","NÃO INFORMADO"),"categoria":seller.get("categoria","Vendedor"),"experiencia":"Sim" if seller["experiencia"] else "Não","vendas":qty,"dias":days_worked,"dias_previstos":len(scheduled),"media":avg,"projecao":projection,"meta_individual":int(seller["meta_individual"]),"zeros":len(zero_days),"zeros_semana":zeros_week,"sequencia_zeros":current_sequence,"maior_sequencia_zeros":longest,"neo":neo,"neo_pct":neo_pct,"neo_elegivel":neo_pct>=cfg["bonus_neoenergia"]["percentual_minimo"],"adim_elegivel":adim,"semanas":weeks,"premios":prizes,"premio_total":sum(prizes),"minimo":minimum,"taxa":rate,"base":base,"bonus_neo":bonus_neo,"bonus_adim":bonus_adim,"total":base+bonus_neo+bonus_adim+sum(prizes),"proxima":next_tier or "Faixa máxima","faltam_proxima":max(0,(next_tier or qty)-qty),"ganho_proxima":next_gain,"proxima_taxa":tier_value(next_tier,ruler) if next_tier else rate,"proxima_comissao":next_tier*tier_value(next_tier,ruler) if next_tier else base,"diario":daily,"dias_agendados":{d.day for d in scheduled},"dias_decorridos":{d.day for d in elapsed}})
+        result.append({"vendedor":name,"setor":seller.get("setor","NÃO INFORMADO"),"categoria":category,"ativo":active,"pertence_franquia":franchise,"elegivel_individual":local_seller,"experiencia":"Sim" if seller["experiencia"] else "Não","vendas":qty,"dias":days_worked,"dias_previstos":len(scheduled),"media":avg,"projecao":projection,"meta_individual":int(seller["meta_individual"]),"zeros":len(zero_days),"zeros_semana":zeros_week,"sequencia_zeros":current_sequence,"maior_sequencia_zeros":longest,"neo":neo,"neo_pct":neo_pct,"neo_elegivel":local_seller and neo_pct>=cfg["bonus_neoenergia"]["percentual_minimo"],"adim_elegivel":local_seller and adim,"semanas":weeks,"premios":prizes,"premio_total":sum(prizes),"minimo":minimum,"taxa":rate,"base":base,"bonus_neo":bonus_neo if local_seller else 0,"bonus_adim":bonus_adim if local_seller else 0,"total":base+(bonus_neo if local_seller else 0)+(bonus_adim if local_seller else 0)+sum(prizes),"proxima":next_tier or "Faixa máxima","faltam_proxima":max(0,(next_tier or qty)-qty) if local_seller else 0,"ganho_proxima":next_gain if local_seller else 0,"proxima_taxa":tier_value(next_tier,ruler) if next_tier and local_seller else rate,"proxima_comissao":next_tier*tier_value(next_tier,ruler) if next_tier and local_seller else base,"diario":daily,"dias_agendados":{d.day for d in scheduled},"dias_decorridos":{d.day for d in elapsed}})
     enterprise_projection=sum(x["projecao"] for x in result); projected_scenario="maior_ou_igual_1000" if enterprise_projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
     for item in result:
-        projected_ruler=cfg["reguas_comissao"][projected_scenario]; projected_rate=tier_value(item["projecao"],projected_ruler) if item["projecao"]>=item["minimo"] else 0
+        projected_ruler=cfg["reguas_comissao"][projected_scenario]; projected_rate=tier_value(item["projecao"],projected_ruler) if item["elegivel_individual"] and item["projecao"]>=item["minimo"] else 0
         projected_base=item["projecao"]*projected_rate
         projected_neo=projected_base*cfg["bonus_neoenergia"]["percentual_bonus"] if item["neo_elegivel"] else 0
         projected_adim=projected_base*cfg["bonus_adimplencia"]["percentual_bonus"] if item["adim_elegivel"] else 0
@@ -192,7 +193,7 @@ def header(sh, values, row=None): sh.add(values,{i:1 for i in range(1,len(values
 
 
 def build_sheets(rows,cfg,summary,all_days,elapsed,official):
-    sheets=[]; n=len(summary)+4; week_count=max((len(x["semanas"]) for x in summary),default=5)
+    report_summary=[x for x in summary if x.get("elegivel_individual",True)]; sheets=[]; n=len(report_summary)+4; week_count=max((len(x["semanas"]) for x in report_summary),default=5)
     dash=Sheet("DASHBOARD",{1:27,2:18,3:3,4:28,5:18,6:18},freeze=None)
     title(dash,"PAINEL COMERCIAL • AFOGADOS",f"Competência {cfg['mes']:02d}/{cfg['ano']}  |  Atualizado até dia {cfg['dia_referencia']}","F")
     dash.add([]); dash.add(["VISÃO GERAL"],{1:9}); dash.merge("A4:F4")
@@ -201,7 +202,8 @@ def build_sheets(rows,cfg,summary,all_days,elapsed,official):
     kpis=[("VENDAS TOTAIS",total,11),("META DO MÊS",cfg["meta_empresa"],12),("% DA META",total/cfg["meta_empresa"],13),("PROJEÇÃO",proj,12),("FALTAM",max(0,cfg["meta_empresa"]-total),14),("VENDAS NEO",neo,11),("% NEO",neo/total if total else 0,13),("DIAS ZERADOS",sum(x["zeros"] for x in summary),14),("WEBSITE",website,11),("ADM",adm,11),("FREELANCE",free,11),("COMISSÃO EQUIPE",sum(x["total"] for x in summary),15),("COMISSÃO PROJETADA",sum(x["comissao_proj"] for x in summary),15),("PRÊMIOS ACUMULADOS",sum(x["premio_total"] for x in summary),15)]
     for i in range(0,len(kpis),2):
         a=kpis[i]; b=kpis[i+1] if i+1<len(kpis) else ("","",10); dash.add([a[0],a[1],None,b[0],b[1]],{1:10,2:a[2],4:10,5:b[2]},24)
-    dash.add([]); dash.add(["VISÃO INDIVIDUAL",None,None,"SELECIONE O VENDEDOR",summary[0]["vendedor"]],{1:9,4:10,5:12},24); dash.merge(f"A{len(dash.rows)}:B{len(dash.rows)}"); selector=f"E{len(dash.rows)}"; dash.validate_list(selector, '"' + ','.join(x['vendedor'] for x in summary) + '"')
+    first_seller=report_summary[0]["vendedor"] if report_summary else "Sem vendedor ativo"; dash.add([]); dash.add(["VISÃO INDIVIDUAL",None,None,"SELECIONE O VENDEDOR",first_seller],{1:9,4:10,5:12},24); dash.merge(f"A{len(dash.rows)}:B{len(dash.rows)}"); selector=f"E{len(dash.rows)}"
+    if report_summary: dash.validate_list(selector, '"' + ','.join(x['vendedor'] for x in report_summary) + '"')
     tail=12+2*week_count
     metrics=[("Total de vendas",5), ("Média diária",7),("Projeção mensal",8),("Dias zerados",9),("Vendas Neoenergia",10),("% Neoenergia",11),*[(f"Semana {i+1}",12+i) for i in range(week_count)],*[(f"Prêmio S{i+1}",12+week_count+i) for i in range(week_count)],("Prêmio acumulado",tail),("Comissão base",tail+3),("Bônus Neoenergia",tail+4),("Bônus adimplência",tail+5),("Comissão total",tail+6),("Comissão projetada",tail+7),("Próxima faixa",tail+8),("Faltam próxima faixa",tail+9),("Ganho adicional",tail+10)]
     for i,(label,colnum) in enumerate(metrics):
@@ -215,16 +217,16 @@ def build_sheets(rows,cfg,summary,all_days,elapsed,official):
     title(general,"RELATÓRIO GERAL","Produção, projeção e remuneração por vendedor",general_end)
     general.add([]); headers=["Vendedor","Setor","Categoria","Experiência","Vendas","Dias trabalhados","Média/dia","Projeção","Dias zerados","Neo","% Neo",*[f"S{i}" for i in range(1,week_count+1)],*[f"Prêmio S{i}" for i in range(1,week_count+1)],"Prêmios","Mínimo","R$/venda","Comissão base","Bônus Neo","Bônus adimpl.","Total acumulado","Comissão projetada","Próxima faixa","Faltam próxima","Ganho adicional","Meta individual"]
     header(general,headers)
-    for x in summary: general.add([x["vendedor"],x["setor"],x["categoria"],x["experiencia"],x["vendas"],x["dias"],x["media"],x["projecao"],x["zeros"],x["neo"],x["neo_pct"],*x["semanas"],*x["premios"],x["premio_total"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"],x["meta_individual"]],{7:3,11:4,**{i:5 for i in range(17,23)},25:5,26:5,27:5,28:5,29:5,32:5})
+    for x in report_summary: general.add([x["vendedor"],x["setor"],x["categoria"],x["experiencia"],x["vendas"],x["dias"],x["media"],x["projecao"],x["zeros"],x["neo"],x["neo_pct"],*x["semanas"],*x["premios"],x["premio_total"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"],x["meta_individual"]],{7:3,11:4,**{i:5 for i in range(17,23)},25:5,26:5,27:5,28:5,29:5,32:5})
     general.color_scale(f"E5:E{n}"); general.performance_scale(f"A5:A{n} H5:H{n}",5,target_col=general_end); sheets.append(general)
 
     weekly_end=column(2*week_count+7); weekly=Sheet("SEMANAL",{1:24,**{i:15 for i in range(2,2*week_count+8)}},freeze="A5",autofilter=f"A4:{weekly_end}{n}"); title(weekly,"ACOMPANHAMENTO SEMANAL","Semanas automáticas de segunda-feira a domingo",weekly_end); weekly.add([]); header(weekly,["Vendedor",*[f"Vendas S{i}" for i in range(1,week_count+1)],*[f"Prêmio S{i}" for i in range(1,week_count+1)],"Total prêmios","Melhor semana","Pior semana","Média semanal","Semana atual","Evolução"])
     current=min(week_count,((date(cfg["ano"],cfg["mes"],cfg["dia_referencia"])-date(cfg["ano"],cfg["mes"],1)).days+date(cfg["ano"],cfg["mes"],1).weekday())//7+1)
-    for x in summary: weekly.add([x["vendedor"],*x["semanas"],*x["premios"],x["premio_total"],max(x["semanas"]),min(x["semanas"]),sum(x["semanas"])/week_count,current,x["semanas"][current-1]-x["semanas"][max(0,current-2)]],{i:5 for i in range(2+week_count,3+2*week_count)})
+    for x in report_summary: weekly.add([x["vendedor"],*x["semanas"],*x["premios"],x["premio_total"],max(x["semanas"]),min(x["semanas"]),sum(x["semanas"])/week_count,current,x["semanas"][current-1]-x["semanas"][max(0,current-2)]],{i:5 for i in range(2+week_count,3+2*week_count)})
     weekly.color_scale(f"B5:{column(week_count+1)}{n}"); sheets.append(weekly)
 
     comm=Sheet("COMISSOES",{1:24,**{i:18 for i in range(2,14)}},freeze="A5",autofilter=f"A4:M{n}"); title(comm,"COMISSÕES E REMUNERAÇÃO",f"Cenário oficial: {'empresa >= 1.000' if official=='maior_ou_igual_1000' else 'empresa < 1.000'}","M"); comm.add([]); header(comm,["Vendedor","Vendas","Mínimo","R$/venda","Base","Bônus Neo","Bônus adimpl.","Prêmios","Total","Projetada","Próxima faixa","Faltam","Ganho adicional"])
-    for x in summary: comm.add([x["vendedor"],x["vendas"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["premio_total"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"]],{i:5 for i in range(4,11)}|{13:5})
+    for x in report_summary: comm.add([x["vendedor"],x["vendas"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["premio_total"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"]],{i:5 for i in range(4,11)}|{13:5})
     comm.color_scale(f"I5:I{n}"); sheets.append(comm)
 
     conf=Sheet("CONFIGURACOES",{1:30,2:22,3:52},freeze="A5"); title(conf,"CONFIGURAÇÕES","Valores carregados de config.json; altere o JSON e gere novamente","C"); conf.add([]); header(conf,["Parâmetro","Valor","Observação"])

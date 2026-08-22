@@ -123,7 +123,9 @@
       "trabalha_domingo": false,
       "data_inicio": "2026-01-01",
       "data_desligamento": "",
-      "folgas": []
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
     },
     {
       "vendedor": "Bruno Lima",
@@ -136,7 +138,9 @@
       "trabalha_domingo": false,
       "data_inicio": "2026-01-01",
       "data_desligamento": "",
-      "folgas": []
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
     },
     {
       "vendedor": "Carla Souza",
@@ -149,7 +153,9 @@
       "trabalha_domingo": false,
       "data_inicio": "2026-01-01",
       "data_desligamento": "",
-      "folgas": []
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
     },
     {
       "vendedor": "Canal Website",
@@ -162,7 +168,9 @@
       "trabalha_domingo": false,
       "data_inicio": "2026-01-01",
       "data_desligamento": "",
-      "folgas": []
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
     },
     {
       "vendedor": "Equipe ADM",
@@ -175,7 +183,9 @@
       "trabalha_domingo": false,
       "data_inicio": "2026-01-01",
       "data_desligamento": "",
-      "folgas": []
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
     },
     {
       "vendedor": "Diego Freela",
@@ -188,7 +198,9 @@
       "trabalha_domingo": false,
       "data_inicio": "2026-01-01",
       "data_desligamento": "",
-      "folgas": []
+      "folgas": [],
+      "pertence_franquia": true,
+      "classificado": true
     }
   ]
 }
