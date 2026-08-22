@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx
+from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx, month_weeks
 
 NS={"m":"http://schemas.openxmlformats.org/spreadsheetml/2006/main","r":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 PUBLISHED_PATH=Path(os.environ.get("PAINEL_DATA_PATH",ROOT/"data"/"dados_publicados.json"))
@@ -881,7 +881,87 @@ CSS="""<style>
 .weekly-rank-list{display:grid;gap:7px;margin:8px 0 12px}.weekly-rank-card{display:grid;grid-template-columns:42px minmax(160px,1fr) 120px 160px;align-items:center;gap:10px;background:white;border:1px solid var(--line);border-radius:11px;padding:10px 13px;box-shadow:0 2px 8px rgba(15,23,42,.035)}.weekly-rank-pos{font-weight:900;color:#475569;text-align:center}.weekly-rank-name{font-size:.78rem;font-weight:900;color:#0F172A;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.weekly-rank-sales,.weekly-rank-award{display:flex;flex-direction:column;align-items:flex-end}.weekly-rank-sales strong{font-size:1.25rem;color:#0F172A}.weekly-rank-award strong{font-size:1rem;color:#0F172A}.weekly-rank-sales span,.weekly-rank-award span{font-size:.52rem;font-weight:850;color:#64748B;margin-top:2px}.weekly-history{background:white;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0 14px}.weekly-history-name{font-size:.82rem;font-weight:900;color:#0F172A;margin-bottom:8px}.weekly-history-row,.weekly-history-total{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #EEF2F7}.weekly-history-row span,.weekly-history-total span{font-size:.6rem;font-weight:850;color:#64748B}.weekly-history-row strong,.weekly-history-total strong{font-size:.76rem;color:#0F172A}.weekly-history-row b,.weekly-history-total b{text-align:right;font-size:.76rem;color:#0F172A}.weekly-history-total{background:#F8FAFC;margin:5px -6px -4px;padding:10px 6px;border-radius:8px}.weekly-desktop-table{overflow:auto;border:1px solid var(--line);border-radius:12px;background:white;margin-top:12px}.weekly-desktop-table table{border-collapse:collapse;width:100%;white-space:nowrap;font-size:.68rem}.weekly-desktop-table th{background:#0F172A;color:white;padding:8px;font-size:.6rem}.weekly-desktop-table td{padding:8px;border-right:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;text-align:center}.weekly-desktop-table td strong{display:block;font-size:.72rem}.weekly-desktop-table td small{font-size:.5rem;color:#94A3B8}.weekly-desktop-table .weekly-name{text-align:left;font-weight:850;position:sticky;left:0;background:white;z-index:1}
 @media(max-width:700px){.weekly-rank-list{gap:5px}.weekly-rank-card{grid-template-columns:28px minmax(0,1fr) 74px 104px;gap:5px;padding:7px 8px;border-radius:9px}.weekly-rank-pos{font-size:.68rem}.weekly-rank-name{font-size:.72rem}.weekly-rank-sales strong{font-size:1.06rem}.weekly-rank-award strong{font-size:.76rem}.weekly-rank-sales span,.weekly-rank-award span{font-size:.43rem}.weekly-history{padding:10px}.weekly-history-row,.weekly-history-total{grid-template-columns:.8fr 1fr 1fr;gap:6px;padding:7px 0}.weekly-history-row span,.weekly-history-total span{font-size:.52rem}.weekly-history-row strong,.weekly-history-total strong,.weekly-history-row b,.weekly-history-total b{font-size:.68rem}.weekly-desktop-table{display:none}}
 
+.weekly-game-list{display:grid;gap:7px;margin:9px 0 12px}.weekly-game-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 8px rgba(15,23,42,.035)}.weekly-game-head{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:7px}.weekly-game-head b{font-size:.78rem;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.weekly-pos{font-size:.72rem;font-weight:950;color:#64748B}.weekly-money-emoji{font-size:1rem;white-space:nowrap;letter-spacing:-1px}.weekly-game-main{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}.weekly-game-main>div{display:flex;align-items:baseline;gap:6px;background:#F8FAFC;border-radius:8px;padding:6px 8px}.weekly-game-main strong{font-size:1.28rem;line-height:1;color:#0F172A;font-weight:950}.weekly-game-main small{font-size:.52rem;color:#64748B;font-weight:900}.weekly-prize strong{font-size:1.04rem}.weekly-target{margin-top:6px;padding:5px 8px;border-radius:7px;background:#FFF7ED;color:#9A3412;font-size:.64rem;font-weight:750}.weekly-target.max{background:#ECFDF5;color:#166534}.weekly-management-table{overflow:auto;max-height:470px;border:1px solid var(--line);border-radius:10px;background:#fff}.weekly-management-table table{border-collapse:collapse;width:100%;white-space:nowrap;font-size:.68rem}.weekly-management-table th{position:sticky;top:0;background:#0F172A;color:#fff;padding:7px 8px;font-size:.60rem;z-index:1}.weekly-management-table td{padding:6px 8px;border-bottom:1px solid #EEF2F7;border-right:1px solid #EEF2F7;text-align:center}.weekly-management-table td:first-child{text-align:left;font-weight:800;color:#334155}@media(max-width:560px){.weekly-game-list{gap:5px}.weekly-game-card{padding:7px 8px;border-radius:10px}.weekly-game-head{grid-template-columns:27px minmax(0,1fr) auto;gap:5px}.weekly-game-head b{font-size:.72rem}.weekly-pos{font-size:.64rem}.weekly-money-emoji{font-size:.84rem}.weekly-game-main{gap:5px;margin-top:4px}.weekly-game-main>div{padding:5px 6px}.weekly-game-main strong{font-size:1.12rem}.weekly-prize strong{font-size:.94rem}.weekly-game-main small{font-size:.46rem}.weekly-target{font-size:.57rem;margin-top:4px;padding:4px 6px}}
+
 </style>"""
+
+
+def weekly_current_index(cfg,max_weeks,today=None):
+    """Índice visual da semana atual sem alterar a regra de cálculo das semanas."""
+    today=today or date.today()
+    ranges=month_weeks(int(cfg["ano"]),int(cfg["mes"]))[:max_weeks]
+    if not ranges:return 0
+    if today.year==int(cfg["ano"]) and today.month==int(cfg["mes"]):
+        return next((i for i,(a,b) in enumerate(ranges) if a<=today<=b),max_weeks-1)
+    # Competência histórica/futura: usa a data de referência apenas para escolher a aba,
+    # sem interferir em nenhum cálculo de vendas ou premiação.
+    ref_day=max(1,min(int(cfg.get("dia_referencia",1) or 1),ranges[-1][1].day))
+    ref=date(int(cfg["ano"]),int(cfg["mes"]),ref_day)
+    return next((i for i,(a,b) in enumerate(ranges) if a<=ref<=b),max_weeks-1)
+
+def weekly_tiers(cfg):
+    return sorted(cfg.get("premiacao_semanal",[]),key=lambda x:int(x.get("vendas",0)))
+
+def weekly_game_level(sales,cfg):
+    tiers=weekly_tiers(cfg)
+    conquered=[i for i,t in enumerate(tiers) if sales>=int(t.get("vendas",0)) and float(t.get("premio",0) or 0)>0]
+    if not conquered:return 0
+    idx=conquered[-1]
+    if len(tiers)<=1:return 1
+    # Escala proporcional 1..6; primeira faixa=1 e maior faixa=6.
+    return max(1,min(6,1+int(idx*5/(len(tiers)-1))))
+
+def weekly_next_goal(sales,cfg):
+    tiers=weekly_tiers(cfg)
+    nxt=next((t for t in tiers if int(t.get("vendas",0))>sales),None)
+    if not nxt:return None
+    target=int(nxt.get("vendas",0)); prize=float(nxt.get("premio",0) or 0)
+    return {"target":target,"missing":max(0,target-sales),"prize":prize}
+
+def weekly_week_labels(cfg,max_weeks,current_index):
+    labels=[]
+    for i in range(max_weeks):
+        if i<current_index: labels.append(f"✓ SEMANA {i+1}")
+        elif i==current_index: labels.append(f"● SEMANA {i+1} — ATUAL")
+        else: labels.append(f"SEMANA {i+1}")
+    return labels
+
+def weekly_rank_gamified_html(team,week_index,cfg,is_current):
+    ranked=sorted(team,key=lambda x:((x.get("semanas",[])[week_index] if week_index<len(x.get("semanas",[])) else 0),(x.get("premios",[])[week_index] if week_index<len(x.get("premios",[])) else 0)),reverse=True)
+    rows=[]
+    for pos,x in enumerate(ranked,1):
+        sales=int(x.get("semanas",[])[week_index] if week_index<len(x.get("semanas",[])) else 0)
+        prize=float(x.get("premios",[])[week_index] if week_index<len(x.get("premios",[])) else 0)
+        level=weekly_game_level(sales,cfg) if prize>0 else 0
+        emojis='🤑'*level
+        target=''
+        if is_current:
+            nxt=weekly_next_goal(sales,cfg)
+            if nxt:
+                target=f'<div class="weekly-target">🎯 Faltam <b>{nxt["missing"]}</b> vendas para <b>{money(nxt["prize"])}</b></div>'
+            else:
+                target='<div class="weekly-target max">🏆 Maior premiação atingida</div>'
+        rows.append(
+            '<div class="weekly-game-card">'
+            f'<div class="weekly-game-head"><span class="weekly-pos">{pos}º</span><b>{html.escape(str(x.get("vendedor","")))}</b><span class="weekly-money-emoji">{emojis}</span></div>'
+            f'<div class="weekly-game-main"><div><strong>{sales}</strong><small>VENDAS</small></div><div class="weekly-prize"><strong>{money(prize)}</strong><small>SEMANAL</small></div></div>'
+            f'{target}</div>'
+        )
+    return '<div class="weekly-game-list">'+''.join(rows)+'</div>'
+
+def weekly_management_table_html(team,max_weeks):
+    heads=['VENDEDOR']
+    for i in range(max_weeks):heads += [f'S{i+1} VENDAS',f'S{i+1} VALOR']
+    rows=[]
+    for x in sorted(team,key=lambda z:normalize_text(z.get("vendedor",""))):
+        cells=[html.escape(str(x.get("vendedor","")))]
+        for i in range(max_weeks):
+            qty=x.get("semanas",[])[i] if i<len(x.get("semanas",[])) else 0
+            prize=x.get("premios",[])[i] if i<len(x.get("premios",[])) else 0
+            cells += [str(qty),money(prize)]
+        rows.append('<tr>'+''.join(f'<td>{c}</td>' for c in cells)+'</tr>')
+    return '<div class="weekly-management-table"><table><thead><tr>'+''.join(f'<th>{h}</th>' for h in heads)+'</tr></thead><tbody>'+''.join(rows)+'</tbody></table></div>'
+
 
 def render_login(st,cfg):
     st.markdown('<div class="login-shell"><div class="login-card"><div class="login-brand">PAINEL COMERCIAL — AFOGADOS</div><div class="login-title">Acesso ao painel</div><div class="login-sub">Informe seu primeiro e segundo nome para continuar.</div></div></div>',unsafe_allow_html=True)
@@ -994,6 +1074,25 @@ def render_management(st,base,current_rows,current_cfg,metadata):
         st.download_button("BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)",general_book,"Relatorio_Geral_Equipe_Afogados.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,key="gestao_download_relatorio_geral")
     except Exception as exc:
         st.error(f"Não foi possível gerar o Relatório Geral em Excel: {exc}")
+
+    st.markdown("#### ACOMPANHAMENTO SEMANAL")
+    st.caption(f'Competência: {int(cfg["mes"]):02d}/{cfg["ano"]} · visão analítica gerencial das mesmas semanas e premiações usadas no ranking.')
+    try:
+        if 'management_summary' not in locals():
+            management_summary,management_days,management_elapsed,management_official=summarize(rows,cfg)
+            apply_team_labels(management_summary,cfg)
+            management_team=regular(management_summary)
+        management_max_weeks=max((len(x.get("semanas",[])) for x in management_team),default=0)
+        if management_max_weeks:
+            st.markdown(weekly_management_table_html(management_team,management_max_weeks),unsafe_allow_html=True)
+            management_sellers=[x["vendedor"] for x in sorted(management_team,key=lambda z:normalize_text(z["vendedor"]))]
+            chosen=st.selectbox("Histórico semanal individual",["SELECIONE UM VENDEDOR"]+management_sellers,key="gestao_weekly_seller")
+            if chosen!="SELECIONE UM VENDEDOR":
+                selected=next((x for x in management_team if x["vendedor"]==chosen),None)
+                if selected:st.markdown(weekly_seller_history_html(selected),unsafe_allow_html=True)
+        else:st.caption("Sem dados semanais nesta competência.")
+    except Exception as exc:
+        st.error(f"Não foi possível montar o acompanhamento semanal: {exc}")
 
     st.markdown("#### CONFERÊNCIA DA IMPORTAÇÃO")
     audit=[]
@@ -1132,19 +1231,23 @@ def render_app():
         st.markdown(production_channel_dashboard_html(channels,total,summary,cfg,data_until,updated),unsafe_allow_html=True)
         render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color)
     elif area=="SEMANAL":
-        st.markdown('<div class="section">Acompanhamento semanal · segunda a domingo</div>',unsafe_allow_html=True)
+        st.markdown('<div class="section">Acompanhamento semanal</div>',unsafe_allow_html=True)
         if not team:st.warning("Nenhum vendedor local ativo.");return
         max_weeks=max(len(x.get("semanas",[])) for x in team)
-        week_labels=[f"SEMANA {i+1}" for i in range(max_weeks)]
-        selected_week=st.segmented_control("Semana",week_labels,default=week_labels[0],key="weekly_week_selector",label_visibility="collapsed") or week_labels[0]
+        current_index=weekly_current_index(cfg,max_weeks)
+        week_labels=weekly_week_labels(cfg,max_weeks,current_index)
+        selector_key=f'weekly_week_selector_gamified_{cfg["ano"]}_{cfg["mes"]}_{current_index}'
+        selected_week=st.segmented_control("Semana",week_labels,default=week_labels[current_index],key=selector_key,label_visibility="collapsed") or week_labels[current_index]
         week_index=week_labels.index(selected_week)
-        st.markdown(weekly_rank_html(team,week_index),unsafe_allow_html=True)
-        seller_options=[x["vendedor"] for x in sorted(team,key=lambda z:normalize_text(z["vendedor"]))]
-        selected_seller=st.selectbox("Ver histórico semanal do vendedor",["SELECIONE UM VENDEDOR"]+seller_options,key="weekly_seller_history")
-        if selected_seller!="SELECIONE UM VENDEDOR":
-            selected=next((x for x in team if x["vendedor"]==selected_seller),None)
-            if selected:st.markdown(weekly_seller_history_html(selected),unsafe_allow_html=True)
-        st.markdown(weekly_desktop_table(team,max_weeks),unsafe_allow_html=True)
+        is_current=(week_index==current_index)
+        if week_index<current_index:
+            st.caption(f'Semana {week_index+1} encerrada · histórico final')
+        elif is_current:
+            st.caption(f'Semana {week_index+1} atual · ranking em andamento')
+        else:
+            st.caption(f'Semana {week_index+1} · período futuro da competência')
+        st.markdown('<div class="section">Ranking da semana</div>',unsafe_allow_html=True)
+        st.markdown(weekly_rank_gamified_html(team,week_index,cfg,is_current),unsafe_allow_html=True)
     elif area=="PREMIAÇÕES":
         st.markdown('<div class="section">Premiações e cenários</div>',unsafe_allow_html=True); projected="maior_ou_igual_1000" if projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
         cards(st,[("CENÁRIO ATUAL","≥ 1.000" if official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{projection} vendas"),("PREMIAÇÃO BASE ATUAL",money(sum(x["base"] for x in team)),"cyan",""),("PREMIAÇÃO PROJETADA",money(sum(x["comissao_proj"] for x in team)),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(sum(x["bonus_neo_proj"] for x in team)),"green",""),("BÔNUS (SE) 100% ADIM",money(sum(x["bonus_adim_proj"] for x in team)),"green",""),("SEMANAIS ACUMULADOS",money(sum(x["premio_total"] for x in team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in team)),"yellow","")])
