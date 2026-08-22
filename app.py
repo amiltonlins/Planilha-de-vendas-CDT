@@ -539,6 +539,47 @@ def production_channel_dashboard_html(channels,total,summary,cfg,data_until,upda
     internal=team_performance_metrics(summary,"Equipe Interna",internal_goal); external=team_performance_metrics(summary,"Equipe Externa",external_goal)
     return f'''<div class="pc-dashboard">{channel_summary_html(channels,total)}<div class="pc-team-grid">{team_performance_card_html("Equipe Interna",internal_goal,internal,"internal")}{team_performance_card_html("Equipe Externa",external_goal,external,"external")}</div></div>'''
 
+
+def weekly_rank_html(team,week_index):
+    ranked=[]
+    for x in team:
+        sales=x["semanas"][week_index] if week_index < len(x.get("semanas",[])) else 0
+        award=x["premios"][week_index] if week_index < len(x.get("premios",[])) else 0
+        ranked.append((x,sales,award))
+    ranked.sort(key=lambda item:(item[1],item[2]),reverse=True)
+    cards=[]
+    for pos,(x,sales,award) in enumerate(ranked,1):
+        cards.append(
+            f'<div class="weekly-rank-card"><div class="weekly-rank-pos">{pos}º</div>'
+            f'<div class="weekly-rank-name">{html.escape(str(x["vendedor"]))}</div>'
+            f'<div class="weekly-rank-sales"><strong>{sales}</strong><span>VENDAS</span></div>'
+            f'<div class="weekly-rank-award"><strong>{money(award)}</strong><span>SEMANAL</span></div></div>'
+        )
+    return '<div class="weekly-rank-list">'+''.join(cards)+'</div>'
+
+def weekly_seller_history_html(x):
+    rows=[]
+    for i,sales in enumerate(x.get("semanas",[])):
+        award=x["premios"][i] if i < len(x.get("premios",[])) else 0
+        rows.append(f'<div class="weekly-history-row"><span>SEMANA {i+1}</span><strong>{sales} vendas</strong><b>{money(award)}</b></div>')
+    return (f'<div class="weekly-history"><div class="weekly-history-name">{html.escape(str(x["vendedor"]))}</div>'
+            +''.join(rows)+f'<div class="weekly-history-total"><span>TOTAL NO MÊS</span><strong>{x.get("vendas",0)} vendas</strong><b>{money(x.get("premio_total",0))}</b></div></div>')
+
+def weekly_desktop_table(team,max_weeks):
+    rows=[]
+    for x in sorted(team,key=lambda z:(sum(z.get("semanas",[])),z.get("premio_total",0)),reverse=True):
+        cells=[f'<td class="weekly-name">{html.escape(str(x["vendedor"]))}</td>']
+        for i in range(max_weeks):
+            sales=x["semanas"][i] if i < len(x.get("semanas",[])) else 0
+            award=x["premios"][i] if i < len(x.get("premios",[])) else 0
+            cells.append(f'<td><strong>{sales}</strong><small>vendas</small></td><td><strong>{money(award)}</strong><small>valor</small></td>')
+        cells.append(f'<td><strong>{money(x.get("premio_total",0))}</strong></td>')
+        rows.append('<tr>'+''.join(cells)+'</tr>')
+    heads=['VENDEDOR']
+    for i in range(max_weeks):heads.extend([f'S{i+1} VENDAS',f'S{i+1} VALOR'])
+    heads.append('SEMANAIS ACUMULADOS')
+    return '<div class="weekly-desktop-table"><table><thead><tr>'+''.join(f'<th>{h}</th>' for h in heads)+'</tr></thead><tbody>'+''.join(rows)+'</tbody></table></div>'
+
 def projection_status_visual(projected_ratio, meta_value=None, projection_value=None):
     try:
         if meta_value in (None, 0, "") or projection_value in (None, ""):
@@ -837,6 +878,9 @@ CSS="""<style>
 
 
 .pc-dashboard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(15,23,42,.04);font-family:inherit}.pc-channel-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}.pc-channel-card{background:#F8FAFC;border:1px solid var(--line);border-radius:11px;padding:12px 14px;min-width:0}.pc-channel-content{min-width:0}.pc-channel-content span,.pc-team-title,.pc-team-stats span,.pc-team-sales span,.pc-team-progress span,.pc-team-goal span{font-family:inherit;font-size:.68rem;font-weight:850;letter-spacing:.035em;color:#64748B}.pc-channel-content strong{display:block;font-family:inherit;font-size:1.75rem;line-height:1;color:#0F172A;margin:7px 0 4px;font-weight:950}.pc-channel-content small{font-family:inherit;font-size:.66rem;color:#94A3B8}.pc-channel-track{height:5px;background:#E5E7EB;border-radius:99px;margin-top:8px;overflow:hidden}.pc-channel-track i{display:block;height:100%;border-radius:99px;background:#4F6FE8}.pc-channel-card.green .pc-channel-track i{background:#2E9D55}.pc-team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pc-team-card{border:1px solid var(--line);border-top:4px solid #6D4BC3;border-radius:12px;padding:13px 14px;background:#fff;min-width:0;box-shadow:0 2px 10px rgba(15,23,42,.035)}.pc-team-card.external{border-top-color:#24974B}.pc-team-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.pc-team-title{display:flex;align-items:center;color:#475569}.pc-team-title b{font-size:.74rem;font-weight:900}.pc-team-goal{display:flex;align-items:center;gap:8px;background:#F1F5F9;border:1px solid #CBD5E1;border-radius:10px;padding:7px 10px;white-space:nowrap}.pc-team-goal span{font-size:.64rem}.pc-team-goal b{font-family:inherit;font-size:1.45rem;line-height:1;color:#0F172A;font-weight:950}.pc-team-main{display:grid;grid-template-columns:1fr .75fr;align-items:center;gap:16px;padding:14px 2px 13px;border-bottom:1px solid #E8EDF4}.pc-team-sales{display:flex;align-items:flex-end;gap:8px}.pc-team-sales strong{font-family:inherit;font-size:2.3rem;line-height:.95;color:#0F172A;font-weight:950}.pc-team-sales span{padding-bottom:4px}.pc-team-progress{text-align:right}.pc-team-progress b{font-family:inherit;font-size:1.05rem;color:#0F172A;font-weight:900}.pc-team-progress span{margin-left:4px;font-size:.62rem}.pc-team-track{height:6px;background:#E8EBF0;border-radius:99px;margin-top:8px;overflow:hidden}.pc-team-track i{display:block;height:100%;background:#6D4BC3;border-radius:99px}.pc-team-card.external .pc-team-track i{background:#24974B}.pc-team-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-top:12px}.pc-team-stats>div{text-align:center;padding:0 7px;border-right:1px solid #E2E8F0;min-width:0}.pc-team-stats>div:last-child{border-right:0}.pc-team-stats span{display:block;white-space:normal;font-size:.60rem}.pc-team-stats strong{display:block;font-family:inherit;font-size:1.15rem;color:#0F172A;margin:6px 0 0;font-weight:900}@media(max-width:700px){.pc-dashboard{padding:10px}.pc-channel-row{grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}.pc-channel-card{padding:10px}.pc-channel-content span,.pc-team-title,.pc-team-stats span,.pc-team-sales span,.pc-team-progress span,.pc-team-goal span{font-size:.58rem}.pc-channel-content strong{font-size:1.42rem}.pc-team-grid{grid-template-columns:1fr;gap:8px}.pc-team-card{padding:10px}.pc-team-title b{font-size:.68rem}.pc-team-goal{padding:6px 8px}.pc-team-goal b{font-size:1.28rem}.pc-team-sales strong{font-size:2rem}.pc-team-progress b{font-size:.96rem}.pc-team-stats strong{font-size:1.03rem}}@media(max-width:360px){.pc-team-stats{grid-template-columns:repeat(2,1fr);row-gap:10px}.pc-team-stats>div:nth-child(2){border-right:0}.pc-team-goal b{font-size:1.18rem}}
+.weekly-rank-list{display:grid;gap:7px;margin:8px 0 12px}.weekly-rank-card{display:grid;grid-template-columns:42px minmax(160px,1fr) 120px 160px;align-items:center;gap:10px;background:white;border:1px solid var(--line);border-radius:11px;padding:10px 13px;box-shadow:0 2px 8px rgba(15,23,42,.035)}.weekly-rank-pos{font-weight:900;color:#475569;text-align:center}.weekly-rank-name{font-size:.78rem;font-weight:900;color:#0F172A;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.weekly-rank-sales,.weekly-rank-award{display:flex;flex-direction:column;align-items:flex-end}.weekly-rank-sales strong{font-size:1.25rem;color:#0F172A}.weekly-rank-award strong{font-size:1rem;color:#0F172A}.weekly-rank-sales span,.weekly-rank-award span{font-size:.52rem;font-weight:850;color:#64748B;margin-top:2px}.weekly-history{background:white;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0 14px}.weekly-history-name{font-size:.82rem;font-weight:900;color:#0F172A;margin-bottom:8px}.weekly-history-row,.weekly-history-total{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #EEF2F7}.weekly-history-row span,.weekly-history-total span{font-size:.6rem;font-weight:850;color:#64748B}.weekly-history-row strong,.weekly-history-total strong{font-size:.76rem;color:#0F172A}.weekly-history-row b,.weekly-history-total b{text-align:right;font-size:.76rem;color:#0F172A}.weekly-history-total{background:#F8FAFC;margin:5px -6px -4px;padding:10px 6px;border-radius:8px}.weekly-desktop-table{overflow:auto;border:1px solid var(--line);border-radius:12px;background:white;margin-top:12px}.weekly-desktop-table table{border-collapse:collapse;width:100%;white-space:nowrap;font-size:.68rem}.weekly-desktop-table th{background:#0F172A;color:white;padding:8px;font-size:.6rem}.weekly-desktop-table td{padding:8px;border-right:1px solid #EEF2F7;border-bottom:1px solid #EEF2F7;text-align:center}.weekly-desktop-table td strong{display:block;font-size:.72rem}.weekly-desktop-table td small{font-size:.5rem;color:#94A3B8}.weekly-desktop-table .weekly-name{text-align:left;font-weight:850;position:sticky;left:0;background:white;z-index:1}
+@media(max-width:700px){.weekly-rank-list{gap:5px}.weekly-rank-card{grid-template-columns:28px minmax(0,1fr) 74px 104px;gap:5px;padding:7px 8px;border-radius:9px}.weekly-rank-pos{font-size:.68rem}.weekly-rank-name{font-size:.72rem}.weekly-rank-sales strong{font-size:1.06rem}.weekly-rank-award strong{font-size:.76rem}.weekly-rank-sales span,.weekly-rank-award span{font-size:.43rem}.weekly-history{padding:10px}.weekly-history-row,.weekly-history-total{grid-template-columns:.8fr 1fr 1fr;gap:6px;padding:7px 0}.weekly-history-row span,.weekly-history-total span{font-size:.52rem}.weekly-history-row strong,.weekly-history-total strong,.weekly-history-row b,.weekly-history-total b{font-size:.68rem}.weekly-desktop-table{display:none}}
+
 </style>"""
 
 def render_login(st,cfg):
@@ -1090,12 +1134,17 @@ def render_app():
     elif area=="SEMANAL":
         st.markdown('<div class="section">Acompanhamento semanal · segunda a domingo</div>',unsafe_allow_html=True)
         if not team:st.warning("Nenhum vendedor local ativo.");return
-        max_weeks=max(len(x["semanas"]) for x in team); data=[]
-        for x in team:
-            row={"Vendedor":x["vendedor"]}
-            for i in range(max_weeks):row[f"Semana {i+1}"]=x["semanas"][i]; row[f"Semanal S{i+1}"]=money(x["premios"][i])
-            row["Semanais acumulados"]=money(x["premio_total"]); data.append(row)
-        st.dataframe(data,use_container_width=True,hide_index=True,height=520)
+        max_weeks=max(len(x.get("semanas",[])) for x in team)
+        week_labels=[f"SEMANA {i+1}" for i in range(max_weeks)]
+        selected_week=st.segmented_control("Semana",week_labels,default=week_labels[0],key="weekly_week_selector",label_visibility="collapsed") or week_labels[0]
+        week_index=week_labels.index(selected_week)
+        st.markdown(weekly_rank_html(team,week_index),unsafe_allow_html=True)
+        seller_options=[x["vendedor"] for x in sorted(team,key=lambda z:normalize_text(z["vendedor"]))]
+        selected_seller=st.selectbox("Ver histórico semanal do vendedor",["SELECIONE UM VENDEDOR"]+seller_options,key="weekly_seller_history")
+        if selected_seller!="SELECIONE UM VENDEDOR":
+            selected=next((x for x in team if x["vendedor"]==selected_seller),None)
+            if selected:st.markdown(weekly_seller_history_html(selected),unsafe_allow_html=True)
+        st.markdown(weekly_desktop_table(team,max_weeks),unsafe_allow_html=True)
     elif area=="PREMIAÇÕES":
         st.markdown('<div class="section">Premiações e cenários</div>',unsafe_allow_html=True); projected="maior_ou_igual_1000" if projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
         cards(st,[("CENÁRIO ATUAL","≥ 1.000" if official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{projection} vendas"),("PREMIAÇÃO BASE ATUAL",money(sum(x["base"] for x in team)),"cyan",""),("PREMIAÇÃO PROJETADA",money(sum(x["comissao_proj"] for x in team)),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(sum(x["bonus_neo_proj"] for x in team)),"green",""),("BÔNUS (SE) 100% ADIM",money(sum(x["bonus_adim_proj"] for x in team)),"green",""),("SEMANAIS ACUMULADOS",money(sum(x["premio_total"] for x in team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in team)),"yellow","")])
