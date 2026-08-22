@@ -5,8 +5,7 @@ on:
     branches:
       - main
     paths:
-      - scripts/apply_producao_canal_compacta.py
-      - .github/workflows/apply-bi-ui.yml
+      - scripts/modernize_dashboard.py
 
 permissions:
   contents: write
@@ -21,21 +20,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Corrigir delimitadores do script temporario
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('scripts/apply_producao_canal_compacta.py')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace("new_helpers=r'''def channel_summary_html", 'new_helpers=r"""def channel_summary_html', 1)
-          s=s.replace("\n'''\ns=s[:start]+new_helpers+s[end:]", '\n"""\ns=s[:start]+new_helpers+s[end:]', 1)
-          p.write_text(s,encoding='utf-8')
-          PY
-      - name: Aplicar novo layout de producao por canal
-        run: python scripts/apply_producao_canal_compacta.py
-      - name: Validar sintaxe
-        run: python -m py_compile app.py gerar_painel.py calendario_feriados.py
-      - name: Commitar app atualizado
+      - name: Apply UI migration
+        run: python scripts/modernize_dashboard.py
+      - name: Validate syntax
+        run: python -m py_compile app.py
+      - name: Commit generated app
         run: |
           if git diff --quiet app.py; then
             echo "No changes"
@@ -44,5 +33,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py
-          git commit -m "Redesenhar producao por canal"
+          git commit -m "Modernizar dashboard com visual BI e menu de três pontos"
           git push origin HEAD:main
