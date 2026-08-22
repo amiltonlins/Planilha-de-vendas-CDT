@@ -1,0 +1,36 @@
+name: Aplicar redesign topo CDT
+on:
+  push:
+    branches:
+      - feat/redesign-topo-cdt
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/redesign-topo-cdt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Aplicar redesign
+        run: python scripts/aplicar_redesign_topo_cdt.py
+      - name: Validar escopo
+        run: |
+          python -m py_compile app.py gerar_painel.py
+          grep -Fq 'Cartão de TODOS' app.py
+          grep -Fq 'cdt_top_header' app.py
+          grep -Fq 'Atualizado hoje' app.py
+          grep -Fq 'areas=["VISÃO GERAL","SEMANAL"]' app.py
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.py
+          if ! git diff --cached --quiet; then
+            git commit -m 'Modernizar topo do Painel Comercial com identidade CDT'
+            git push
+          fi
