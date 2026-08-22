@@ -273,7 +273,7 @@ def general_report_display(team):
 
 def render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color):
     st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
-    cols=[("setor","SETOR"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
+    cols=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
     display=general_report_display(team)
     st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
     try:
@@ -554,6 +554,13 @@ CSS="""<style>
 }
 @media(max-width:350px){[data-testid="stDialog"] .seller-kpi-grid{grid-template-columns:1fr 1fr!important}.rank-inside{grid-template-columns:repeat(2,minmax(0,1fr))!important}.rank-inside .total-highlight{grid-column:span 2!important}}
 
+
+.rank-mobile-head>div:first-child{display:flex;flex-direction:column;min-width:0}
+@media(max-width:560px){
+[data-testid="stDialog"] [role="dialog"]{overflow-x:visible!important}
+[data-testid="stDialog"] [role="dialog"]>div{overflow-x:visible!important}
+}
+
 </style>"""
 
 def render_login(st,cfg):
@@ -701,8 +708,8 @@ def render_app():
         for x in team:counts[performance(x["media"])[0]]+=1
         st.markdown(performance_summary_html(counts),unsafe_allow_html=True)
         st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True)
-        team_filter=st.selectbox("Filtrar ranking por equipe",("Todas as Equipes",)+TEAM_OPTIONS,key="ranking_team_filter",label_visibility="collapsed")
-        filtered_team=team if team_filter=="Todas as Equipes" else [x for x in team if x.get("equipe")==team_filter]
+        team_filter=st.selectbox("Filtrar ranking por equipe",("TODAS AS EQUIPES",)+TEAM_OPTIONS,key="ranking_team_filter",label_visibility="collapsed")
+        filtered_team=team if team_filter=="TODAS AS EQUIPES" else [x for x in team if x.get("equipe")==team_filter]
         ranking=sorted(filtered_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True); st.markdown(ranking_html(ranking),unsafe_allow_html=True)
         st.markdown('<div class="section">Produção por canal</div>',unsafe_allow_html=True); channels={name:0 for name in ("VENDEDORES FRANQUIA","WEBSITE","FREELANCE","CANAL NACIONAL")}
         for item in summary:
