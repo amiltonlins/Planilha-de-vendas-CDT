@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Aplicar alteracoes
+      - name: Aplicar alteracoes visuais
         run: python scripts/apply_producao_canal_compacta.py
       - name: Validar sintaxe
         run: python -m py_compile app.py gerar_painel.py calendario_feriados.py
