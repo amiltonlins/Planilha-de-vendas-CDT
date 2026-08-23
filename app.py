@@ -1775,6 +1775,36 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   .st-key-week_nav_buttons .stButton button{width:100%!important;min-width:0!important;box-sizing:border-box!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;}
 }
 </style>""",unsafe_allow_html=True)
+    st.markdown("""<style>
+/* AJUSTE FINAL: somente mobile, sem alterar desktop ou a estrutura das colunas. */
+@media(max-width:600px){
+  .st-key-top_nav_buttons .stButton button{
+    box-sizing:border-box!important;
+    width:100%!important;min-width:0!important;max-width:100%!important;
+    padding-left:3px!important;padding-right:3px!important;
+    font-size:clamp(.48rem,2.2vw,.56rem)!important;
+    letter-spacing:-.01em!important;line-height:1!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;
+  }
+  .st-key-top_nav_buttons .stButton button p,
+  .st-key-top_nav_buttons .stButton button span{
+    margin:0!important;padding:0!important;max-width:100%!important;
+    font:inherit!important;line-height:1!important;letter-spacing:inherit!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;
+  }
+  .st-key-week_nav_buttons .stButton button{
+    box-sizing:border-box!important;
+    padding-left:2px!important;padding-right:2px!important;
+    font-size:clamp(.45rem,2vw,.53rem)!important;
+    line-height:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;
+  }
+  .st-key-week_nav_buttons .stButton button p,
+  .st-key-week_nav_buttons .stButton button span{
+    margin:0!important;padding:0!important;max-width:100%!important;
+    font:inherit!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;
+  }
+}
+</style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     global BASE_SELLER_DEFAULTS
     BASE_SELLER_DEFAULTS=copy.deepcopy(base.get("vendedores",[]))
