@@ -1014,6 +1014,48 @@ div[data-testid="stPopoverBody"] .stButton button:hover{background:#F1F5F9!impor
   .exec-pair-values strong{font-size:.91rem}
 }
 
+/* Topo conforme referência: compacto, horizontal e sem logo/pin. */
+.st-key-cdt_top_header{background:linear-gradient(110deg,#075B35,#0A6B40)!important;border-radius:10px!important;padding:7px 12px!important;margin:0 0 4px!important;box-shadow:0 3px 12px rgba(7,91,53,.12)!important}
+.st-key-cdt_top_header [data-testid="stHorizontalBlock"]{align-items:center!important;gap:.4rem!important}
+.cdt-brandline{font-size:.48rem!important;line-height:1!important;margin:0 0 2px!important;letter-spacing:.10em!important;color:#CFF3B1!important}
+.cdt-title{font-size:.92rem!important;line-height:1!important;margin:0!important;color:#fff!important;font-weight:950!important}
+.cdt-unit-emphasis{font-size:1.22rem!important;line-height:1!important;font-weight:950!important;letter-spacing:.03em!important;text-align:right!important;color:#fff!important;white-space:nowrap!important}
+.st-key-compact_top_strip{background:#fff!important;border:1px solid #E2E8F0!important;border-radius:9px!important;padding:2px 5px!important;margin:0 0 5px!important;box-shadow:0 1px 5px rgba(15,23,42,.035)!important;overflow:hidden!important}
+.st-key-compact_top_strip [data-testid="stHorizontalBlock"]{align-items:center!important;gap:.28rem!important}
+.st-key-compact_top_strip [data-testid="column"]{min-width:0!important}
+.st-key-compact_top_strip [data-testid="stSegmentedControl"]{min-height:28px!important;background:transparent!important;border:0!important;padding:0!important}
+.st-key-compact_top_strip [data-testid="stSegmentedControl"]>div{display:flex!important;flex-wrap:nowrap!important;gap:1px!important;background:transparent!important;border:0!important;padding:0!important;overflow-x:auto!important;scrollbar-width:none!important}
+.st-key-compact_top_strip [data-testid="stSegmentedControl"]>div::-webkit-scrollbar{display:none!important}
+.st-key-compact_top_strip [data-testid="stSegmentedControl"] button{min-height:26px!important;height:26px!important;padding:2px 6px!important;border-radius:6px!important;border:0!important;background:transparent!important;color:#64748B!important;font-size:.56rem!important;font-weight:850!important;white-space:nowrap!important;box-shadow:none!important}
+.st-key-compact_top_strip .st-key-top_nav_area [data-testid="stSegmentedControl"] button[aria-pressed="true"]{color:#075B35!important;background:#EAF5EE!important;border-bottom:0!important}
+.st-key-compact_top_strip [data-testid="stSegmentedControl"] button[aria-pressed="true"]{background:#F06F61!important;color:#fff!important;font-weight:950!important}
+.compact-top-text,.compact-top-month{font-size:.54rem!important;line-height:1.05!important;color:#64748B!important;font-weight:700!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.compact-top-month{font-weight:900!important;color:#334155!important;text-align:center!important}
+.st-key-compact_top_strip [data-testid="stPopover"]>button{min-height:26px!important;height:26px!important;padding:0 6px!important;border-radius:6px!important;background:#F8FAFC!important;color:#475569!important;border:1px solid #E2E8F0!important;font-size:.53rem!important;font-weight:800!important;box-shadow:none!important}
+.weekly-current-note,.st-key-weekly_week_nav{display:none!important}
+@media(max-width:760px){
+ .st-key-cdt_top_header{padding:6px 8px!important;border-radius:9px!important;margin-bottom:3px!important}
+ .cdt-brandline{font-size:.42rem!important}.cdt-title{font-size:.82rem!important}.cdt-unit-emphasis{font-size:1.02rem!important}
+ .st-key-compact_top_strip{padding:3px 4px!important;overflow:visible!important}
+ .st-key-compact_top_strip [data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:wrap!important;gap:2px 4px!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(1){flex:1 1 42%!important;max-width:48%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(2){flex:1 1 48%!important;max-width:52%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(3){flex:0 0 auto!important;max-width:32%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(4){flex:1 1 62%!important;max-width:68%!important;overflow:hidden!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(5){flex:0 0 auto!important;max-width:22%!important}
+ .st-key-compact_top_strip [data-testid="stSegmentedControl"] button{font-size:.52rem!important;padding:2px 5px!important}
+ .compact-top-text,.compact-top-month{font-size:.49rem!important}
+}
+@media(max-width:390px){
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(1){flex-basis:48%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(2){flex-basis:48%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(3){flex-basis:26%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(4){flex-basis:64%!important}
+ .st-key-compact_top_strip [data-testid="column"]:nth-child(5){flex-basis:8%!important}
+ .st-key-compact_top_strip [data-testid="stPopover"]>button{font-size:0!important;width:26px!important;min-width:26px!important;padding:0!important}
+ .st-key-compact_top_strip [data-testid="stPopover"]>button:after{content:"▾";font-size:.65rem!important}
+}
+
 </style>"""
 
 
@@ -1330,47 +1372,66 @@ def render_app():
         try:del st.query_params["action"]
         except KeyError:pass
     user_name_raw=str(st.session_state.get("dashboard_usuario") or "Usuário autenticado")
-    user_name=html.escape(user_name_raw)
     auth_token=st.session_state.get("dashboard_auth_token") or incoming_token or ""
     management_available=bool(manager_password(st))
+    data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1))
+    updated=datetime.fromisoformat(metadata["atualizado_em"])
+    month_names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
+    today=date.today()
+    update_text=f"Atualizado hoje, {updated:%H:%M}" if updated.date()==today else f"Atualizado {updated:%d/%m}, {updated:%H:%M}"
+    if data_until!=updated.date():update_text+=f" · Dados até {data_until:%d/%m}"
+    competence_text=f"{month_names[int(cfg['mes'])-1]}/{cfg['ano']}"
+
+    # Cabeçalho visual compacto: somente identidade e unidade.
     with st.container(key="cdt_top_header"):
-        header_main,header_account=st.columns([7.5,2.5],vertical_alignment="center")
-        with header_main:
-            st.markdown(
-                '<div class="cdt-brandline">Cartão de TODOS</div>'
-                '<div class="cdt-title">PAINEL COMERCIAL</div>'
-                '<div class="cdt-unit">Afogados</div>',
-                unsafe_allow_html=True
-            )
-        with header_account:
-            account_label=f"◉ {user_name_raw}  ▾"
-            with st.popover(account_label,use_container_width=True):
-                if management_available and st.button("⚙ Gestão",key="cdt_menu_management",use_container_width=True):
+        header_left,header_right=st.columns([7.8,2.2],vertical_alignment="center")
+        with header_left:
+            st.markdown('<div class="cdt-brandline">CARTÃO DE TODOS</div><div class="cdt-title">PAINEL COMERCIAL</div>',unsafe_allow_html=True)
+        with header_right:
+            st.markdown('<div class="cdt-unit-emphasis">AFOGADOS</div>',unsafe_allow_html=True)
+
+    if st.session_state.area=="GESTÃO":
+        render_management(st,base,rows,cfg,metadata)
+        return
+
+    # Uma única faixa compacta reúne abas, atualização, competência, semanas e conta.
+    max_top_weeks=max(1,len(month_weeks(int(cfg["ano"]),int(cfg["mes"]))))
+    current_top_week=weekly_current_index(cfg,max_top_weeks)
+    week_labels=weekly_week_labels(cfg,max_top_weeks,current_top_week)
+    weekly_state_key=f'weekly_top_selector_{cfg["ano"]}_{cfg["mes"]}_{current_top_week}'
+    remembered_week=st.session_state.get("weekly_selected_label")
+    default_week=remembered_week if remembered_week in week_labels else week_labels[current_top_week]
+
+    with st.container(key="compact_top_strip"):
+        nav_col,update_col,month_col,weeks_col,account_col=st.columns([2.0,2.2,1.2,3.7,.9],vertical_alignment="center")
+        with nav_col:
+            selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
+        with update_col:
+            st.markdown(f'<div class="compact-top-text">{html.escape(update_text)}</div>',unsafe_allow_html=True)
+        with month_col:
+            st.markdown(f'<div class="compact-top-month">{html.escape(competence_text)}</div>',unsafe_allow_html=True)
+        with weeks_col:
+            selected_week=st.segmented_control("Semanas",week_labels,default=default_week,key=weekly_state_key,label_visibility="collapsed") or default_week
+            st.session_state["weekly_selected_label"]=selected_week
+        with account_col:
+            with st.popover("Conta",use_container_width=True):
+                st.caption(user_name_raw)
+                if management_available and st.button("Gestão",key="cdt_menu_management",use_container_width=True):
                     st.session_state.area="GESTÃO"
                     st.rerun()
-                if st.button("↪ Sair",key="cdt_menu_logout",use_container_width=True):
+                if st.button("Sair",key="cdt_menu_logout",use_container_width=True):
                     for key in ("dashboard_autenticado","dashboard_usuario","dashboard_auth_token","seller_detail","gestor_autenticado","login_duplicate_first"):
                         st.session_state.pop(key,None)
                     st.session_state.area="VISÃO GERAL"
                     st.query_params.clear()
                     st.rerun()
-    if st.session_state.area=="GESTÃO":
-        render_management(st,base,rows,cfg,metadata)
-        return
-    selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
+
     if selected_area and selected_area != st.session_state.area:
         st.session_state.area=selected_area
         st.rerun()
     area=st.session_state.area
     try:summary,all_days,elapsed,official=summarize(rows,cfg); apply_team_labels(summary,cfg)
     except Exception as exc:st.error(f"Falha ao processar relatório: {exc}");return
-    data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1)); updated=datetime.fromisoformat(metadata["atualizado_em"])
-    month_names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
-    today=date.today()
-    update_text=f"Atualizado hoje, {updated:%H:%M}" if updated.date()==today else f"Atualizado {updated:%d/%m}, {updated:%H:%M}"
-    if data_until!=updated.date():update_text+=f" • Dados até {data_until:%d/%m}"
-    update_text+=f" • {month_names[int(cfg['mes'])-1]}/{cfg['ano']}"
-    st.markdown(f'<div class="cdt-update">{html.escape(update_text)}</div>',unsafe_allow_html=True)
     team=regular(summary); total=sum(x["vendas"] for x in summary); projection=sum(x["projecao"] for x in summary); neo=sum(x["neo"] for x in summary); color=lambda x:performance(x["media"])[1]
     # Abrir detalhamento somente após clique explícito no vendedor.
     # Limpa estado legado para filtros/equipe não reabrirem o último popup.
@@ -1398,16 +1459,13 @@ def render_app():
         st.markdown(performance_summary_html(counts),unsafe_allow_html=True)
         render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color)
     elif area=="SEMANAL":
-        st.markdown('<div class="section">Acompanhamento semanal</div>',unsafe_allow_html=True)
         if not team:st.warning("Nenhum vendedor local ativo.");return
         max_weeks=max(len(x.get("semanas",[])) for x in team)
         current_index=weekly_current_index(cfg,max_weeks)
-        week_labels=weekly_week_labels(cfg,max_weeks,current_index)
-        selector_key=f'weekly_week_selector_gamified_{cfg["ano"]}_{cfg["mes"]}_{current_index}'
-        with st.container(key="weekly_week_nav"):
-            selected_week=st.segmented_control("Semana",week_labels,default=week_labels[current_index],key=selector_key,label_visibility="collapsed") or week_labels[current_index]
-            st.markdown(f'<div class="weekly-current-note">ATUAL: S{current_index+1}</div>',unsafe_allow_html=True)
-        week_index=week_labels.index(selected_week)
+        current_labels=weekly_week_labels(cfg,max_weeks,current_index)
+        selected_week=st.session_state.get("weekly_selected_label")
+        if selected_week not in current_labels:selected_week=current_labels[current_index]
+        week_index=current_labels.index(selected_week)
         is_current=(week_index==current_index)
         st.markdown('<div class="section weekly-rank-title">Ranking da semana</div>',unsafe_allow_html=True)
         st.markdown(weekly_rank_gamified_html(team,week_index,cfg,is_current),unsafe_allow_html=True)
