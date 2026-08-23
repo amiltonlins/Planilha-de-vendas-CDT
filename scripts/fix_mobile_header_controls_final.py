@@ -2,12 +2,50 @@ from pathlib import Path
 
 path=Path('app.py')
 s=path.read_text(encoding='utf-8')
-marker='CORRECAO FINAL MOBILE: CONTROLES SEM EMPILHAMENTO'
-if marker in s:
-    raise SystemExit(0)
-needle='    base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))\n'
-if needle not in s:
-    raise SystemExit('Ponto de insercao nao encontrado')
-css='''    st.markdown("""<style>\n/* CORRECAO FINAL MOBILE: CONTROLES SEM EMPILHAMENTO */\n@media(max-width:600px){\n  .st-key-header_control_strip{width:100%!important;margin-top:12px!important;padding:0!important;overflow:visible!important;}\n  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:7px 9px!important;width:100%!important;min-width:0!important;align-items:center!important;}\n  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;margin:0!important;padding:0!important;}\n  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){grid-column:1/-1!important;grid-row:1!important;}\n  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}\n  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}\n  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4){grid-column:1/-1!important;grid-row:3!important;}\n  .st-key-top_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;}\n  .st-key-top_nav_buttons > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0!important;width:100%!important;min-width:0!important;}\n  .st-key-top_nav_buttons > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{display:block!important;width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;margin:0!important;padding:0!important;}\n  .st-key-top_nav_buttons .stButton{width:100%!important;margin:0!important;}\n  .st-key-top_nav_buttons .stButton button{width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;margin:0!important;padding:0 6px!important;border-radius:0!important;background:#FFFFFF!important;color:#182033!important;border:1px solid #D9DEE7!important;box-shadow:none!important;font-size:.62rem!important;font-weight:800!important;white-space:nowrap!important;justify-content:center!important;}\n  .st-key-top_nav_buttons [data-testid="stBaseButton-primary"],.st-key-top_nav_buttons button[kind="primary"]{background:#FFF1F0!important;color:#EF3E38!important;border-color:#F45A55!important;box-shadow:inset 0 0 0 1px #F45A55!important;}\n  .st-key-top_nav_buttons div[data-testid="column"]:first-child .stButton button{border-radius:10px 0 0 10px!important;}\n  .st-key-top_nav_buttons div[data-testid="column"]:last-child .stButton button{border-radius:0 10px 10px 0!important;}\n  .st-key-header_control_strip .header-meta{display:block!important;width:100%!important;margin:0!important;padding:0 2px!important;color:#FFFFFF!important;font-size:.54rem!important;line-height:1.15!important;font-weight:800!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}\n  .st-key-header_control_strip .header-month{text-align:right!important;}\n  .st-key-week_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;overflow:visible!important;}\n  .st-key-week_nav_buttons > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:nowrap!important;gap:3px!important;width:100%!important;min-width:0!important;overflow:visible!important;align-items:stretch!important;}\n  .st-key-week_nav_buttons > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{display:block!important;flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;}\n  .st-key-week_nav_buttons .stButton{width:100%!important;margin:0!important;}\n  .st-key-week_nav_buttons .stButton button{width:100%!important;min-width:0!important;height:34px!important;min-height:34px!important;margin:0!important;padding:0 1px!important;border-radius:8px!important;background:#FFFFFF!important;color:#182033!important;border:1px solid #D9DEE7!important;box-shadow:none!important;font-size:.53rem!important;font-weight:850!important;white-space:nowrap!important;justify-content:center!important;}\n  .st-key-week_nav_buttons [data-testid="stBaseButton-primary"],.st-key-week_nav_buttons button[kind="primary"]{background:#FFF1F0!important;color:#EF3E38!important;border-color:#F45A55!important;box-shadow:inset 0 0 0 1px #F45A55!important;}\n}\n@media(max-width:360px){.st-key-top_nav_buttons .stButton button{font-size:.58rem!important;padding:0 3px!important}.st-key-week_nav_buttons .stButton button{font-size:.47rem!important;padding:0!important}.st-key-header_control_strip .header-meta{font-size:.49rem!important}}\n</style>""",unsafe_allow_html=True)\n'''
-s=s.replace(needle,css+needle,1)
+
+# Corrige apenas seletores mobile que estavam amplos demais e atingiam
+# também os stHorizontalBlock/stColumn internos dos próprios botões.
+# Não altera cores, tamanhos, textos, lógica, desktop ou componentes.
+replacements={
+    '.st-key-header_control_strip [data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:wrap!important;gap:7px 8px!important}':
+    '.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:wrap!important;gap:7px 8px!important}',
+
+    '.st-key-header_control_strip [data-testid="stHorizontalBlock"]{gap:5px 6px!important}':
+    '.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{gap:5px 6px!important}',
+
+    '.st-key-header_control_strip [data-testid="column"]:nth-child(1){flex:1 1 40%!important}.st-key-header_control_strip [data-testid="column"]:nth-child(2){flex:1 1 52%!important}':
+    '.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){flex:1 1 40%!important}.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2){flex:1 1 52%!important}',
+
+    '.st-key-header_control_strip [data-testid="column"]:nth-child(3){flex:0 0 31%!important}.st-key-header_control_strip [data-testid="column"]:nth-child(4){flex:1 1 65%!important;overflow:hidden!important}':
+    '.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3){flex:0 0 31%!important}.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4){flex:1 1 65%!important;overflow:hidden!important}',
+
+    '.st-key-header_control_strip [data-testid="column"]:nth-child(1){flex-basis:100%!important}.st-key-header_control_strip [data-testid="column"]:nth-child(2){flex-basis:58%!important}.st-key-header_control_strip [data-testid="column"]:nth-child(3){flex-basis:36%!important}.st-key-header_control_strip [data-testid="column"]:nth-child(4){flex-basis:100%!important}':
+    '.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){flex-basis:100%!important}.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2){flex-basis:58%!important}.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3){flex-basis:36%!important}.st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4){flex-basis:100%!important}',
+
+    '  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{\n    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;\n    gap:6px 8px!important;width:100%!important;align-items:center!important;\n  }':
+    '  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{\n    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;\n    gap:6px 8px!important;width:100%!important;align-items:center!important;\n  }',
+
+    '  .st-key-header_control_strip [data-testid="column"]{width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;}':
+    '  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;}',
+
+    '  .st-key-header_control_strip [data-testid="column"]:nth-child(1){grid-column:1 / -1!important;grid-row:1!important;}':
+    '  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){grid-column:1 / -1!important;grid-row:1!important;}',
+    '  .st-key-header_control_strip [data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}':
+    '  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}',
+    '  .st-key-header_control_strip [data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}':
+    '  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}',
+    '  .st-key-header_control_strip [data-testid="column"]:nth-child(4){grid-column:1 / -1!important;grid-row:3!important;width:100%!important;overflow:hidden!important;}':
+    '  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4){grid-column:1 / -1!important;grid-row:3!important;width:100%!important;overflow:hidden!important;}',
+}
+
+changed=0
+for old,new in replacements.items():
+    if old in s:
+        s=s.replace(old,new)
+        changed+=1
+
+if changed==0:
+    raise SystemExit('Nenhum seletor conflitante encontrado; abortando para evitar alteração indevida.')
+
 path.write_text(s,encoding='utf-8')
+print(f'{changed} seletor(es) mobile restringido(s) ao container externo.')
