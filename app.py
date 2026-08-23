@@ -1666,6 +1666,30 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
 }
 </style>""",unsafe_allow_html=True)
     st.markdown("""<style>
+/* Ajuste cirurgico: somente mobile. Mantem as duas colunas e faz o conteudo caber dentro dos botoes. */
+@media(max-width:600px){
+  .st-key-top_nav_buttons [data-testid="stHorizontalBlock"]{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    width:100%!important;max-width:100%!important;overflow:visible!important;
+    box-sizing:border-box!important;
+  }
+  .st-key-top_nav_buttons [data-testid="column"],
+  .st-key-top_nav_buttons .stButton,
+  .st-key-top_nav_buttons .stButton > div{
+    min-width:0!important;max-width:100%!important;width:100%!important;box-sizing:border-box!important;
+  }
+  .st-key-top_nav_buttons .stButton button{
+    width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;
+    padding-left:4px!important;padding-right:4px!important;overflow:hidden!important;
+  }
+  .st-key-top_nav_buttons .stButton button p{
+    margin:0!important;max-width:100%!important;min-width:0!important;
+    font-size:clamp(.54rem,2.7vw,.64rem)!important;line-height:1!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;
+  }
+}
+</style>""",unsafe_allow_html=True)
+    st.markdown("""<style>
 /* CORRECAO ESTRUTURAL FINAL DOS CONTROLES MOBILE.
    Substitui a dependencia visual do segmented_control por botoes em grids fixos. */
 @media(max-width:600px){
