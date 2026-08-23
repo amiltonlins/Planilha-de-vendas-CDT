@@ -484,14 +484,14 @@ def executive_kpis_html(cfg,total,projection,neo,team):
         '<div class="exec-compact-card exec-performance">'
         '<div class="exec-compact-title">DESEMPENHO DE VENDAS</div>'
         '<div class="exec-performance-values">'
-        f'<div class="exec-main-value"><small>VENDAS</small><strong>{total}</strong></div>'
+        f'<div class="exec-main-value"><small>REALIZADAS</small><strong>{total}</strong></div>'
         f'<div><small>PROJEÇÃO</small><strong>{projection}</strong></div>'
         f'<div><small>% DA META</small><strong>{pct(ating)}</strong></div>'
         '</div></div>'
         '<div class="exec-compact-card exec-goal">'
         '<div class="exec-compact-title">METAS DO MÊS</div>'
         '<div class="exec-pair-values">'
-        f'<div><small>META DO MÊS</small><strong>{meta}</strong></div>'
+        f'<div><small>META</small><strong>{meta}</strong></div>'
         f'<div><small>FALTAM</small><strong>{faltam}</strong></div>'
         '</div></div>'
         '<div class="exec-compact-card exec-energy">'
@@ -1429,6 +1429,53 @@ def render_app():
     import streamlit as st
     st.set_page_config(page_title="Painel Comercial — Afogados",page_icon="📊",layout="wide",initial_sidebar_state="collapsed")
     st.markdown(CSS,unsafe_allow_html=True)
+    st.markdown("""<style>
+/* Refinamento visual final do topo e KPIs — sem alterar lógica */
+.st-key-cdt_top_header{padding-top:18px!important;padding-bottom:14px!important;margin-bottom:0!important}
+.st-key-cdt_top_header [data-testid="stVerticalBlock"]{gap:.35rem!important}
+.st-key-cdt_top_header .cdt-brandline{margin-bottom:4px!important}
+.st-key-cdt_top_header .cdt-title{margin:0!important;line-height:1.02!important}
+.st-key-cdt_top_header .cdt-unit-emphasis{margin-top:4px!important;line-height:1!important}
+.st-key-header_control_strip{margin-top:4px!important;padding-top:0!important;padding-bottom:4px!important}
+.st-key-header_control_strip [data-testid="stHorizontalBlock"]{gap:8px!important;align-items:center!important}
+.st-key-header_control_strip [data-testid="stSegmentedControl"]{margin:0!important}
+.header-meta{white-space:nowrap!important}
+.exec-compact-grid{margin-top:16px!important;gap:18px!important;align-items:stretch!important}
+.exec-compact-card{min-height:0!important;height:auto!important;padding:22px 28px!important}
+.exec-compact-title{margin-bottom:18px!important}
+.exec-performance-values,.exec-pair-values{align-items:end!important}
+.exec-performance-values strong,.exec-pair-values strong{font-size:clamp(2.25rem,3.2vw,3.7rem)!important;line-height:.95!important;letter-spacing:-.035em!important}
+.exec-main-value strong{font-size:clamp(2.55rem,3.7vw,4.1rem)!important}
+.exec-performance-values small,.exec-pair-values small{font-size:clamp(.72rem,.9vw,.95rem)!important;margin-bottom:8px!important}
+@media(max-width:900px){
+  .st-key-cdt_top_header{padding:14px 16px 10px!important}
+  .st-key-header_control_strip{padding:0 2px 4px!important}
+  .exec-compact-grid{margin-top:10px!important;gap:10px!important}
+  .exec-compact-card{padding:16px 14px!important}
+  .exec-compact-title{margin-bottom:12px!important}
+  .exec-performance-values strong,.exec-pair-values strong{font-size:clamp(1.65rem,7vw,2.35rem)!important}
+  .exec-main-value strong{font-size:clamp(1.85rem,8vw,2.65rem)!important}
+}
+@media(max-width:600px){
+  .st-key-cdt_top_header{padding:12px 12px 8px!important;border-radius:24px!important}
+  .st-key-cdt_top_header .cdt-title{font-size:clamp(1.65rem,8vw,2.2rem)!important}
+  .st-key-cdt_top_header .cdt-brandline{font-size:.72rem!important}
+  .st-key-cdt_top_header .cdt-unit-emphasis{font-size:clamp(1.2rem,6vw,1.7rem)!important}
+  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{gap:4px!important;flex-wrap:wrap!important}
+  .header-meta{font-size:.64rem!important}
+  .header-meta-icon{font-size:.72rem!important}
+  .exec-compact-grid{grid-template-columns:1fr!important;gap:8px!important}
+  .exec-performance{grid-column:1!important}
+  .exec-goal,.exec-energy{grid-column:auto!important}
+  .exec-compact-card{padding:14px 12px!important}
+  .exec-compact-title{font-size:.78rem!important;margin-bottom:10px!important}
+  .exec-performance-values{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+  .exec-pair-values{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  .exec-performance-values strong,.exec-pair-values strong{font-size:clamp(1.55rem,8vw,2.15rem)!important}
+  .exec-main-value strong{font-size:clamp(1.8rem,9vw,2.45rem)!important}
+  .exec-performance-values small,.exec-pair-values small{font-size:.62rem!important;margin-bottom:5px!important}
+}
+</style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     global BASE_SELLER_DEFAULTS
     BASE_SELLER_DEFAULTS=copy.deepcopy(base.get("vendedores",[]))
@@ -1500,17 +1547,28 @@ def render_app():
                     st.rerun()
 
         if st.session_state.area!="GESTÃO":
-            with st.container(key="header_control_strip"):
-                nav_col,update_col,month_col,weeks_col=st.columns([2.35,2.45,1.55,3.65],vertical_alignment="center")
-                with nav_col:
-                    selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
-                with update_col:
-                    st.markdown(f'<div class="header-meta header-update"><span class="header-meta-icon">◷</span>{html.escape(update_text)}</div>',unsafe_allow_html=True)
-                with month_col:
-                    st.markdown(f'<div class="header-meta header-month"><span class="header-meta-icon">▦</span>{html.escape(competence_text)}</div>',unsafe_allow_html=True)
-                with weeks_col:
-                    selected_week=st.segmented_control("Semanas",week_labels,default=default_week,key=weekly_state_key,label_visibility="collapsed") or default_week
-                    st.session_state["weekly_selected_label"]=selected_week
+            if st.session_state.area=="SEMANAL":
+                with st.container(key="header_control_strip"):
+                    nav_col,update_col,month_col,weeks_col=st.columns([2.25,2.25,1.35,4.15],vertical_alignment="center")
+                    with nav_col:
+                        selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
+                    with update_col:
+                        st.markdown(f'<div class="header-meta header-update"><span class="header-meta-icon">◷</span>{html.escape(update_text)}</div>',unsafe_allow_html=True)
+                    with month_col:
+                        st.markdown(f'<div class="header-meta header-month"><span class="header-meta-icon">▦</span>{html.escape(competence_text)}</div>',unsafe_allow_html=True)
+                    with weeks_col:
+                        selected_week=st.segmented_control("Semanas",week_labels,default=default_week,key=weekly_state_key,label_visibility="collapsed") or default_week
+                        st.session_state["weekly_selected_label"]=selected_week
+            else:
+                with st.container(key="header_control_strip"):
+                    nav_col,update_col,month_col=st.columns([2.55,2.75,1.7],vertical_alignment="center")
+                    with nav_col:
+                        selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
+                    with update_col:
+                        st.markdown(f'<div class="header-meta header-update"><span class="header-meta-icon">◷</span>{html.escape(update_text)}</div>',unsafe_allow_html=True)
+                    with month_col:
+                        st.markdown(f'<div class="header-meta header-month"><span class="header-meta-icon">▦</span>{html.escape(competence_text)}</div>',unsafe_allow_html=True)
+                selected_week=default_week
         else:
             selected_area="GESTÃO"
             selected_week=default_week
