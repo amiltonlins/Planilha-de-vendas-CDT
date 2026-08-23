@@ -1,0 +1,26 @@
+name: Aplicar layout semanal e navegacao
+on:
+  push:
+    branches: [feat/weekly-grid-nav-reposition]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[weekly-grid-nav]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/weekly-grid-nav-reposition
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/apply_weekly_grid_nav_reposition.py
+      - run: python -m py_compile app.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Reorganizar ranking semanal e navegacao [weekly-grid-nav]"
+          git push origin HEAD:feat/weekly-grid-nav-reposition
