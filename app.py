@@ -1665,6 +1665,73 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   .header-meta{font-size:.54rem!important;}
 }
 </style>""",unsafe_allow_html=True)
+    st.markdown("""<style>
+/* CORRECAO ESTRUTURAL FINAL DOS CONTROLES MOBILE.
+   Substitui a dependencia visual do segmented_control por botoes em grids fixos. */
+@media(max-width:600px){
+  /* Navegacao principal: dois botoes obrigatoriamente lado a lado. */
+  .st-key-top_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;}
+  .st-key-top_nav_buttons>[data-testid="stVerticalBlock"]{width:100%!important;gap:0!important;}
+  .st-key-top_nav_buttons [data-testid="stHorizontalBlock"]{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:0!important;width:100%!important;min-width:0!important;align-items:stretch!important;
+  }
+  .st-key-header_control_strip .st-key-top_nav_buttons [data-testid="column"]{
+    display:block!important;width:100%!important;min-width:0!important;max-width:none!important;
+    flex:none!important;margin:0!important;padding:0!important;grid-column:auto!important;grid-row:auto!important;
+  }
+  .st-key-top_nav_buttons .stButton{width:100%!important;margin:0!important;}
+  .st-key-top_nav_buttons .stButton button{
+    width:100%!important;min-width:0!important;max-width:none!important;height:38px!important;min-height:38px!important;
+    margin:0!important;padding:0 8px!important;border-radius:0!important;font-size:.64rem!important;font-weight:850!important;
+    white-space:nowrap!important;justify-content:center!important;box-shadow:none!important;
+  }
+  .st-key-top_nav_buttons [data-testid="column"]:first-child .stButton button{border-radius:9px 0 0 9px!important;}
+  .st-key-top_nav_buttons [data-testid="column"]:last-child .stButton button{border-radius:0 9px 9px 0!important;}
+
+  /* Seletor semanal: seis (ou quantas existirem) celulas numa unica linha. */
+  .st-key-week_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+  .st-key-week_nav_buttons>[data-testid="stVerticalBlock"]{width:100%!important;gap:0!important;}
+  .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
+    display:grid!important;grid-auto-flow:column!important;grid-auto-columns:minmax(44px,1fr)!important;
+    gap:0!important;width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;
+    scrollbar-width:none!important;align-items:stretch!important;
+  }
+  .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]::-webkit-scrollbar{display:none!important;}
+  .st-key-header_control_strip .st-key-week_nav_buttons [data-testid="column"]{
+    display:block!important;width:100%!important;min-width:44px!important;max-width:none!important;
+    flex:none!important;margin:0!important;padding:0!important;grid-column:auto!important;grid-row:auto!important;
+  }
+  .st-key-week_nav_buttons .stButton{width:100%!important;margin:0!important;}
+  .st-key-week_nav_buttons .stButton button{
+    width:100%!important;min-width:44px!important;max-width:none!important;height:34px!important;min-height:34px!important;
+    margin:0!important;padding:0 4px!important;border-radius:0!important;font-size:.56rem!important;font-weight:850!important;
+    white-space:nowrap!important;justify-content:center!important;box-shadow:none!important;
+  }
+  .st-key-week_nav_buttons [data-testid="column"]:first-child .stButton button{border-radius:8px 0 0 8px!important;}
+  .st-key-week_nav_buttons [data-testid="column"]:last-child .stButton button{border-radius:0 8px 8px 0!important;}
+
+  /* O container externo continua a organizar navegacao / meta / semanas sem sobreposicao. */
+  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:6px 8px!important;width:100%!important;align-items:center!important;
+  }
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]{width:100%!important;}
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]>[data-testid="stHorizontalBlock"]>[data-testid="column"]{
+    width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;
+  }
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]>[data-testid="stHorizontalBlock"]>[data-testid="column"]:nth-child(1){grid-column:1/-1!important;grid-row:1!important;}
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]>[data-testid="stHorizontalBlock"]>[data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]>[data-testid="stHorizontalBlock"]>[data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]>[data-testid="stHorizontalBlock"]>[data-testid="column"]:nth-child(4){grid-column:1/-1!important;grid-row:3!important;overflow:hidden!important;}
+  .header-meta{margin:0!important;padding:1px 0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+}
+@media(max-width:360px){
+  .st-key-top_nav_buttons .stButton button{font-size:.60rem!important;padding:0 5px!important;}
+  .st-key-week_nav_buttons .stButton button{font-size:.52rem!important;min-width:42px!important;padding:0 2px!important;}
+  .st-key-header_control_strip .st-key-week_nav_buttons [data-testid="column"]{min-width:42px!important;}
+}
+</style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     global BASE_SELLER_DEFAULTS
     BASE_SELLER_DEFAULTS=copy.deepcopy(base.get("vendedores",[]))
@@ -1742,19 +1809,41 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
                 with st.container(key="header_control_strip"):
                     nav_col,update_col,month_col,weeks_col=st.columns([2.25,2.25,1.35,4.15],vertical_alignment="center")
                     with nav_col:
-                        selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
+                        selected_area=st.session_state.area
+                        with st.container(key="top_nav_buttons"):
+                            nav_a,nav_b=st.columns(2,gap="small")
+                            with nav_a:
+                                if st.button("VISÃO GERAL",key="nav_visao_btn",use_container_width=True,type="primary" if st.session_state.area=="VISÃO GERAL" else "secondary"):
+                                    selected_area="VISÃO GERAL"
+                            with nav_b:
+                                if st.button("SEMANAL",key="nav_semanal_btn",use_container_width=True,type="primary" if st.session_state.area=="SEMANAL" else "secondary"):
+                                    selected_area="SEMANAL"
                     with update_col:
                         st.markdown(f'<div class="header-meta header-update">{html.escape(update_text)}</div>',unsafe_allow_html=True)
                     with month_col:
                         st.markdown(f'<div class="header-meta header-month">{html.escape(competence_text)}</div>',unsafe_allow_html=True)
                     with weeks_col:
-                        selected_week=st.segmented_control("Semanas",week_labels,default=default_week,key=weekly_state_key,label_visibility="collapsed") or default_week
+                        selected_week=default_week
+                        with st.container(key="week_nav_buttons"):
+                            week_cols=st.columns(len(week_labels),gap="small")
+                            for week_i,(week_col,week_label) in enumerate(zip(week_cols,week_labels)):
+                                with week_col:
+                                    if st.button(week_label,key=f"week_btn_{week_i}",use_container_width=True,type="primary" if week_label==default_week else "secondary"):
+                                        selected_week=week_label
                         st.session_state["weekly_selected_label"]=selected_week
             else:
                 with st.container(key="header_control_strip"):
                     nav_col,update_col,month_col=st.columns([2.55,2.75,1.7],vertical_alignment="center")
                     with nav_col:
-                        selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
+                        selected_area=st.session_state.area
+                        with st.container(key="top_nav_buttons"):
+                            nav_a,nav_b=st.columns(2,gap="small")
+                            with nav_a:
+                                if st.button("VISÃO GERAL",key="nav_visao_btn",use_container_width=True,type="primary" if st.session_state.area=="VISÃO GERAL" else "secondary"):
+                                    selected_area="VISÃO GERAL"
+                            with nav_b:
+                                if st.button("SEMANAL",key="nav_semanal_btn",use_container_width=True,type="primary" if st.session_state.area=="SEMANAL" else "secondary"):
+                                    selected_area="SEMANAL"
                     with update_col:
                         st.markdown(f'<div class="header-meta header-update">{html.escape(update_text)}</div>',unsafe_allow_html=True)
                     with month_col:
