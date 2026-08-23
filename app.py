@@ -1600,6 +1600,71 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] button{min-width:50px!important;padding:0 7px!important;font-size:.59rem!important;}
 }
 </style>""",unsafe_allow_html=True)
+    st.markdown("""<style>
+/* Correção robusta final dos controles do cabeçalho no mobile. */
+@media(max-width:600px){
+  .st-key-cdt_top_header{overflow:visible!important;}
+  .st-key-cdt_top_header [data-testid="stHorizontalBlock"]{align-items:start!important;}
+  .st-key-cdt_top_header [data-testid="stPopover"]{position:static!important;width:100%!important;display:flex!important;justify-content:flex-end!important;}
+  .st-key-cdt_top_header [data-testid="stPopover"]>button{width:100%!important;min-width:0!important;max-width:100%!important;height:36px!important;min-height:36px!important;}
+
+  /* Grade estável do bloco inferior do cabeçalho. */
+  .st-key-header_control_strip{width:100%!important;margin-top:10px!important;padding:0!important;}
+  .st-key-header_control_strip>[data-testid="stVerticalBlock"]{width:100%!important;}
+  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:6px 8px!important;width:100%!important;align-items:center!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]{width:100%!important;min-width:0!important;max-width:none!important;flex:none!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(1){grid-column:1 / -1!important;grid-row:1!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4){grid-column:1 / -1!important;grid-row:3!important;width:100%!important;overflow:hidden!important;}
+
+  /* VISÃO GERAL + SEMANAL: força exatamente uma linha. */
+  .st-key-top_nav_area [data-testid="stSegmentedControl"]{width:100%!important;min-width:0!important;overflow:hidden!important;}
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] div{
+    flex-direction:row!important;flex-wrap:nowrap!important;white-space:nowrap!important;min-width:0!important;
+  }
+  .st-key-top_nav_area [data-testid="stSegmentedControl"]>div,
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] [role="radiogroup"],
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] [data-baseweb="button-group"]{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;width:100%!important;gap:0!important;
+  }
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] button{
+    display:flex!important;flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;
+    height:38px!important;min-height:38px!important;padding:0 8px!important;justify-content:center!important;
+    white-space:nowrap!important;margin:0!important;
+  }
+
+  /* Semanas: S1..S6 sempre em uma única linha, sem quebrar ou sobrepor. */
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"]{
+    width:100%!important;min-width:0!important;overflow:hidden!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] div{
+    flex-direction:row!important;flex-wrap:nowrap!important;white-space:nowrap!important;min-width:0!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"]>div,
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] [role="radiogroup"],
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] [data-baseweb="button-group"]{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;width:100%!important;gap:0!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] button{
+    display:flex!important;flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;
+    height:34px!important;min-height:34px!important;padding:0 3px!important;justify-content:center!important;
+    font-size:.58rem!important;white-space:nowrap!important;margin:0!important;
+  }
+
+  .header-meta{width:100%!important;min-width:0!important;margin:0!important;padding:1px 0!important;font-size:.58rem!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+  .header-month{text-align:right!important;}
+}
+
+@media(max-width:390px){
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] button{font-size:.61rem!important;padding:0 5px!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] button{font-size:.54rem!important;padding:0 2px!important;}
+  .header-meta{font-size:.54rem!important;}
+}
+</style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     global BASE_SELLER_DEFAULTS
     BASE_SELLER_DEFAULTS=copy.deepcopy(base.get("vendedores",[]))
