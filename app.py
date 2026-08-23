@@ -1661,6 +1661,7 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
 
 @media(max-width:390px){
   .st-key-top_nav_area [data-testid="stSegmentedControl"] button{font-size:.61rem!important;padding:0 5px!important;}
+  .st-key-top_nav_buttons .stButton button p,.st-key-top_nav_buttons .stButton button span{font-size:.59rem!important;letter-spacing:-.015em!important;}
   .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] button{font-size:.54rem!important;padding:0 2px!important;}
   .header-meta{font-size:.54rem!important;}
 }
@@ -1686,6 +1687,11 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
     margin:0!important;padding:0 8px!important;border-radius:0!important;font-size:.64rem!important;font-weight:850!important;
     white-space:nowrap!important;justify-content:center!important;box-shadow:none!important;
   }
+  .st-key-top_nav_buttons .stButton button p,
+  .st-key-top_nav_buttons .stButton button span{
+    max-width:100%!important;margin:0!important;font-size:.64rem!important;line-height:1!important;
+    white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;letter-spacing:-.01em!important;
+  }
   .st-key-top_nav_buttons [data-testid="column"]:first-child .stButton button{border-radius:9px 0 0 9px!important;}
   .st-key-top_nav_buttons [data-testid="column"]:last-child .stButton button{border-radius:0 9px 9px 0!important;}
 
@@ -1707,6 +1713,11 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
     width:100%!important;min-width:44px!important;max-width:none!important;height:34px!important;min-height:34px!important;
     margin:0!important;padding:0 4px!important;border-radius:0!important;font-size:.56rem!important;font-weight:850!important;
     white-space:nowrap!important;justify-content:center!important;box-shadow:none!important;
+  }
+  .st-key-week_nav_buttons .stButton button p,
+  .st-key-week_nav_buttons .stButton button span{
+    max-width:100%!important;margin:0!important;font-size:.56rem!important;line-height:1!important;
+    white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
   }
   .st-key-week_nav_buttons [data-testid="column"]:first-child .stButton button{border-radius:8px 0 0 8px!important;}
   .st-key-week_nav_buttons [data-testid="column"]:last-child .stButton button{border-radius:0 8px 8px 0!important;}
