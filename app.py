@@ -1672,7 +1672,7 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   /* Navegacao principal: dois botoes obrigatoriamente lado a lado. */
   .st-key-top_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;}
   .st-key-top_nav_buttons>[data-testid="stVerticalBlock"]{width:100%!important;gap:0!important;}
-  .st-key-top_nav_buttons [data-testid="stHorizontalBlock"]{
+  .st-key-top_nav_buttons > div[data-testid="stHorizontalBlock"]{
     display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
     gap:0!important;width:100%!important;min-width:0!important;align-items:stretch!important;
   }
@@ -1692,12 +1692,12 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   /* Seletor semanal: seis (ou quantas existirem) celulas numa unica linha. */
   .st-key-week_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
   .st-key-week_nav_buttons>[data-testid="stVerticalBlock"]{width:100%!important;gap:0!important;}
-  .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
+  .st-key-week_nav_buttons > div[data-testid="stHorizontalBlock"]{
     display:grid!important;grid-auto-flow:column!important;grid-auto-columns:minmax(44px,1fr)!important;
     gap:0!important;width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;
     scrollbar-width:none!important;align-items:stretch!important;
   }
-  .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]::-webkit-scrollbar{display:none!important;}
+  .st-key-week_nav_buttons > div[data-testid="stHorizontalBlock"]::-webkit-scrollbar{display:none!important;}
   .st-key-header_control_strip .st-key-week_nav_buttons [data-testid="column"]{
     display:block!important;width:100%!important;min-width:44px!important;max-width:none!important;
     flex:none!important;margin:0!important;padding:0!important;grid-column:auto!important;grid-row:auto!important;
@@ -1730,6 +1730,38 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   .st-key-top_nav_buttons .stButton button{font-size:.60rem!important;padding:0 5px!important;}
   .st-key-week_nav_buttons .stButton button{font-size:.52rem!important;min-width:42px!important;padding:0 2px!important;}
   .st-key-header_control_strip .st-key-week_nav_buttons [data-testid="column"]{min-width:42px!important;}
+}
+</style>""",unsafe_allow_html=True)
+    st.markdown("""<style>
+/* MOBILE NAV BUTTON CLIP FIX — somente mobile; desktop intocado. */
+@media(max-width:600px){
+  /* O componente principal ocupa exatamente a largura da coluna real. */
+  .st-key-top_nav_buttons{width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;overflow:visible!important;}
+  .st-key-top_nav_buttons > div[data-testid="stHorizontalBlock"]{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:6px!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;
+  }
+  .st-key-top_nav_buttons > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{
+    width:100%!important;min-width:0!important;max-width:100%!important;margin:0!important;padding:0!important;box-sizing:border-box!important;
+  }
+  .st-key-top_nav_buttons .stButton{width:100%!important;min-width:0!important;max-width:100%!important;margin:0!important;box-sizing:border-box!important;}
+  .st-key-top_nav_buttons .stButton button{
+    width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;padding-left:4px!important;padding-right:4px!important;
+  }
+
+  /* Semanas permanecem no mesmo visual, apenas sem quebra/corte. */
+  .st-key-week_nav_buttons{width:100%!important;min-width:0!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important;scrollbar-width:none!important;}
+  .st-key-week_nav_buttons::-webkit-scrollbar{display:none!important;}
+  .st-key-week_nav_buttons > div[data-testid="stHorizontalBlock"]{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:3px!important;
+    width:max-content!important;min-width:100%!important;max-width:none!important;box-sizing:border-box!important;
+  }
+  .st-key-week_nav_buttons > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{
+    flex:1 0 44px!important;width:auto!important;min-width:44px!important;max-width:none!important;margin:0!important;padding:0!important;box-sizing:border-box!important;
+  }
+  .st-key-week_nav_buttons .stButton{width:100%!important;min-width:0!important;margin:0!important;}
+  .st-key-week_nav_buttons .stButton button{width:100%!important;min-width:0!important;box-sizing:border-box!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;}
 }
 </style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
