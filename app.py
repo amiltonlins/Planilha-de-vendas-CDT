@@ -3,6 +3,7 @@
 from __future__ import annotations
 import base64, copy, csv, hmac, html, io, json, os, re, tempfile, time, unicodedata, uuid, zipfile
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -11,6 +12,7 @@ from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx, 
 NS={"m":"http://schemas.openxmlformats.org/spreadsheetml/2006/main","r":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 PUBLISHED_PATH=Path(os.environ.get("PAINEL_DATA_PATH",ROOT/"data"/"dados_publicados.json"))
 BASE_SELLER_DEFAULTS=[]
+RECIFE_TZ=ZoneInfo("America/Recife")
 ALIASES={
  "data_venda":("data venda","data da venda","data","dt venda","criado em","data cadastro"),
  "vendedor":("vendedor","colaborador","consultor","nome vendedor","usuario","responsavel"),
@@ -234,7 +236,11 @@ def serialize_row(row):
     out=dict(row); out["data_venda"]=row["data_venda"].isoformat(); return out
 
 def save_published(rows,cfg,source_name,history=None,updated_at=None):
-    updated_at=updated_at or datetime.now(); PUBLISHED_PATH.parent.mkdir(parents=True,exist_ok=True)
+    if updated_at is None:
+        updated_at=datetime.now(RECIFE_TZ)
+    elif updated_at.tzinfo is not None:
+        updated_at=updated_at.astimezone(RECIFE_TZ)
+    PUBLISHED_PATH.parent.mkdir(parents=True,exist_ok=True)
     payload={"atualizado_em":updated_at.isoformat(timespec="seconds"),"arquivo":Path(source_name).name,
              "config":cfg,"historico_importacoes":history or [],"vendas":[serialize_row(row) for row in rows]}
     temporary=PUBLISHED_PATH.with_suffix(".tmp"); temporary.write_text(json.dumps(payload,ensure_ascii=False),encoding="utf-8"); temporary.replace(PUBLISHED_PATH)
@@ -1377,8 +1383,9 @@ def render_management(st,base,current_rows,current_cfg,metadata):
     if audit:st.dataframe(audit,use_container_width=True,hide_index=True)
     if confirmed:
         if imported_days and pending_import_id:
-            history.append({"importacao_id":pending_import_id,"data_importacao":datetime.now().isoformat(timespec="seconds"),"arquivo":source,"dias":[d.isoformat() for d in imported_days],"registros_arquivo":pending_import_count,"vendedores":pending_seller_count,"usuario":st.session_state.get("dashboard_usuario","") or "","status":"Ativa"}); history=history[-180:]
-        save_published(rows,cfg,source,history); st.success("Histórico atualizado e dashboard publicado."); st.rerun()
+            history.append({"importacao_id":pending_import_id,"data_importacao":datetime.now(RECIFE_TZ).isoformat(timespec="seconds"),"arquivo":source,"dias":[d.isoformat() for d in imported_days],"registros_arquivo":pending_import_count,"vendedores":pending_seller_count,"usuario":st.session_state.get("dashboard_usuario","") or "","status":"Ativa"}); history=history[-180:]
+        report_updated_at=datetime.now(RECIFE_TZ) if imported_days else datetime.fromisoformat(metadata["atualizado_em"])
+        save_published(rows,cfg,source,history,updated_at=report_updated_at); st.success("Histórico atualizado e dashboard publicado."); st.rerun()
     if st.session_state.pop("import_delete_flash",None):st.success(st.session_state.pop("import_delete_flash_text","Importação excluída com sucesso."))
     if history:
         st.markdown("#### HISTÓRICO DE IMPORTAÇÕES")
@@ -1498,7 +1505,15 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   .exec-main-value strong{font-size:clamp(1.85rem,8vw,2.65rem)!important}
 }
 @media(max-width:600px){
-  .st-key-cdt_top_header{padding:12px 12px 8px!important;border-radius:24px!important}
+  .st-key-cdt_top_header{padding:12px 12px 8px!important;border-radius:24px!important;position:relative!important}
+  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px 8px!important;align-items:center!important}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(1){grid-column:1!important;grid-row:1!important;width:100%!important}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;width:100%!important}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;width:100%!important}
+  .st-key-cdt_top_header [data-testid="stPopover"]{position:absolute!important;right:12px!important;bottom:44px!important;width:calc(50% - 16px)!important;z-index:5!important}
+  .st-key-cdt_top_header [data-testid="stPopover"]>button{width:100%!important;height:36px!important;min-height:36px!important;justify-content:center!important;border-radius:10px!important;font-size:.68rem!important}
+  .st-key-header_control_strip [data-testid="stSegmentedControl"] button{height:36px!important;min-height:36px!important}
+  .header-meta{font-size:.64rem!important;line-height:1.1!important;padding:1px 0!important}
   .st-key-cdt_top_header .cdt-title{font-size:clamp(1.65rem,8vw,2.2rem)!important}
   .st-key-cdt_top_header .cdt-brandline{font-size:.72rem!important}
   .st-key-cdt_top_header .cdt-unit-emphasis{font-size:clamp(1.2rem,6vw,1.7rem)!important}
@@ -1550,6 +1565,8 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
     management_available=bool(manager_password(st))
     data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1))
     updated=datetime.fromisoformat(metadata["atualizado_em"])
+    if updated.tzinfo is not None:
+        updated=updated.astimezone(RECIFE_TZ)
     month_names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
     today=date.today()
     update_text=f"Atualizado hoje, {updated:%H:%M}" if updated.date()==today else f"Atualizado {updated:%d/%m}, {updated:%H:%M}"
@@ -1594,9 +1611,9 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
                     with nav_col:
                         selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
                     with update_col:
-                        st.markdown(f'<div class="header-meta header-update"><span class="header-meta-icon">◷</span>{html.escape(update_text)}</div>',unsafe_allow_html=True)
+                        st.markdown(f'<div class="header-meta header-update">{html.escape(update_text)}</div>',unsafe_allow_html=True)
                     with month_col:
-                        st.markdown(f'<div class="header-meta header-month"><span class="header-meta-icon">▦</span>{html.escape(competence_text)}</div>',unsafe_allow_html=True)
+                        st.markdown(f'<div class="header-meta header-month">{html.escape(competence_text)}</div>',unsafe_allow_html=True)
                     with weeks_col:
                         selected_week=st.segmented_control("Semanas",week_labels,default=default_week,key=weekly_state_key,label_visibility="collapsed") or default_week
                         st.session_state["weekly_selected_label"]=selected_week
@@ -1606,9 +1623,9 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
                     with nav_col:
                         selected_area=st.segmented_control("Navegação",areas,default=st.session_state.area,key="top_nav_area",label_visibility="collapsed")
                     with update_col:
-                        st.markdown(f'<div class="header-meta header-update"><span class="header-meta-icon">◷</span>{html.escape(update_text)}</div>',unsafe_allow_html=True)
+                        st.markdown(f'<div class="header-meta header-update">{html.escape(update_text)}</div>',unsafe_allow_html=True)
                     with month_col:
-                        st.markdown(f'<div class="header-meta header-month"><span class="header-meta-icon">▦</span>{html.escape(competence_text)}</div>',unsafe_allow_html=True)
+                        st.markdown(f'<div class="header-meta header-month">{html.escape(competence_text)}</div>',unsafe_allow_html=True)
                 selected_week=default_week
         else:
             selected_area="GESTÃO"
