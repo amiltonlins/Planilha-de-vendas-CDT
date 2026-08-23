@@ -624,15 +624,6 @@ def seller_kpi_card(label,value,sub,cls):
 def seller_kpis_html(x):
     meta_pct=x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0
     status,_,_=performance(x["media"])
-    commercial=[
-        ("VENDAS",x["vendas"],"Produção","primary mobile-duplicate"),
-        ("PROJEÇÃO",x["projecao"],f'Meta {x["meta_individual"]}',"level2 mobile-duplicate"),
-        ("MÉDIA/DIA",f'{x["media"]:.2f}',f'{x["dias"]} dias',"level2"),
-        ("% META",pct(meta_pct),status,"level2"),
-        ("ZEROS",x["zeros"],f'Semana {x["zeros_semana"]}',"level3"),
-        ("NEO",x["neo"],"Neoenergia","level3"),
-        ("% NEO",pct(x["neo_pct"]),"Participação","level3"),
-    ]
     awards=[
         ("PREMIAÇÃO ATUAL",money(x["base"]),"Já acumulada","primary mobile-duplicate"),
         ("PREMIAÇÃO PROJETADA",money(x["comissao_proj"]),"Base projetada","level2"),
@@ -641,7 +632,6 @@ def seller_kpis_html(x):
         ("SEMANAIS",money(x["premio_total"]),"Acumulado semanal","level3"),
         ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total mobile-duplicate"),
     ]
-    commercial_html=''.join(seller_kpi_card(*item) for item in commercial)
     awards_html=''.join(seller_kpi_card(*item) for item in awards)
     mobile_primary=[
         ("VENDAS",x["vendas"],"Produção","primary"),
@@ -650,17 +640,28 @@ def seller_kpis_html(x):
         ("TOTAL VARIÁVEL PROJETADO",money(x["total_variavel_proj"]),"Fechamento estimado","primary total"),
     ]
     mobile_html=''.join(seller_kpi_card(*item) for item in mobile_primary)
+    commercial_html=(
+        '<div class="seller-commercial-single">'
+        '<div class="seller-commercial-title">DESEMPENHO COMERCIAL</div>'
+        '<div class="seller-commercial-metrics">'
+        f'<div><small>MÉDIA/DIA</small><strong>{x["media"]:.2f}</strong></div>'
+        f'<div><small>% META</small><strong>{pct(meta_pct)}</strong></div>'
+        f'<div><small>ZEROS</small><strong>{x["zeros"]}</strong></div>'
+        f'<div class="seller-commercial-neo"><small>NEOENERGIA</small><strong>{x["neo"]} vendas <span>• {pct(x["neo_pct"])}</span></strong></div>'
+        '</div></div>'
+    )
     return (
         f'<div class="seller-mobile-primary">{mobile_html}</div>'
         '<div class="seller-groups">'
-        '<div class="seller-group-title">DESEMPENHO COMERCIAL</div>'
-        f'<div class="seller-kpi-grid">{commercial_html}</div>'
+        f'{commercial_html}'
         '<div class="seller-group-title award">PREMIAÇÃO</div>'
         f'<div class="seller-kpi-grid award-grid">{awards_html}</div>'
         '</div>'
     )
 
+
 def ranking_html(ranking,auth_token=""):
+
     medals=("🥇","🥈","🥉")
     rows=[]
     for i,x in enumerate(ranking):
@@ -1429,6 +1430,46 @@ def render_app():
     import streamlit as st
     st.set_page_config(page_title="Painel Comercial — Afogados",page_icon="📊",layout="wide",initial_sidebar_state="collapsed")
     st.markdown(CSS,unsafe_allow_html=True)
+    st.markdown("""<style>
+.exec-performance-values strong,.exec-performance-values .exec-main-value strong{font-size:clamp(2.25rem,3.2vw,3.7rem)!important;font-weight:900!important;line-height:.95!important;letter-spacing:-.035em!important}
+.seller-commercial-single{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px;min-width:0;overflow:hidden}
+.seller-commercial-title{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:#475569;margin:0 0 10px}
+.seller-commercial-metrics{display:grid;grid-template-columns:.9fr .9fr .75fr 1.65fr;align-items:stretch;gap:0;min-width:0}
+.seller-commercial-metrics>div{min-width:0;padding:3px 12px;border-left:1px solid #E2E8F0;display:flex;flex-direction:column;justify-content:center}
+.seller-commercial-metrics>div:first-child{border-left:0;padding-left:0}
+.seller-commercial-metrics small{font-size:.58rem;font-weight:900;letter-spacing:.035em;color:#64748B;white-space:nowrap}
+.seller-commercial-metrics strong{font-size:1.2rem;line-height:1.08;margin-top:6px;color:#0F172A;font-weight:900;white-space:nowrap}
+.seller-commercial-neo strong{font-size:1.32rem;color:#0F172A}
+.seller-commercial-neo strong span{font-size:.92em;font-weight:900}
+@media(max-width:760px){
+.block-container{padding-top:.30rem!important;padding-left:.48rem!important;padding-right:.48rem!important}
+.st-key-cdt_top_header{padding:10px 11px 7px!important;margin-bottom:2px!important}
+.st-key-header_control_strip,.st-key-compact_top_strip{margin-top:1px!important;margin-bottom:3px!important;padding-top:0!important;padding-bottom:1px!important}
+.exec-compact-grid{margin-top:5px!important;margin-bottom:7px!important;gap:6px!important;grid-template-columns:1fr 1fr!important}
+.exec-performance{grid-column:1/-1!important}
+.exec-compact-card{min-height:0!important;height:auto!important;padding:10px 11px!important;border-radius:11px!important}
+.exec-compact-title{margin-bottom:7px!important;font-size:.58rem!important}
+.exec-performance-values{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+.exec-performance-values strong,.exec-performance-values .exec-main-value strong{font-size:clamp(1.55rem,7vw,2.1rem)!important;margin-top:5px!important}
+.exec-pair-values{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+.exec-pair-values strong{font-size:clamp(1.35rem,6vw,1.9rem)!important;margin-top:4px!important}
+.exec-performance-values small,.exec-pair-values small{font-size:.52rem!important}
+}
+@media(max-width:560px){
+.st-key-cdt_top_header{padding:9px 10px 6px!important;border-radius:16px!important}
+.cdt-brandline{margin-bottom:2px!important}.cdt-title{line-height:1!important}.cdt-unit-emphasis{margin-top:3px!important}
+.exec-compact-grid{gap:5px!important;margin-top:4px!important}.exec-compact-card{padding:9px 9px!important}.exec-compact-title{margin-bottom:6px!important}
+.exec-performance-values strong,.exec-performance-values .exec-main-value strong{font-size:clamp(1.45rem,7.5vw,1.95rem)!important}
+.exec-pair-values strong{font-size:clamp(1.25rem,6.5vw,1.7rem)!important}
+div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important}
+.seller-mobile-primary{margin-top:6px!important;gap:6px!important}.seller-mobile-primary .seller-kpi{padding:9px 9px!important}.seller-groups{margin-top:5px!important}
+.seller-commercial-single{padding:10px 9px;margin-top:7px;border-radius:10px}.seller-commercial-title{font-size:.62rem;margin-bottom:7px}
+.seller-commercial-metrics{grid-template-columns:.82fr .82fr .68fr 1.68fr}.seller-commercial-metrics>div{padding:2px 7px}.seller-commercial-metrics>div:first-child{padding-left:0}
+.seller-commercial-metrics small{font-size:.48rem}.seller-commercial-metrics strong{font-size:.92rem;margin-top:4px}.seller-commercial-neo strong{font-size:1rem;white-space:normal;line-height:1.05}
+.seller-group-title.award{margin-top:9px!important;margin-bottom:5px!important}.seller-kpi-grid.award-grid{gap:6px!important}
+}
+@media(max-width:360px){.seller-commercial-metrics{grid-template-columns:.8fr .8fr .65fr 1.75fr}.seller-commercial-metrics>div{padding:2px 5px}.seller-commercial-metrics small{font-size:.43rem}.seller-commercial-metrics strong{font-size:.84rem}.seller-commercial-neo strong{font-size:.91rem}}
+</style>""",unsafe_allow_html=True)
     st.markdown("""<style>
 /* Refinamento visual final do topo e KPIs — sem alterar lógica */
 .st-key-cdt_top_header{padding-top:18px!important;padding-bottom:14px!important;margin-bottom:0!important}
