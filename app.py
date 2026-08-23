@@ -1550,17 +1550,17 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
 
   /* Faixa de navegação: grid previsível, sem flex-basis conflitantes. */
   .st-key-header_control_strip{margin-top:10px!important;padding:0!important;width:100%!important;}
-  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{
+  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{
     display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
     gap:6px 8px!important;align-items:center!important;width:100%!important;flex-wrap:unset!important;
   }
-  .st-key-header_control_strip [data-testid="column"]{
+  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{
     width:100%!important;max-width:none!important;min-width:0!important;flex:none!important;
   }
   .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){grid-column:1 / -1!important;grid-row:1!important;}
   .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}
   .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}
-  .st-key-header_control_strip [data-testid="column"]:nth-child(4){grid-column:1 / -1!important;grid-row:3!important;overflow:hidden!important;}
+  .st-key-header_control_strip > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4){grid-column:1 / -1!important;grid-row:3!important;overflow:hidden!important;}
 
   /* Visão Geral / Semanal sempre lado a lado. */
   .st-key-top_nav_area [data-testid="stSegmentedControl"]{width:100%!important;min-height:38px!important;}
