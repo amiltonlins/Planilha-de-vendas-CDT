@@ -1532,6 +1532,74 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
   .exec-performance-values small,.exec-pair-values small{font-size:.62rem!important;margin-bottom:5px!important}
 }
 </style>""",unsafe_allow_html=True)
+    st.markdown("""<style>
+/* Correção definitiva do cabeçalho mobile: sem sobreposição e com controles organizados. */
+@media(max-width:600px){
+  .st-key-cdt_top_header{position:relative!important;overflow:visible!important;}
+
+  /* O menu do usuário volta ao fluxo normal: nunca pode flutuar sobre atualização/semanas. */
+  .st-key-cdt_top_header [data-testid="stPopover"]{
+    position:static!important;right:auto!important;bottom:auto!important;left:auto!important;top:auto!important;
+    width:100%!important;display:flex!important;justify-content:flex-end!important;z-index:auto!important;
+  }
+  .st-key-cdt_top_header [data-testid="stPopover"]>button{
+    width:100%!important;max-width:100%!important;min-width:0!important;height:36px!important;min-height:36px!important;
+    padding:0 9px!important;border-radius:10px!important;font-size:.64rem!important;white-space:nowrap!important;
+    overflow:hidden!important;text-overflow:ellipsis!important;
+  }
+
+  /* Faixa de navegação: grid previsível, sem flex-basis conflitantes. */
+  .st-key-header_control_strip{margin-top:10px!important;padding:0!important;width:100%!important;}
+  .st-key-header_control_strip [data-testid="stHorizontalBlock"]{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:6px 8px!important;align-items:center!important;width:100%!important;flex-wrap:unset!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]{
+    width:100%!important;max-width:none!important;min-width:0!important;flex:none!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]:nth-child(1){grid-column:1 / -1!important;grid-row:1!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(2){grid-column:1!important;grid-row:2!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4){grid-column:1 / -1!important;grid-row:3!important;overflow:hidden!important;}
+
+  /* Visão Geral / Semanal sempre lado a lado. */
+  .st-key-top_nav_area [data-testid="stSegmentedControl"]{width:100%!important;min-height:38px!important;}
+  .st-key-top_nav_area [data-testid="stSegmentedControl"]>div{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;width:100%!important;gap:0!important;
+  }
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] button{
+    flex:1 1 50%!important;width:50%!important;min-width:0!important;height:38px!important;min-height:38px!important;
+    padding:0 8px!important;font-size:.66rem!important;white-space:nowrap!important;
+  }
+
+  /* Atualização e competência permanecem em linha própria, sem ícones e sem invadir outros controles. */
+  .header-meta{
+    display:block!important;width:100%!important;min-width:0!important;padding:2px 0!important;margin:0!important;
+    font-size:.60rem!important;line-height:1.15!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+  }
+  .header-month{text-align:right!important;}
+
+  /* Semanas: uma única faixa rolável dentro do componente, nunca sobreposta ao usuário. */
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"]{
+    width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;
+    -webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"]::-webkit-scrollbar{display:none!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"]>div{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;width:max-content!important;min-width:100%!important;gap:0!important;
+  }
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] button{
+    flex:0 0 auto!important;min-width:54px!important;height:36px!important;min-height:36px!important;padding:0 9px!important;font-size:.62rem!important;
+  }
+}
+
+@media(max-width:390px){
+  .st-key-cdt_top_header [data-testid="stPopover"]>button{font-size:.59rem!important;padding:0 7px!important;}
+  .st-key-top_nav_area [data-testid="stSegmentedControl"] button{font-size:.62rem!important;padding:0 5px!important;}
+  .header-meta{font-size:.56rem!important;}
+  .st-key-header_control_strip [data-testid="column"]:nth-child(4) [data-testid="stSegmentedControl"] button{min-width:50px!important;padding:0 7px!important;font-size:.59rem!important;}
+}
+</style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     global BASE_SELLER_DEFAULTS
     BASE_SELLER_DEFAULTS=copy.deepcopy(base.get("vendedores",[]))
