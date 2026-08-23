@@ -1,0 +1,25 @@
+name: Aplicar otimizacao mobile e popup
+on:
+  push:
+    branches: [feat/mobile-popup-compacto]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[mobile-popup-aplicado]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mobile-popup-compacto
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/aplicar_mobile_popup.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Otimizar mobile e popup do vendedor [mobile-popup-aplicado]"
+          git push origin HEAD:feat/mobile-popup-compacto
