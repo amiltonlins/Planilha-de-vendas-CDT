@@ -2037,6 +2037,52 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
 </style>""",unsafe_allow_html=True)
 
     st.markdown("""<style>
+/* CORREÇÃO FINAL DO SELETOR DE SEMANAS MOBILE - 2026-08-24 */
+@media(max-width:700px){
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons{
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    overflow:hidden!important;box-sizing:border-box!important;margin:1px 0 0!important;padding:0!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons > [data-testid="stVerticalBlock"]{
+    width:100%!important;max-width:100%!important;min-width:0!important;overflow:hidden!important;box-sizing:border-box!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    gap:1px!important;justify-content:flex-start!important;overflow:hidden!important;box-sizing:border-box!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
+    flex:0 0 26px!important;width:26px!important;min-width:26px!important;max-width:26px!important;
+    margin:0!important;padding:0!important;box-sizing:border-box!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div{
+    width:26px!important;min-width:26px!important;max-width:26px!important;margin:0!important;padding:0!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+    width:26px!important;min-width:26px!important;max-width:26px!important;
+    height:25px!important;min-height:25px!important;max-height:25px!important;
+    margin:0!important;padding:0 1px!important;border-radius:4px!important;
+    font-size:.52rem!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;
+    box-sizing:border-box!important;justify-content:center!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button p,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button span{
+    margin:0!important;padding:0!important;font:inherit!important;line-height:1!important;white-space:nowrap!important;
+  }
+}
+@media(max-width:390px){
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"],
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+    width:24px!important;min-width:24px!important;max-width:24px!important;flex-basis:24px!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{height:24px!important;min-height:24px!important;max-height:24px!important;font-size:.49rem!important;}
+}
+</style>""",unsafe_allow_html=True)
+
+    st.markdown("""<style>
 /* Correção final do espaço vazio superior do Streamlit.
    Não altera componentes, dados ou regras; apenas remove o espaçamento estrutural antes do painel. */
 [data-testid="stAppViewContainer"],
@@ -2456,7 +2502,8 @@ section.main>div,
                     week_cols=st.columns(len(week_labels),gap="small")
                     for week_i,(week_col,week_label) in enumerate(zip(week_cols,week_labels)):
                         with week_col:
-                            if st.button(week_label,key=f"week_btn_{week_i}",use_container_width=True,type="primary" if week_label==default_week else "secondary"):
+                            mobile_week_label=f"S{week_i+1}"
+                            if st.button(mobile_week_label,key=f"week_btn_{week_i}",use_container_width=False,type="primary" if week_label==default_week else "secondary"):
                                 selected_week=week_label
                 st.session_state["weekly_selected_label"]=selected_week
     else:
