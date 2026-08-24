@@ -7,21 +7,56 @@ import app_core as _core
 
 _original_general_report_xlsx = _core.general_report_xlsx_bytes
 _original_team_card_html = _core.team_performance_card_html
+_original_render_management = _core.render_management
+_report_rendered_this_run = False
 
 
 def _management_general_report_xlsx(team, all_days):
+    """Renderiza a tabela do Relatório Geral uma única vez e preserva o Excel original."""
+    global _report_rendered_this_run
     import streamlit as st
-    columns=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(day.day,str(day.day)) for day in all_days]
-    display=_core.general_report_display(team)
-    st.markdown(_core.table_html(display,columns,lambda item:_core.performance(item["media"])[1],True),unsafe_allow_html=True)
+
+    if not _report_rendered_this_run:
+        columns=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(day.day,str(day.day)) for day in all_days]
+        display=_core.general_report_display(team)
+        st.markdown(_core.table_html(display,columns,lambda item:_core.performance(item["media"])[1],True),unsafe_allow_html=True)
+        _report_rendered_this_run = True
+
     return _original_general_report_xlsx(team,all_days)
+
+
+def _is_awards_detail_table(data):
+    """Identifica somente a tabela detalhada de PREMIAÇÕES E CENÁRIOS."""
+    if not isinstance(data, list) or not data:
+        return False
+    first=data[0]
+    if not isinstance(first, dict):
+        return False
+    required={"Vendedor","Premiação projetada","Total var. projetado"}
+    return required.issubset(set(first.keys()))
+
+
+def _render_management_without_awards_table(*args, **kwargs):
+    """Mantém todo o Menu Gerencial e suprime apenas a planilha detalhada de premiações."""
+    import streamlit as st
+
+    original_dataframe=st.dataframe
+
+    def guarded_dataframe(data=None, *df_args, **df_kwargs):
+        if _is_awards_detail_table(data):
+            return None
+        return original_dataframe(data, *df_args, **df_kwargs)
+
+    st.dataframe=guarded_dataframe
+    try:
+        return _original_render_management(*args, **kwargs)
+    finally:
+        st.dataframe=original_dataframe
 
 
 def _clickable_team_card(title,goal,metrics,tone="internal",performance_counts=None):
     """Mantém o card original como item direto do grid e adiciona clique sem quebrar o layout."""
     card=_original_team_card_html(title,goal,metrics,tone,performance_counts)
-    # display:contents impede o link-wrapper de virar uma nova caixa do CSS Grid.
-    # Assim Interna e Externa permanecem lado a lado no desktop e empilhadas no mobile.
     return f'<a href="?team={quote(str(title))}" target="_self" style="display:contents;color:inherit;text-decoration:none" aria-label="Abrir detalhamento de {html.escape(str(title),quote=True)}">{card}</a>'
 
 
@@ -77,6 +112,7 @@ def _open_team_dialog_if_requested():
 
 _core.general_report_xlsx_bytes=_management_general_report_xlsx
 _core.render_general_report=lambda *args,**kwargs:None
+_core.render_management=_render_management_without_awards_table
 _core.team_performance_card_html=_clickable_team_card
 
 if __name__=="__main__":
