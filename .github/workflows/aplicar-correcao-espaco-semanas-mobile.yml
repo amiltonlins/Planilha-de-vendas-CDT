@@ -1,0 +1,46 @@
+name: Aplicar correcao espaco semanas mobile
+
+on:
+  push:
+    branches:
+      - fix/semanas-mobile-espaco-imagem
+    paths:
+      - scripts/corrigir_espaco_semanas_mobile_imagem.py
+      - .github/workflows/aplicar-correcao-espaco-semanas-mobile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/semanas-mobile-espaco-imagem
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar correcao
+        run: python scripts/corrigir_espaco_semanas_mobile_imagem.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py
+      - name: Validar seletor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          t=Path('app.py').read_text(encoding='utf-8')
+          assert 'CORREÇÃO FINAL DE DISTRIBUIÇÃO DAS SEMANAS NO MOBILE' in t
+          assert 'justify-content:flex-start!important' in t
+          assert 'flex:0 0 26px!important' in t
+          assert 'gap:1px!important' in t
+          print('Seletor mobile OK')
+          PY
+      - name: Commitar app atualizado
+        run: |
+          if git diff --quiet app.py; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add -- app.py
+          git commit -m "Agrupar botoes de semana no mobile"
+          git push origin HEAD:fix/semanas-mobile-espaco-imagem
