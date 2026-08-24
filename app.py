@@ -21,21 +21,39 @@ def _is_awards_detail_table(data):
 
 
 def _render_management_without_awards_table(*args, **kwargs):
-    """Mantém o Menu Gerencial nativo e suprime apenas a tabela detalhada de premiações."""
+    """Mantém o Menu Gerencial e remove apenas o Relatório Geral e a tabela detalhada de premiações."""
     import streamlit as st
 
     original_dataframe = st.dataframe
+    original_markdown = st.markdown
+    original_download_button = st.download_button
 
     def guarded_dataframe(data=None, *df_args, **df_kwargs):
         if _is_awards_detail_table(data):
             return None
         return original_dataframe(data, *df_args, **df_kwargs)
 
+    def guarded_markdown(body, *md_args, **md_kwargs):
+        normalized = str(body).strip().upper()
+        if normalized == "#### RELATÓRIO GERAL DA EQUIPE":
+            return None
+        return original_markdown(body, *md_args, **md_kwargs)
+
+    def guarded_download_button(label, *db_args, **db_kwargs):
+        normalized = str(label).strip().upper()
+        if normalized == "BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)":
+            return False
+        return original_download_button(label, *db_args, **db_kwargs)
+
     st.dataframe = guarded_dataframe
+    st.markdown = guarded_markdown
+    st.download_button = guarded_download_button
     try:
         return _original_render_management(*args, **kwargs)
     finally:
         st.dataframe = original_dataframe
+        st.markdown = original_markdown
+        st.download_button = original_download_button
 
 
 def _clickable_team_card(title, goal, metrics, tone="internal", performance_counts=None):
@@ -132,8 +150,7 @@ def _open_team_dialog_if_requested():
     _dialog()
 
 
-# O Relatório Geral volta a usar o fluxo nativo de renderização da Gestão.
-# Não existe mais monkey patch em general_report_xlsx_bytes nem interceptação do título/download.
+# O Relatório Geral da Equipe é removido da interface da Gestão.
 _core.render_general_report = lambda *args, **kwargs: None
 _core.render_management = _render_management_without_awards_table
 _core.team_performance_card_html = _clickable_team_card
