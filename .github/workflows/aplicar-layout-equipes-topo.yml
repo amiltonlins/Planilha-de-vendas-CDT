@@ -1,0 +1,37 @@
+name: Aplicar ajustes de layout, equipes e topo
+
+on:
+  push:
+    branches:
+      - fix/layout-equipes-topo-url
+    paths:
+      - scripts/ajustar_layout_equipes_topo.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/layout-equipes-topo-url
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar ajustes
+        run: python scripts/ajustar_layout_equipes_topo.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py
+      - name: Commitar app atualizado
+        run: |
+          if git diff --quiet app.py; then
+            echo "Sem alterações em app.py"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Ajustar topo, produção e performance por equipe"
+          git push origin HEAD:fix/layout-equipes-topo-url
