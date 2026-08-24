@@ -37,21 +37,51 @@ def _is_awards_detail_table(data):
 
 
 def _render_management_without_awards_table(*args, **kwargs):
-    """Mantém todo o Menu Gerencial e suprime apenas a planilha detalhada de premiações."""
+    """Mantém o Menu Gerencial, suprime a planilha de premiações e impede duplicação do Relatório Geral."""
+    global _report_rendered_this_run
     import streamlit as st
 
+    # Cada nova renderização do Menu Gerencial começa limpa. Dentro dela, o Relatório Geral
+    # pode aparecer somente uma vez, mesmo que funções internas tentem chamá-lo novamente.
+    _report_rendered_this_run = False
     original_dataframe=st.dataframe
+    original_markdown=st.markdown
+    original_download_button=st.download_button
+    report_title_seen=False
+    report_download_seen=False
 
     def guarded_dataframe(data=None, *df_args, **df_kwargs):
         if _is_awards_detail_table(data):
             return None
         return original_dataframe(data, *df_args, **df_kwargs)
 
+    def guarded_markdown(body, *md_args, **md_kwargs):
+        nonlocal report_title_seen
+        normalized=str(body).strip().upper()
+        if normalized == "#### RELATÓRIO GERAL DA EQUIPE":
+            if report_title_seen:
+                return None
+            report_title_seen=True
+        return original_markdown(body, *md_args, **md_kwargs)
+
+    def guarded_download_button(label, *db_args, **db_kwargs):
+        nonlocal report_download_seen
+        normalized=str(label).strip().upper()
+        if normalized == "BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)":
+            if report_download_seen:
+                return False
+            report_download_seen=True
+        return original_download_button(label, *db_args, **db_kwargs)
+
     st.dataframe=guarded_dataframe
+    st.markdown=guarded_markdown
+    st.download_button=guarded_download_button
     try:
         return _original_render_management(*args, **kwargs)
     finally:
         st.dataframe=original_dataframe
+        st.markdown=original_markdown
+        st.download_button=original_download_button
 
 
 def _clickable_team_card(title,goal,metrics,tone="internal",performance_counts=None):
