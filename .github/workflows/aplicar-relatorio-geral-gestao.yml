@@ -1,0 +1,45 @@
+name: Aplicar relatorio geral na gestao
+
+on:
+  push:
+    branches:
+      - move/relatorio-geral-gestao-20260824
+    paths:
+      - scripts/mover_relatorio_geral_para_gestao.py
+      - .github/workflows/aplicar-relatorio-geral-gestao.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: move/relatorio-geral-gestao-20260824
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar ajuste
+        run: python scripts/mover_relatorio_geral_para_gestao.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py
+      - name: Validar posição do relatório
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('app.py').read_text(encoding='utf-8')
+          assert 'management_display=general_report_display(management_team)' in text
+          assert 'gestao_download_relatorio_geral' in text
+          assert 'render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color)' not in text
+          print('Relatório restrito à Gestão: OK')
+          PY
+      - name: Commitar app atualizado
+        run: |
+          if git diff --quiet app.py; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add -- app.py
+          git commit -m "Mover relatório geral para painel de gestão"
+          git push origin HEAD:move/relatorio-geral-gestao-20260824
