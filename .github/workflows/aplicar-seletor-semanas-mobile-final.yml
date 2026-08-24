@@ -1,0 +1,45 @@
+name: Aplicar seletor semanas mobile final
+
+on:
+  push:
+    branches:
+      - fix/semanas-mobile-compacto-20260824
+    paths:
+      - scripts/corrigir_seletor_semanas_mobile_final.py
+      - .github/workflows/aplicar-seletor-semanas-mobile-final.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/semanas-mobile-compacto-20260824
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python scripts/corrigir_seletor_semanas_mobile_final.py
+      - run: python -m py_compile app.py
+      - name: Validar seletor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('app.py').read_text(encoding='utf-8')
+          assert 'CORREÇÃO FINAL DO SELETOR DE SEMANAS MOBILE - 2026-08-24' in text
+          assert 'flex:0 0 26px!important' in text
+          assert 'gap:1px!important' in text
+          assert 'overflow:hidden!important' in text
+          assert 'mobile_week_label=f"S{week_i+1}"' in text
+          print('Validação OK')
+          PY
+      - name: Commitar app
+        run: |
+          if git diff --quiet app.py; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add -- app.py
+          git commit -m "Corrigir seletor semanal mobile"
+          git push origin HEAD:fix/semanas-mobile-compacto-20260824

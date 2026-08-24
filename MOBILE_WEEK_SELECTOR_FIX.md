@@ -1,0 +1,1 @@
+Escopo: seletor semanal mobile somente. Botões S1-S6 com 24–26px, gap de 1px e sem overflow horizontal.

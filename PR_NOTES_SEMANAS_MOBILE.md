@@ -1,0 +1,1 @@
+Correção exclusivamente visual do seletor semanal em telas mobile.
