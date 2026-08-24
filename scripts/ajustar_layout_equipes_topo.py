@@ -120,4 +120,4 @@ if 'AJUSTE FINAL ESTRUTURAL DE TOPO + PERFORMANCE POR EQUIPE - 2026-08' not in t
 path.write_text(text,encoding='utf-8')
 print('Layout de topo, produção por canal e performance por equipe ajustados.')
 
-# trigger workflow after workflow file exists
+# trigger workflow after default-branch workflow exists - run 2
