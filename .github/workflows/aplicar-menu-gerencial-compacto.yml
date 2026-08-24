@@ -3,7 +3,7 @@ name: Aplicar menu gerencial compacto
 on:
   push:
     branches:
-      - fix/menu-gerencial-compacto-20260824
+      - main
     paths:
       - scripts/compactar_menu_gerencial.py
       - .github/workflows/aplicar-menu-gerencial-compacto.yml
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/menu-gerencial-compacto-20260824
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -49,4 +49,4 @@ jobs:
           git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
           git add app.py
           git commit -m "Compactar menu gerencial"
-          git push origin HEAD:fix/menu-gerencial-compacto-20260824
+          git push origin HEAD:main
