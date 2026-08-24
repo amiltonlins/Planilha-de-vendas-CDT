@@ -3,6 +3,7 @@ name: Aplicar relatorio geral na gestao
 on:
   push:
     branches:
+      - main
       - move/relatorio-geral-gestao-20260824
     paths:
       - scripts/mover_relatorio_geral_para_gestao.py
@@ -17,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: move/relatorio-geral-gestao-20260824
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -42,4 +43,4 @@ jobs:
           git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
           git add -- app.py
           git commit -m "Mover relatório geral para painel de gestão"
-          git push origin HEAD:move/relatorio-geral-gestao-20260824
+          git push origin HEAD:${{ github.ref_name }}
