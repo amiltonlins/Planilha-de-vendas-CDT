@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Camada de interação sobre o núcleo existente do painel."""
+import copy
 import html
 import math
 from urllib.parse import quote
@@ -7,6 +8,81 @@ import app_core as _core
 
 _original_team_card_html = _core.team_performance_card_html
 _original_render_management = _core.render_management
+
+
+def _merge_registry_preserving_sellers(base, current):
+    """Importação nunca altera configurações administrativas já persistidas."""
+    cfg = copy.deepcopy(base)
+    if current is not None:
+        cfg.update(copy.deepcopy(current))
+        cfg["vendedores"] = copy.deepcopy(current.get("vendedores", []))
+    else:
+        cfg["vendedores"] = copy.deepcopy(base.get("vendedores", []))
+    return cfg
+
+
+def _prepare_config_preserving_sellers(base, rows, month, year):
+    """Preserva vendedores existentes exatamente como estão e adiciona apenas nomes novos, inativos."""
+    cfg = copy.deepcopy(base)
+    cfg["mes"], cfg["ano"] = month, year
+    sellers = copy.deepcopy(cfg.get("vendedores", []))
+    existing = {
+        _core.normalize_text(seller.get("vendedor", "")): seller
+        for seller in sellers
+        if _core.normalize_text(seller.get("vendedor", ""))
+    }
+
+    grouped = {}
+    for row in rows:
+        key = _core.normalize_text(row.get("vendedor", ""))
+        if key:
+            grouped.setdefault(key, []).append(row)
+
+    for key in sorted(grouped):
+        if key in existing:
+            # REGRA ABSOLUTA: vendedor já conhecido não recebe nenhuma alteração
+            # administrativa por causa de uma nova planilha.
+            continue
+
+        group = grouped[key]
+        sample = group[0]
+        variants = {}
+        for item in group:
+            raw = str(item.get("vendedor", "")).strip()
+            if raw:
+                variants[raw] = variants.get(raw, 0) + 1
+        name = max(variants, key=lambda value: (variants[value], len(value))) if variants else str(sample.get("vendedor", "")).strip()
+
+        inferred_category = next(
+            (label for label in ("Website", "ADM", "Freelance") if _core.normalize_text(label) in key),
+            "Vendedor",
+        )
+        inferred_team = _core.normalized_team(
+            None,
+            {"setor": sample.get("setor", "NÃO INFORMADO"), "categoria": inferred_category},
+        )
+
+        new_seller = {
+            "vendedor": name,
+            "setor": sample.get("setor", "NÃO INFORMADO"),
+            "equipe": inferred_team,
+            "categoria": inferred_category,
+            "pertence_franquia": False,
+            "classificado": False,
+            "ativo": False,
+            "experiencia": False,
+            "meta_individual": int(cfg.get("meta_padrao_vendedor", 70) or 70),
+            "trabalha_sabado": True,
+            "trabalha_domingo": False,
+            "data_inicio": f"{year}-01-01",
+            "data_desligamento": "",
+            "folgas": [],
+        }
+        sellers.append(new_seller)
+        existing[key] = new_seller
+
+    cfg["vendedores"] = sellers
+    return cfg
 
 
 def _is_awards_detail_table(data):
@@ -158,6 +234,10 @@ def _open_team_dialog_if_requested():
 
     _dialog()
 
+
+# Proteção da Gestão de Vendedores contra alterações provocadas por importação.
+_core.merge_registry = _merge_registry_preserving_sellers
+_core.prepare_config = _prepare_config_preserving_sellers
 
 # O Relatório Geral permanece oculto na Gestão, mas o download Excel nativo continua disponível.
 # O Excel usa o gerador original do sistema, preservando sua formatação e cores.
