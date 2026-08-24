@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Executar transferência do Relatório Geral para o Painel de Gestão via PR.
 path=Path('app.py')
 text=path.read_text(encoding='utf-8')
 
