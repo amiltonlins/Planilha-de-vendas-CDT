@@ -1,0 +1,53 @@
+name: Aplicar ajuste importacao vendedores meta
+
+on:
+  push:
+    branches:
+      - fix/importacao-config-vendedores-meta-20260824
+    paths:
+      - scripts/ajustar_importacao_vendedores_meta.py
+      - .github/workflows/aplicar-ajuste-importacao-vendedores-meta.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/importacao-config-vendedores-meta-20260824
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar ajuste
+        run: python scripts/ajustar_importacao_vendedores_meta.py
+      - name: Validar sintaxe
+        run: |
+          python -m py_compile app.py
+          python -m py_compile gerar_painel.py
+      - name: Validar regras essenciais
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('app.py').read_text(encoding='utf-8')
+          assert 'kept=[x for x in current_rows if x["data_venda"] not in imported_days]' in text
+          assert 'previous.get("meta_individual",int(cfg.get("meta_padrao_vendedor",70) or 70))' in text
+          assert 'meta_padrao_vendedor' in text
+          assert 'seller_line_' in text
+          assert 'seller_grid_row_' not in text
+          assert 'seller["meta_individual"]=meta_padrao' in text
+          print('Regras essenciais OK')
+          PY
+      - name: Commitar app atualizado
+        run: |
+          if git diff --quiet app.py; then
+            echo "Sem alteracoes em app.py"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add -- app.py
+          git commit -m "Preservar vendedores e compactar gestao"
+          git push origin HEAD:fix/importacao-config-vendedores-meta-20260824
