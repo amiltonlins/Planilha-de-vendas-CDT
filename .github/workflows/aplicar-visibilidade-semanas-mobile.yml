@@ -1,0 +1,49 @@
+name: Aplicar visibilidade semanas mobile
+
+on:
+  push:
+    branches:
+      - fix/semanas-mobile-visiveis-20260824
+    paths:
+      - scripts/corrigir_visibilidade_semanas_mobile.py
+      - .github/workflows/aplicar-visibilidade-semanas-mobile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/semanas-mobile-visiveis-20260824
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar correção
+        run: python scripts/corrigir_visibilidade_semanas_mobile.py
+      - name: Validar sintaxe
+        run: python -m py_compile app.py
+      - name: Validar seletor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('app.py').read_text(encoding='utf-8')
+          assert 'overflow-x:auto!important' in text
+          assert 'flex:0 0 26px!important' in text
+          assert 'gap:1px!important' in text
+          assert 'mobile_week_label=f"S{week_i+1}"' in text
+          print('Seletor mobile validado')
+          PY
+      - name: Commitar app atualizado
+        run: |
+          if git diff --quiet app.py; then
+            echo "Sem alterações em app.py"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add -- app.py
+          git commit -m "Exibir todas as semanas no mobile"
+          git push origin HEAD:fix/semanas-mobile-visiveis-20260824
