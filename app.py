@@ -692,10 +692,17 @@ def ranking_html(ranking,auth_token=""):
     medals=("🥇","🥈","🥉")
     rows=[]
     for i,x in enumerate(ranking):
-        _,color,_=performance(x["media"])
+        classification,color,_=performance(x["media"])
         medal=medals[i] if i<3 else f"{i+1}º"
         meta_pct=x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0
-        status_emoji,status_message=projection_status_visual(meta_pct,x.get("meta_individual"),x.get("projecao"))
+        performance_key=normalize_text(classification)
+        status_emoji={
+            "vermelho":"😟",
+            "amarelo":"😐",
+            "verde":"🙂",
+            "azul":"😎",
+        }.get(performance_key,"😟")
+        status_message=""
         rows.append(
             f'<div class="rank-row"><div class="rank-pos">{medal}</div>'
             f'<a class="rank-click" href="?{("auth="+html.escape(str(auth_token),quote=True)+"&") if auth_token else ""}seller={html.escape(str(x["vendedor"]),quote=True)}" target="_self">'
