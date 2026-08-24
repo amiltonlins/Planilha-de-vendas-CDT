@@ -185,7 +185,7 @@ def prepare_config(base,rows,month,year):
             team_value=normalized_team(fallback_base.get("equipe"),fallback_base)
         sellers.append({"vendedor":name,"setor":previous.get("setor",sample["setor"]),"equipe":team_value,"categoria":category,
             "pertence_franquia":belongs,"classificado":previous.get("classificado",registered or bool(fallback_base)),"ativo":previous.get("ativo",active_default if fallback_base else registered),
-            "experiencia":previous.get("experiencia",False),"meta_individual":previous.get("meta_individual",70),
+            "experiencia":previous.get("experiencia",False),"meta_individual":previous.get("meta_individual",int(cfg.get("meta_padrao_vendedor",70) or 70)),
             "trabalha_sabado":previous.get("trabalha_sabado",True),"trabalha_domingo":previous.get("trabalha_domingo",False),
             "data_inicio":previous.get("data_inicio",f"{year}-01-01"),"data_desligamento":previous.get("data_desligamento",""),"folgas":previous.get("folgas",[])})
     cfg["vendedores"]=sellers; return cfg
@@ -1323,7 +1323,12 @@ def render_management(st,base,current_rows,current_cfg,metadata):
             rows,imported_days=merge_daily_history(rows,incoming)
             pending_import_count=len(incoming); pending_seller_count=len({normalize_text(x["vendedor"]) for x in incoming})
             ref=max(imported_days); month_rows=[x for x in rows if x["data_venda"].year==ref.year and x["data_venda"].month==ref.month]
-            cfg=prepare_config(merge_registry(base,current_cfg),month_rows,ref.month,ref.year)
+            # A importação atualiza vendas, mas o cadastro administrativo existente é a fonte de verdade.
+            # prepare_config apenas acrescenta nomes novos encontrados no relatório e preserva os campos
+            # dos vendedores já configurados (equipe, ativo, categoria, vínculo e meta).
+            preserved_cfg=merge_registry(base,current_cfg)
+            cfg=prepare_config(preserved_cfg,month_rows,ref.month,ref.year)
+            cfg["meta_padrao_vendedor"]=int(preserved_cfg.get("meta_padrao_vendedor",70) or 70)
             cfg["dia_referencia"]=max(x["data_venda"].day for x in month_rows); source=uploaded.name
         except Exception as exc:st.error(f"O relatório não pôde ser validado: {exc}"); return
     month_rows=[x for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]]
@@ -1351,40 +1356,51 @@ def render_management(st,base,current_rows,current_cfg,metadata):
 
     with st.form("gestao_config"):
         st.markdown("#### GESTÃO DE VENDEDORES")
-        st.caption("Os vendedores são identificados automaticamente pela planilha. Aqui você define somente a equipe e se aparecem no Dashboard/Ranking.")
+        st.caption("Configurações já salvas são preservadas nas próximas importações. Vendedores novos aparecem abaixo para configuração.")
         st.markdown("""<style>
-/* MENU GERENCIAL COMPACTO - somente apresentação */
-[class*="st-key-seller_grid_row_"]{margin-bottom:.25rem!important}
-[class*="st-key-seller_grid_row_"] [data-testid="stVerticalBlockBorderWrapper"]{padding:.15rem!important}
-[class*="st-key-seller_grid_row_"] [data-testid="stVerticalBlock"]{gap:.20rem!important}
-[class*="st-key-seller_grid_row_"] [data-testid="stMarkdownContainer"] p{margin-bottom:.05rem!important;line-height:1.12!important}
-[class*="st-key-seller_grid_row_"] [data-testid="stCaptionContainer"]{margin-top:-.15rem!important;margin-bottom:.05rem!important}
-[class*="st-key-seller_grid_row_"] [data-testid="stSelectbox"] label,
-[class*="st-key-seller_grid_row_"] [data-testid="stCheckbox"] label{font-size:.70rem!important}
-[class*="st-key-seller_grid_row_"] [data-baseweb="select"]>div{min-height:34px!important;height:34px!important}
+/* GESTÃO DE VENDEDORES EM LINHAS COMPACTAS - somente layout */
+.st-key-seller_management_header{margin:.15rem 0 .05rem!important}
+[class*="st-key-seller_line_"]{border-bottom:1px solid #E2E8F0!important;margin:0!important;padding:2px 0!important}
+[class*="st-key-seller_line_"] [data-testid="stHorizontalBlock"]{align-items:center!important;gap:.35rem!important}
+[class*="st-key-seller_line_"] [data-testid="stMarkdownContainer"] p{margin:0!important;line-height:1.05!important;font-size:.76rem!important}
+[class*="st-key-seller_line_"] [data-testid="stSelectbox"],
+[class*="st-key-seller_line_"] [data-testid="stCheckbox"]{margin:0!important;padding:0!important}
+[class*="st-key-seller_line_"] [data-baseweb="select"]>div{min-height:30px!important;height:30px!important;font-size:.72rem!important}
+[class*="st-key-seller_line_"] label{font-size:.64rem!important;margin:0!important}
 @media(max-width:700px){
-  [class*="st-key-seller_grid_row_"] [data-testid="stHorizontalBlock"]{display:block!important}
-  [class*="st-key-seller_grid_row_"] [data-testid="column"]{width:100%!important;min-width:100%!important;max-width:100%!important;margin-bottom:.35rem!important}
+ [class*="st-key-seller_line_"] [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:minmax(0,1fr) 70px!important;gap:3px 6px!important}
+ [class*="st-key-seller_line_"] [data-testid="column"]{width:100%!important;min-width:0!important;max-width:none!important}
+ [class*="st-key-seller_line_"] [data-testid="column"]:nth-child(3){grid-column:1!important}
+ [class*="st-key-seller_line_"] [data-testid="column"]:nth-child(4){grid-column:2!important}
 }
 </style>""",unsafe_allow_html=True)
-        sellers_list=list(enumerate(cfg["vendedores"]))
-        for row_start in range(0,len(sellers_list),3):
-            with st.container(key=f"seller_grid_row_{row_start//3}"):
-                seller_cols=st.columns(3,gap="small")
-                for offset,(i,seller) in enumerate(sellers_list[row_start:row_start+3]):
-                    key=normalize_text(seller.get("vendedor","")); qty=sales_by_seller.get(key,0)
-                    with seller_cols[offset]:
-                        with st.container(border=True):
-                            st.markdown(f'**{seller["vendedor"]}**')
-                            st.caption(f'{qty} venda(s) no mês')
-                            current_team=normalized_team(seller.get("equipe"),seller)
-                            seller["equipe"]=st.selectbox("Equipe",TEAM_OPTIONS,index=TEAM_OPTIONS.index(current_team),key=f"geq{i}")
-                            was_active=bool(seller.get("ativo",False))
-                            seller["ativo"]=st.checkbox("Exibir no Dashboard/Ranking",was_active,key=f"gat{i}")
-                            if seller["ativo"]:
-                                seller["pertence_franquia"]=True
-                                if normalize_text(seller.get("categoria")) in {"canal nacional",""}:seller["categoria"]="Vendedor"
-                            seller["classificado"]=True
+
+        # Um único valor administrativo é aplicado igualmente a todos os vendedores ativos.
+        default_meta=int(cfg.get("meta_padrao_vendedor",next((x.get("meta_individual",70) for x in cfg.get("vendedores",[]) if x.get("ativo",False)),70)) or 70)
+        meta_col,meta_note=st.columns([1.2,3.8],vertical_alignment="bottom")
+        meta_padrao=int(meta_col.number_input("META MENSAL POR VENDEDOR",min_value=0,value=default_meta,step=1,key="gestao_meta_padrao_vendedor"))
+        meta_note.caption("Ao salvar, este mesmo valor será aplicado a todos os vendedores ativos. Não é dividido entre a equipe.")
+        cfg["meta_padrao_vendedor"]=meta_padrao
+
+        with st.container(key="seller_management_header"):
+            h1,h2,h3,h4=st.columns([3.6,.8,2.0,1.55],vertical_alignment="center")
+            h1.markdown("**VENDEDOR**"); h2.markdown("**VENDAS**"); h3.markdown("**EQUIPE**"); h4.markdown("**DASHBOARD / RANKING**")
+
+        for i,seller in enumerate(cfg["vendedores"]):
+            key=normalize_text(seller.get("vendedor","")); qty=sales_by_seller.get(key,0)
+            with st.container(key=f"seller_line_{i}"):
+                name_col,sales_col,team_col,active_col=st.columns([3.6,.8,2.0,1.55],vertical_alignment="center")
+                name_col.markdown(f'**{html.escape(str(seller["vendedor"]))}**',unsafe_allow_html=True)
+                sales_col.markdown(f'**{qty}**')
+                current_team=normalized_team(seller.get("equipe"),seller)
+                seller["equipe"]=team_col.selectbox("Equipe",TEAM_OPTIONS,index=TEAM_OPTIONS.index(current_team),key=f"geq{i}",label_visibility="collapsed")
+                was_active=bool(seller.get("ativo",False))
+                seller["ativo"]=active_col.checkbox("Exibir",was_active,key=f"gat{i}")
+                if seller["ativo"]:
+                    seller["pertence_franquia"]=True
+                    seller["meta_individual"]=meta_padrao
+                    if normalize_text(seller.get("categoria")) in {"canal nacional",""}:seller["categoria"]="Vendedor"
+                seller["classificado"]=True
         confirmed=st.form_submit_button("SALVAR CONFIGURAÇÕES",use_container_width=True)
 
     st.markdown("#### RELATÓRIO GERAL DA EQUIPE")
