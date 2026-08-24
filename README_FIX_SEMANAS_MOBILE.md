@@ -1,0 +1,1 @@
+A correção final reduz o seletor semanal mobile para botões de 24–26px, gap de 1px e bloqueia overflow horizontal do componente.
