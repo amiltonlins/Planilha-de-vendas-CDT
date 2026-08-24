@@ -2095,6 +2095,22 @@ section.main > div.block-container,
   [data-testid="stDialog"] .seller-finance-detail .seller-kpi span{font-size:.4rem!important;margin-top:2px!important}
 }
 
+
+/* CORRECAO ESTRUTURAL DO ESPACO SUPERIOR - 2026-08 */
+html,body{margin:0!important;padding:0!important}
+[data-testid="stAppViewContainer"]{margin-top:0!important;padding-top:0!important}
+[data-testid="stAppViewContainer"]>.main{margin-top:0!important;padding-top:0!important}
+[data-testid="stAppViewBlockContainer"]{margin-top:0!important;padding-top:.35rem!important}
+section.main>div{margin-top:0!important;padding-top:.35rem!important}
+.block-container{margin-top:0!important;padding-top:.35rem!important}
+@media(max-width:900px){
+  [data-testid="stAppViewContainer"],
+  [data-testid="stAppViewContainer"]>.main,
+  [data-testid="stAppViewBlockContainer"],
+  section.main>div,
+  .block-container{margin-top:0!important;padding-top:.18rem!important}
+}
+
 </style>""",unsafe_allow_html=True)
     base=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
     global BASE_SELLER_DEFAULTS
