@@ -1,0 +1,52 @@
+name: Aplicar menu gerencial compacto
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/compactar_menu_gerencial.py
+      - .github/workflows/aplicar-menu-gerencial-compacto.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aplicar compactacao visual
+        run: python scripts/compactar_menu_gerencial.py
+      - name: Validar sintaxe
+        run: |
+          python -m py_compile app.py
+          python -m py_compile gerar_painel.py
+      - name: Validar remocoes de interface
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('app.py').read_text(encoding='utf-8')
+          assert 'st.markdown("#### ACOMPANHAMENTO SEMANAL")' not in text
+          assert 'st.markdown("#### CONFERÊNCIA DA IMPORTAÇÃO")' not in text
+          assert 'weekly_management_table_html(management_team,management_max_weeks)' not in text
+          assert 'st.markdown("#### HISTÓRICO SEMANAL INDIVIDUAL")' in text
+          assert 'seller_grid_row_' in text
+          print('Validacoes de interface OK')
+          PY
+      - name: Commitar app atualizado
+        run: |
+          if git diff --quiet app.py; then
+            echo "Sem alteracoes em app.py"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Compactar menu gerencial"
+          git push origin HEAD:main
