@@ -1,0 +1,1 @@
+Correção final do seletor semanal mobile.
