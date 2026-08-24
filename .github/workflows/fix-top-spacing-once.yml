@@ -1,0 +1,82 @@
+name: Fix top spacing once
+
+on:
+  push:
+    branches:
+      - fix/top-spacing-20260824
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/top-spacing-20260824
+          fetch-depth: 0
+
+      - name: Patch structural top spacing
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app.py")
+          text = path.read_text(encoding="utf-8")
+          marker = "/* AJUSTE ESTRUTURAL FINAL DE TOPO + PERFORMANCE POR EQUIPE - 2026-08 */"
+          fix_marker = "/* FIX DEFINITIVO: blocos técnicos de CSS não ocupam espaço vertical */"
+
+          if fix_marker not in text:
+              anchor = marker + "\n"
+              if anchor not in text:
+                  raise SystemExit("Marcador de CSS estrutural não encontrado")
+
+              fix = '''/* FIX DEFINITIVO: blocos técnicos de CSS não ocupam espaço vertical */
+[data-testid="stElementContainer"]:has(style){
+  display:none!important;
+  height:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+}
+/* O primeiro conteúdo útil começa no topo, sem reserva do header nativo. */
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>.main,
+[data-testid="stMain"],
+.stMain{
+  margin-top:0!important;
+  padding-top:0!important;
+}
+[data-testid="stHeader"]{
+  position:static!important;
+  inset:0!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+'''
+              text = text.replace(anchor, anchor + fix, 1)
+              path.write_text(text, encoding="utf-8")
+
+          workflow = Path(".github/workflows/fix-top-spacing-once.yml")
+          if workflow.exists():
+              workflow.unlink()
+
+      - name: Validate Python syntax
+        run: python -m py_compile app.py
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app.py .github/workflows/fix-top-spacing-once.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Corrigir espaçamento estrutural no topo"
+          git push origin HEAD:fix/top-spacing-20260824
