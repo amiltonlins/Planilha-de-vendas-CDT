@@ -18,8 +18,11 @@ def _management_general_report_xlsx(team, all_days):
 
 
 def _clickable_team_card(title,goal,metrics,tone="internal",performance_counts=None):
+    """Mantém o card original como item direto do grid e adiciona clique sem quebrar o layout."""
     card=_original_team_card_html(title,goal,metrics,tone,performance_counts)
-    return f'<a href="?team={quote(str(title))}" target="_self" style="display:block;color:inherit;text-decoration:none;min-width:0" aria-label="Abrir detalhamento de {html.escape(str(title),quote=True)}">{card}</a>'
+    # display:contents impede o link-wrapper de virar uma nova caixa do CSS Grid.
+    # Assim Interna e Externa permanecem lado a lado no desktop e empilhadas no mobile.
+    return f'<a href="?team={quote(str(title))}" target="_self" style="display:contents;color:inherit;text-decoration:none" aria-label="Abrir detalhamento de {html.escape(str(title),quote=True)}">{card}</a>'
 
 
 def _active_team_sellers(cfg,team_name):
