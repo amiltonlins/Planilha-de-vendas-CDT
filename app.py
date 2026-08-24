@@ -24,6 +24,15 @@ def _render_management_without_awards_table(*args, **kwargs):
     """Oculta o Relatório Geral visual, mantém seu download formatado e remove a tabela detalhada de premiações."""
     import streamlit as st
 
+    # O parâmetro ?team pertence exclusivamente ao dashboard.
+    # Ao entrar no Menu Gerencial ele deve ser descartado para impedir a abertura
+    # indevida do popup de Equipe Interna/Externa dentro da Gestão.
+    if st.query_params.get("team"):
+        try:
+            del st.query_params["team"]
+        except KeyError:
+            pass
+
     original_dataframe = st.dataframe
     original_markdown = st.markdown
 
@@ -77,6 +86,15 @@ def _popup_css():
 
 def _open_team_dialog_if_requested():
     import streamlit as st
+
+    # Popup de equipe existe somente no dashboard. Nunca abrir dentro do Menu Gerencial.
+    if st.session_state.get("gestor_autenticado", False):
+        if st.query_params.get("team"):
+            try:
+                del st.query_params["team"]
+            except KeyError:
+                pass
+        return
 
     requested = st.query_params.get("team")
     if requested not in ("Equipe Interna", "Equipe Externa") or not st.session_state.get("dashboard_autenticado", False):
