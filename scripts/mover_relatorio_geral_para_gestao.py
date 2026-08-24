@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Trigger: aplicar movimentação do Relatório Geral para a Gestão.
 path=Path('app.py')
 text=path.read_text(encoding='utf-8')
 
