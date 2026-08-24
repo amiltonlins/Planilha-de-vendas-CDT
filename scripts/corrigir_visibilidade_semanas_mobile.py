@@ -66,3 +66,4 @@ if marker not in text:
 text=text.replace(marker,css+marker,1)
 path.write_text(text,encoding='utf-8')
 print('Seletor semanal mobile ajustado para exibir todas as semanas via rolagem interna.')
+# trigger workflow
