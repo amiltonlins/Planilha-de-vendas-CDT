@@ -21,12 +21,11 @@ def _is_awards_detail_table(data):
 
 
 def _render_management_without_awards_table(*args, **kwargs):
-    """Mantém o Menu Gerencial e remove apenas o Relatório Geral e a tabela detalhada de premiações."""
+    """Oculta o Relatório Geral visual, mantém seu download formatado e remove a tabela detalhada de premiações."""
     import streamlit as st
 
     original_dataframe = st.dataframe
     original_markdown = st.markdown
-    original_download_button = st.download_button
 
     def guarded_dataframe(data=None, *df_args, **df_kwargs):
         if _is_awards_detail_table(data):
@@ -39,21 +38,13 @@ def _render_management_without_awards_table(*args, **kwargs):
             return None
         return original_markdown(body, *md_args, **md_kwargs)
 
-    def guarded_download_button(label, *db_args, **db_kwargs):
-        normalized = str(label).strip().upper()
-        if normalized == "BAIXAR RELATÓRIO GERAL DA EQUIPE (EXCEL)":
-            return False
-        return original_download_button(label, *db_args, **db_kwargs)
-
     st.dataframe = guarded_dataframe
     st.markdown = guarded_markdown
-    st.download_button = guarded_download_button
     try:
         return _original_render_management(*args, **kwargs)
     finally:
         st.dataframe = original_dataframe
         st.markdown = original_markdown
-        st.download_button = original_download_button
 
 
 def _clickable_team_card(title, goal, metrics, tone="internal", performance_counts=None):
@@ -150,7 +141,8 @@ def _open_team_dialog_if_requested():
     _dialog()
 
 
-# O Relatório Geral da Equipe é removido da interface da Gestão.
+# O Relatório Geral permanece oculto na Gestão, mas o download Excel nativo continua disponível.
+# O Excel usa o gerador original do sistema, preservando sua formatação e cores.
 _core.render_general_report = lambda *args, **kwargs: None
 _core.render_management = _render_management_without_awards_table
 _core.team_performance_card_html = _clickable_team_card
