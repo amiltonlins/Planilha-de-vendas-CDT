@@ -40,8 +40,6 @@ def _prepare_config_preserving_sellers(base, rows, month, year):
 
     for key in sorted(grouped):
         if key in existing:
-            # REGRA ABSOLUTA: vendedor já conhecido não recebe nenhuma alteração
-            # administrativa por causa de uma nova planilha.
             continue
 
         group = grouped[key]
@@ -97,12 +95,9 @@ def _is_awards_detail_table(data):
 
 
 def _render_management_without_awards_table(*args, **kwargs):
-    """Oculta o Relatório Geral visual, mantém seu download formatado e remove a tabela detalhada de premiações."""
+    """Mantém o Relatório Geral visível e remove apenas a tabela detalhada de premiações."""
     import streamlit as st
 
-    # O parâmetro ?team pertence exclusivamente ao dashboard.
-    # Ao entrar no Menu Gerencial ele deve ser descartado para impedir a abertura
-    # indevida do popup de Equipe Interna/Externa dentro da Gestão.
     if st.query_params.get("team"):
         try:
             del st.query_params["team"]
@@ -110,26 +105,17 @@ def _render_management_without_awards_table(*args, **kwargs):
             pass
 
     original_dataframe = st.dataframe
-    original_markdown = st.markdown
 
     def guarded_dataframe(data=None, *df_args, **df_kwargs):
         if _is_awards_detail_table(data):
             return None
         return original_dataframe(data, *df_args, **df_kwargs)
 
-    def guarded_markdown(body, *md_args, **md_kwargs):
-        normalized = str(body).strip().upper()
-        if normalized == "#### RELATÓRIO GERAL DA EQUIPE":
-            return None
-        return original_markdown(body, *md_args, **md_kwargs)
-
     st.dataframe = guarded_dataframe
-    st.markdown = guarded_markdown
     try:
         return _original_render_management(*args, **kwargs)
     finally:
         st.dataframe = original_dataframe
-        st.markdown = original_markdown
 
 
 def _clickable_team_card(title, goal, metrics, tone="internal", performance_counts=None):
@@ -163,7 +149,6 @@ def _popup_css():
 def _open_team_dialog_if_requested():
     import streamlit as st
 
-    # Popup de equipe existe somente no dashboard. Nunca abrir dentro do Menu Gerencial.
     if st.session_state.get("gestor_autenticado", False):
         if st.query_params.get("team"):
             try:
@@ -235,13 +220,10 @@ def _open_team_dialog_if_requested():
     _dialog()
 
 
-# Proteção da Gestão de Vendedores contra alterações provocadas por importação.
 _core.merge_registry = _merge_registry_preserving_sellers
 _core.prepare_config = _prepare_config_preserving_sellers
 
-# O Relatório Geral permanece oculto na Gestão, mas o download Excel nativo continua disponível.
-# O Excel usa o gerador original do sistema, preservando sua formatação e cores.
-_core.render_general_report = lambda *args, **kwargs: None
+# Relatório Geral volta a usar a renderização nativa do núcleo, uma única vez no Menu Gerencial.
 _core.render_management = _render_management_without_awards_table
 _core.team_performance_card_html = _clickable_team_card
 
