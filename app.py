@@ -83,19 +83,8 @@ def _prepare_config_preserving_sellers(base, rows, month, year):
     return cfg
 
 
-def _is_awards_detail_table(data):
-    """Identifica somente a tabela detalhada de PREMIAÇÕES E CENÁRIOS."""
-    if not isinstance(data, list) or not data:
-        return False
-    first = data[0]
-    if not isinstance(first, dict):
-        return False
-    required = {"Vendedor", "Premiação projetada", "Total var. projetado"}
-    return required.issubset(set(first.keys()))
-
-
-def _render_management_without_awards_table(*args, **kwargs):
-    """Mantém o Relatório Geral visível e remove apenas a tabela detalhada de premiações."""
+def _render_management_full_tables(*args, **kwargs):
+    """Mantém Relatório Geral e tabela detalhada de Premiações visíveis."""
     import streamlit as st
 
     if st.query_params.get("team"):
@@ -104,18 +93,7 @@ def _render_management_without_awards_table(*args, **kwargs):
         except KeyError:
             pass
 
-    original_dataframe = st.dataframe
-
-    def guarded_dataframe(data=None, *df_args, **df_kwargs):
-        if _is_awards_detail_table(data):
-            return None
-        return original_dataframe(data, *df_args, **df_kwargs)
-
-    st.dataframe = guarded_dataframe
-    try:
-        return _original_render_management(*args, **kwargs)
-    finally:
-        st.dataframe = original_dataframe
+    return _original_render_management(*args, **kwargs)
 
 
 def _clickable_team_card(title, goal, metrics, tone="internal", performance_counts=None):
@@ -223,8 +201,8 @@ def _open_team_dialog_if_requested():
 _core.merge_registry = _merge_registry_preserving_sellers
 _core.prepare_config = _prepare_config_preserving_sellers
 
-# Relatório Geral volta a usar a renderização nativa do núcleo, uma única vez no Menu Gerencial.
-_core.render_management = _render_management_without_awards_table
+# Relatório Geral e tabela detalhada de Premiações usam a renderização nativa do núcleo.
+_core.render_management = _render_management_full_tables
 _core.team_performance_card_html = _clickable_team_card
 
 if __name__ == "__main__":
