@@ -8,6 +8,13 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx, month_weeks, month_weeks
+from painel_persistence import (
+    RemotePersistenceError,
+    configure_remote_persistence,
+    load_remote_payload,
+    remote_persistence_enabled,
+    save_remote_payload,
+)
 
 NS={"m":"http://schemas.openxmlformats.org/spreadsheetml/2006/main","r":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"}
 PUBLISHED_PATH=Path(os.environ.get("PAINEL_DATA_PATH",ROOT/"data"/"dados_publicados.json"))
@@ -235,23 +242,56 @@ def merge_daily_history(current_rows,incoming_rows):
 def serialize_row(row):
     out=dict(row); out["data_venda"]=row["data_venda"].isoformat(); return out
 
+def _read_local_payload():
+    if not PUBLISHED_PATH.exists():return None
+    return json.loads(PUBLISHED_PATH.read_text(encoding="utf-8"))
+
+def _write_local_payload(payload):
+    PUBLISHED_PATH.parent.mkdir(parents=True,exist_ok=True)
+    temporary=PUBLISHED_PATH.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload,ensure_ascii=False),encoding="utf-8")
+    temporary.replace(PUBLISHED_PATH)
+
+def _deserialize_published_payload(base,payload):
+    rows=payload.get("vendas",[])
+    for row in rows:row["data_venda"]=datetime.strptime(row["data_venda"],"%Y-%m-%d").date()
+    rows,history=ensure_import_history(rows,payload.get("historico_importacoes",[]))
+    payload["historico_importacoes"]=history
+    return rows,merge_registry(base,payload.get("config",base)),payload
+
 def save_published(rows,cfg,source_name,history=None,updated_at=None):
     if updated_at is None:
         updated_at=datetime.now(RECIFE_TZ)
     elif updated_at.tzinfo is not None:
         updated_at=updated_at.astimezone(RECIFE_TZ)
-    PUBLISHED_PATH.parent.mkdir(parents=True,exist_ok=True)
     payload={"atualizado_em":updated_at.isoformat(timespec="seconds"),"arquivo":Path(source_name).name,
              "config":cfg,"historico_importacoes":history or [],"vendas":[serialize_row(row) for row in rows]}
-    temporary=PUBLISHED_PATH.with_suffix(".tmp"); temporary.write_text(json.dumps(payload,ensure_ascii=False),encoding="utf-8"); temporary.replace(PUBLISHED_PATH)
+    # O Supabase é a fonte permanente. O JSON local fica apenas como cache/contingência.
+    try:save_remote_payload(payload)
+    except RemotePersistenceError as exc:
+        raise RuntimeError(f"Não foi possível salvar os dados permanentemente: {exc}") from exc
+    try:_write_local_payload(payload)
+    except OSError:
+        # No Streamlit o disco é apenas cache. Uma falha local não invalida a
+        # publicação que já foi confirmada no Supabase.
+        if not remote_persistence_enabled():raise
 
 def load_published(base):
-    if PUBLISHED_PATH.exists():
-        payload=json.loads(PUBLISHED_PATH.read_text(encoding="utf-8")); rows=payload.get("vendas",[])
-        for row in rows:row["data_venda"]=datetime.strptime(row["data_venda"],"%Y-%m-%d").date()
-        rows,history=ensure_import_history(rows,payload.get("historico_importacoes",[]))
-        payload["historico_importacoes"]=history
-        return rows,merge_registry(base,payload.get("config",base)),payload
+    if remote_persistence_enabled():
+        try:payload=load_remote_payload()
+        except RemotePersistenceError as exc:
+            raise RuntimeError(f"Não foi possível carregar os dados permanentes: {exc}") from exc
+        if payload is not None:
+            payload["persistencia"]="supabase"
+            return _deserialize_published_payload(base,payload)
+        # Migração automática: se houver um JSON da versão anterior, publica-o uma vez.
+        local_payload=_read_local_payload()
+        if local_payload is not None:
+            save_remote_payload(local_payload)
+            local_payload["persistencia"]="supabase"
+            return _deserialize_published_payload(base,local_payload)
+    payload=_read_local_payload()
+    if payload is not None:return _deserialize_published_payload(base,payload)
     raw=rows_from_csv((ROOT/"dados_exemplo.csv").read_bytes()); rows,_=canonicalize(raw,base); cfg=prepare_config(base,rows,base["mes"],base["ano"])
     return rows,cfg,{"atualizado_em":datetime.now().isoformat(timespec="seconds"),"arquivo":"dados_exemplo.csv","demonstracao":True,"historico_importacoes":[]}
 
@@ -1307,6 +1347,10 @@ def render_management(st,base,current_rows,current_cfg,metadata):
             else:st.error("Senha inválida.")
         return
 
+    if remote_persistence_enabled():
+        st.success("ARMAZENAMENTO PERMANENTE ATIVO · os dados não serão apagados quando o painel reiniciar.")
+    else:
+        st.error("ARMAZENAMENTO PERMANENTE INATIVO · configure PAINEL_STORAGE_TOKEN nos Secrets do Streamlit antes de atualizar o painel.")
     st.info("HISTÓRICO DIÁRIO ATIVO: envie somente o relatório do dia anterior. Se uma data já existir, ela será substituída; os demais dias permanecerão acumulados.")
     uploaded=st.file_uploader("IMPORTAR RELATÓRIO DIÁRIO",type=["xlsx","csv"],key="gestao_upload")
     rows=current_rows; cfg=merge_registry(base,current_cfg); source=metadata.get("arquivo","base atual")
@@ -1502,6 +1546,7 @@ def render_management(st,base,current_rows,current_cfg,metadata):
 def render_app():
     import streamlit as st
     st.set_page_config(page_title="Painel Comercial — Afogados",page_icon="📊",layout="wide",initial_sidebar_state="collapsed")
+    configure_remote_persistence(st)
     st.markdown(CSS,unsafe_allow_html=True)
     st.markdown("""<style>
 .exec-performance-values strong,.exec-performance-values .exec-main-value strong{font-size:clamp(2.25rem,3.2vw,3.7rem)!important;font-weight:900!important;line-height:.95!important;letter-spacing:-.035em!important}
