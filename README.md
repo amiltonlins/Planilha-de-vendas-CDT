@@ -14,9 +14,11 @@ streamlit run app.py
 ```
 
 No navegador, escolha mês e ano e envie o `.xlsx` original do sistema ou um
-CSV. O upload fica somente em memória. Metas, experiência, campanhas, réguas e
-bônus podem ser ajustados na área **Configurações**, sem editar JSON. O painel
-online é recalculado imediatamente e o Excel completo pode ser baixado.
+CSV. Após a confirmação do gestor, a base tratada, o histórico e as
+configurações administrativas são gravados permanentemente no Supabase. Metas,
+experiência, campanhas, réguas e bônus podem ser ajustados na área
+**Configurações**, sem editar JSON. O painel online é recalculado imediatamente
+e o Excel completo pode ser baixado.
 
 ## Publicar no Streamlit Community Cloud
 
@@ -99,6 +101,7 @@ No Streamlit Community Cloud, abra **App settings → Secrets** e cadastre:
 
 ```toml
 GESTOR_SENHA = "use-uma-senha-forte"
+PAINEL_STORAGE_TOKEN = "token-privado-do-armazenamento"
 ```
 
 Localmente, a mesma chave pode ser fornecida por variável de ambiente:
@@ -110,7 +113,11 @@ streamlit run app.py
 
 O gestor seleciona **IMPORTAR NOVO RELATÓRIO**, confere arquivo, período, vendas e classificação e somente então usa **CONFIRMAR ATUALIZAÇÃO**. A publicação é atômica: a equipe continua vendo a base anterior durante a conferência. O arquivo bruto não é salvo; `data/dados_publicados.json` contém apenas data, vendedor, classificação e indicadores canônicos necessários e está ignorado pelo Git.
 
-Por padrão, a publicação fica em `data/dados_publicados.json`. Para usar um diretório persistente fornecido pela infraestrutura, configure `PAINEL_DATA_PATH`. Todos os acessos ao mesmo processo/deploy passam a visualizar a base confirmada sem upload próprio.
+O Supabase é a fonte permanente da publicação. O arquivo
+`data/dados_publicados.json` permanece apenas como cache local e contingência;
+ele não é considerado persistente no Streamlit Community Cloud. Todos os
+processos e novos deploys carregam automaticamente a última base confirmada no
+Supabase.
 
 ### Classificação de vendedores
 
