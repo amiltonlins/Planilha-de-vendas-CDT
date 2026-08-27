@@ -25,7 +25,7 @@ create policy painel_afogados_state_select
 on public.painel_afogados_state for select to anon
 using (
   encode(extensions.digest(coalesce((coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb ->> 'x-panel-key'), ''), 'sha256'), 'hex')
-  = '96e7359ba51ec81a4ed982d2b9952caa5e6047fa5007b5e1d1f02da56fa529e5'
+  = '769bd777b1b9f141eefde8362c8bffe1a85e3bec94a0c2bb865b66c93fd50ff3'
 );
 
 drop policy if exists painel_afogados_state_insert on public.painel_afogados_state;
@@ -34,7 +34,7 @@ on public.painel_afogados_state for insert to anon
 with check (
   state_key = 'current'
   and encode(extensions.digest(coalesce((coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb ->> 'x-panel-key'), ''), 'sha256'), 'hex')
-      = '96e7359ba51ec81a4ed982d2b9952caa5e6047fa5007b5e1d1f02da56fa529e5'
+      = '769bd777b1b9f141eefde8362c8bffe1a85e3bec94a0c2bb865b66c93fd50ff3'
 );
 
 drop policy if exists painel_afogados_state_update on public.painel_afogados_state;
@@ -42,10 +42,10 @@ create policy painel_afogados_state_update
 on public.painel_afogados_state for update to anon
 using (
   encode(extensions.digest(coalesce((coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb ->> 'x-panel-key'), ''), 'sha256'), 'hex')
-  = '96e7359ba51ec81a4ed982d2b9952caa5e6047fa5007b5e1d1f02da56fa529e5'
+  = '769bd777b1b9f141eefde8362c8bffe1a85e3bec94a0c2bb865b66c93fd50ff3'
 )
 with check (
   state_key = 'current'
   and encode(extensions.digest(coalesce((coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb ->> 'x-panel-key'), ''), 'sha256'), 'hex')
-      = '96e7359ba51ec81a4ed982d2b9952caa5e6047fa5007b5e1d1f02da56fa529e5'
+      = '769bd777b1b9f141eefde8362c8bffe1a85e3bec94a0c2bb865b66c93fd50ff3'
 );
