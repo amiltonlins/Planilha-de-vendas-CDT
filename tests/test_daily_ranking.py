@@ -1,7 +1,10 @@
 from datetime import date
+import json
 import unittest
+from pathlib import Path
 
-from app_core import daily_ranking_html, daily_ranking_png, daily_ranking_rows
+from app_core import apply_team_labels, daily_ranking_html, daily_ranking_png, daily_ranking_rows, daily_team_totals, regular
+from gerar_painel import summarize
 
 
 def _sale(day, seller, neo="Não"):
@@ -11,8 +14,9 @@ def _sale(day, seller, neo="Não"):
 class DailyRankingTests(unittest.TestCase):
     def test_counts_today_week_and_neo(self):
         team = [
-            {"vendedor": "Ana Lívia", "equipe": "Equipe Interna", "semanas": [1, 5]},
-            {"vendedor": "Bruno", "equipe": "Equipe Externa", "semanas": [0, 4]},
+            {"vendedor": "Ana Lívia", "equipe": "Equipe Interna", "semanas": [1, 5], "media": 2.1},
+            {"vendedor": "Bruno", "equipe": "Equipe Externa", "semanas": [0, 4], "media": 1.6},
+            {"vendedor": "Carla", "equipe": "Equipe Interna", "semanas": [0, 0], "media": 0},
         ]
         rows = [
             _sale(date(2026, 9, 8), "ANA LIVIA", "Neoenergia Celpe"),
@@ -27,9 +31,14 @@ class DailyRankingTests(unittest.TestCase):
 
         self.assertEqual(1, week_index)
         self.assertEqual([
-            {"vendedor": "Ana Lívia", "equipe": "Equipe Interna", "vendas_dia": 2, "vendas_semana": 5, "neo_dia": 1},
-            {"vendedor": "Bruno", "equipe": "Equipe Externa", "vendas_dia": 1, "vendas_semana": 4, "neo_dia": 1},
+            {"vendedor": "Ana Lívia", "equipe": "Equipe Interna", "vendas_dia": 2, "vendas_semana": 5, "neo_dia": 1, "classificacao": "Azul", "cor_classificacao": "#0891B2", "emoji": "😎"},
+            {"vendedor": "Bruno", "equipe": "Equipe Externa", "vendas_dia": 1, "vendas_semana": 4, "neo_dia": 1, "classificacao": "Verde", "cor_classificacao": "#16A34A", "emoji": "🙂"},
+            {"vendedor": "Carla", "equipe": "Equipe Interna", "vendas_dia": 0, "vendas_semana": 0, "neo_dia": 0, "classificacao": "Vermelho", "cor_classificacao": "#DC2626", "emoji": "😟"},
         ], ranking)
+        self.assertEqual({
+            "Equipe Interna": {"dia": 2, "semana": 5},
+            "Equipe Externa": {"dia": 1, "semana": 4},
+        }, daily_team_totals(ranking))
         self.assertIn("RANKING DE VENDAS — HOJE", daily_ranking_html(ranking, date(2026, 9, 8), week_index, week_ranges))
         self.assertTrue(daily_ranking_png(ranking, date(2026, 9, 8), week_index, week_ranges).startswith(b"\x89PNG\r\n\x1a\n"))
 
@@ -42,6 +51,20 @@ class DailyRankingTests(unittest.TestCase):
 
         self.assertEqual(0, ranking[0]["vendas_dia"])
         self.assertEqual(0, ranking[0]["neo_dia"])
+
+    def test_includes_every_active_dashboard_seller_even_with_zero_sales(self):
+        cfg = json.loads((Path(__file__).parents[1] / "config.json").read_text(encoding="utf-8"))
+        active = dict(cfg["vendedores"][0], vendedor="Vendedora Ativa", ativo=True, pertence_franquia=True, categoria="Vendedor")
+        inactive = dict(cfg["vendedores"][0], vendedor="Vendedora Oculta", ativo=False, pertence_franquia=True, categoria="Vendedor")
+        cfg.update({"ano": 2026, "mes": 9, "dia_referencia": 8, "vendedores": [active, inactive]})
+
+        summary, _, _, _ = summarize([], cfg)
+        visible = regular(apply_team_labels(summary, cfg))
+        ranking, _, _ = daily_ranking_rows(visible, [], cfg, date(2026, 9, 8))
+
+        self.assertEqual(["Vendedora Ativa"], [item["vendedor"] for item in ranking])
+        self.assertEqual(0, ranking[0]["vendas_dia"])
+        self.assertEqual(0, ranking[0]["vendas_semana"])
 
 
 if __name__ == "__main__":
