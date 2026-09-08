@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-from app_core import apply_team_labels, daily_performance, daily_ranking_html, daily_ranking_png, daily_ranking_rows, daily_team_totals, regular
+from app_core import _daily_overlay_color, apply_team_labels, daily_performance, daily_ranking_html, daily_ranking_png, daily_ranking_rows, daily_team_totals, regular
 from gerar_painel import summarize
 
 
@@ -53,6 +53,10 @@ class DailyRankingTests(unittest.TestCase):
         self.assertEqual(("Verde", "#16A34A", "🙂"), daily_performance(2))
         self.assertEqual(("Amarelo", "#F59E0B", "😐"), daily_performance(1))
         self.assertEqual(("Vermelho", "#DC2626", "😟"), daily_performance(0))
+
+    def test_png_neo_highlight_matches_translucent_dashboard_style(self):
+        self.assertEqual((59, 178, 103), _daily_overlay_color("#16A34A"))
+        self.assertEqual((247, 174, 50), _daily_overlay_color("#F59E0B"))
 
     def test_does_not_show_unpublished_future_day(self):
         team = [{"vendedor": "Ana", "equipe": "Equipe Interna", "semanas": [2]}]
