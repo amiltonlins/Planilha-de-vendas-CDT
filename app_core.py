@@ -1384,7 +1384,6 @@ def _daily_font(size,bold=False):
 
 def _draw_daily_ordinal(draw,x,y,position,color):
     """Desenha a posição sem depender do glifo Unicode do ordinal masculino."""
-    draw.rounded_rectangle((x-29,y-24,x+29,y+24),radius=14,fill="#FFFFFF")
     number=str(position)
     font=_daily_font(23,True)
     number_box=draw.textbbox((0,0),number,font=font)
@@ -1433,7 +1432,7 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
     image=Image.new("RGB",(width,height),"#F4F7FB"); draw=ImageDraw.Draw(image)
     draw.rectangle((0,0,width,header_h),fill="#075B35")
     draw.text((56,38),"CARTÃO DE TODOS · AFOGADOS",font=_daily_font(25,True),fill="#91E665")
-    draw.text((56,78),"RANKING DE VENDAS — HOJE",font=_daily_font(48,True),fill="#FFFFFF")
+    draw.text((56,78),"RANKING DE VENDAS - HOJE",font=_daily_font(48,True),fill="#FFFFFF")
     draw.text((width-56,48),reference_day.strftime("%d/%m/%Y"),font=_daily_font(27,True),fill="#E7F7EE",anchor="ra")
     total_day=sum(item["vendas_dia"] for item in ranking); total_week=sum(item["vendas_semana"] for item in ranking); total_neo=sum(item["neo_dia"] for item in ranking)
     if week_index is not None:
@@ -1465,7 +1464,7 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
         text_fill="#172033" if item["classificacao"]=="Amarelo" else "#FFFFFF"
         muted_fill="#4B5563" if item["classificacao"]=="Amarelo" else "#E8EEF5"
         draw.rectangle((34,y,width-34,y+row_h-2),fill=fill)
-        _draw_daily_ordinal(draw,78,y+45,pos,fill)
+        _draw_daily_ordinal(draw,78,y+45,pos,text_fill)
         name=item["vendedor"] if len(item["vendedor"])<=34 else item["vendedor"][:31]+"..."
         draw.text((135,y+20),name,font=_daily_font(23,True),fill=text_fill)
         draw.text((135,y+53),item["equipe"],font=_daily_font(17),fill=muted_fill)
