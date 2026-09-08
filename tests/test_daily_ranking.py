@@ -36,12 +36,13 @@ class DailyRankingTests(unittest.TestCase):
             {"vendedor": "Carla", "equipe": "Equipe Interna", "vendas_dia": 0, "vendas_semana": 0, "neo_dia": 0, "classificacao": "Vermelho", "cor_classificacao": "#DC2626", "emoji": "😟"},
         ], ranking)
         self.assertEqual({
-            "Equipe Interna": {"dia": 2, "semana": 5},
-            "Equipe Externa": {"dia": 1, "semana": 4},
+            "Equipe Interna": {"dia": 2, "semana": 5, "neo": 1},
+            "Equipe Externa": {"dia": 1, "semana": 4, "neo": 1},
         }, daily_team_totals(ranking))
         ranking_html = daily_ranking_html(ranking, date(2026, 9, 8), week_index, week_ranges)
         self.assertIn("RANKING DE VENDAS — HOJE", ranking_html)
         self.assertIn("--daily-color:#16A34A", ranking_html)
+        self.assertIn("NEO HOJE</small><strong>1</strong>", ranking_html)
         self.assertNotIn("<small>Verde</small>", ranking_html)
         self.assertNotIn("<small>Amarelo</small>", ranking_html)
         self.assertTrue(daily_ranking_png(ranking, date(2026, 9, 8), week_index, week_ranges).startswith(b"\x89PNG\r\n\x1a\n"))
