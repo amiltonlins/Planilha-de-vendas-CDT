@@ -81,7 +81,7 @@ A interface foi organizada em quatro áreas de leitura para a equipe e uma área
 
 - **VISÃO GERAL:** cards empresariais, distribuição das quatro cores de desempenho, ranking configurável, relatório diário horizontal e canais Website/ADM/Freelance separados;
 - **VENDEDORES:** ficha individual, zeros do mês e da semana, sequências de zero, Neoenergia, composição da remuneração e salto para a próxima faixa;
-- **DIÁRIO:** ranking do dia corrente com todos os vendedores ativos do painel, inclusive zerados; mostra vendas de hoje, acumulado da semana, Neoenergia de hoje, classificação por emoji, totais diários e semanais das equipes Interna/Externa e download em PNG;
+- **DIÁRIO:** ranking do dia corrente com todos os vendedores ativos do painel, inclusive zerados; mostra vendas de hoje, acumulado da semana, Neoenergia de hoje, totais diários e semanais das equipes Interna/Externa e download em PNG. Cada linha recebe a cor e o emoji das vendas do dia: 3 ou mais azul, 2 verde, 1 amarelo e 0 vermelho;
 - **SEMANAL:** semanas civis de segunda-feira a domingo (inclusive uma sexta semana quando a competência exigir), vendas, status e prêmio por vendedor;
 - **COMISSÕES:** cenários real e projetado, simulação sem interferir no cálculo oficial e composição da folha variável;
 - **GESTÃO:** upload, metas, bônus, campanhas, réguas e cadastro/escala, disponível somente após autenticação do gestor.

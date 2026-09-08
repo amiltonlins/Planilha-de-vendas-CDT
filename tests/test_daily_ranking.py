@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-from app_core import apply_team_labels, daily_ranking_html, daily_ranking_png, daily_ranking_rows, daily_team_totals, regular
+from app_core import apply_team_labels, daily_performance, daily_ranking_html, daily_ranking_png, daily_ranking_rows, daily_team_totals, regular
 from gerar_painel import summarize
 
 
@@ -31,16 +31,27 @@ class DailyRankingTests(unittest.TestCase):
 
         self.assertEqual(1, week_index)
         self.assertEqual([
-            {"vendedor": "Ana Lívia", "equipe": "Equipe Interna", "vendas_dia": 2, "vendas_semana": 5, "neo_dia": 1, "classificacao": "Azul", "cor_classificacao": "#0891B2", "emoji": "😎"},
-            {"vendedor": "Bruno", "equipe": "Equipe Externa", "vendas_dia": 1, "vendas_semana": 4, "neo_dia": 1, "classificacao": "Verde", "cor_classificacao": "#16A34A", "emoji": "🙂"},
+            {"vendedor": "Ana Lívia", "equipe": "Equipe Interna", "vendas_dia": 2, "vendas_semana": 5, "neo_dia": 1, "classificacao": "Verde", "cor_classificacao": "#16A34A", "emoji": "🙂"},
+            {"vendedor": "Bruno", "equipe": "Equipe Externa", "vendas_dia": 1, "vendas_semana": 4, "neo_dia": 1, "classificacao": "Amarelo", "cor_classificacao": "#F59E0B", "emoji": "😐"},
             {"vendedor": "Carla", "equipe": "Equipe Interna", "vendas_dia": 0, "vendas_semana": 0, "neo_dia": 0, "classificacao": "Vermelho", "cor_classificacao": "#DC2626", "emoji": "😟"},
         ], ranking)
         self.assertEqual({
             "Equipe Interna": {"dia": 2, "semana": 5},
             "Equipe Externa": {"dia": 1, "semana": 4},
         }, daily_team_totals(ranking))
-        self.assertIn("RANKING DE VENDAS — HOJE", daily_ranking_html(ranking, date(2026, 9, 8), week_index, week_ranges))
+        ranking_html = daily_ranking_html(ranking, date(2026, 9, 8), week_index, week_ranges)
+        self.assertIn("RANKING DE VENDAS — HOJE", ranking_html)
+        self.assertIn("--daily-color:#16A34A", ranking_html)
+        self.assertNotIn("<small>Verde</small>", ranking_html)
+        self.assertNotIn("<small>Amarelo</small>", ranking_html)
         self.assertTrue(daily_ranking_png(ranking, date(2026, 9, 8), week_index, week_ranges).startswith(b"\x89PNG\r\n\x1a\n"))
+
+    def test_daily_color_thresholds(self):
+        self.assertEqual(("Azul", "#0891B2", "😎"), daily_performance(3))
+        self.assertEqual(("Azul", "#0891B2", "😎"), daily_performance(8))
+        self.assertEqual(("Verde", "#16A34A", "🙂"), daily_performance(2))
+        self.assertEqual(("Amarelo", "#F59E0B", "😐"), daily_performance(1))
+        self.assertEqual(("Vermelho", "#DC2626", "😟"), daily_performance(0))
 
     def test_does_not_show_unpublished_future_day(self):
         team = [{"vendedor": "Ana", "equipe": "Equipe Interna", "semanas": [2]}]

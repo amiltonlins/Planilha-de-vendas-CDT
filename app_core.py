@@ -1200,13 +1200,13 @@ div[data-testid="stPopoverBody"] .stButton button:hover{background:#F1F5F9!impor
 .daily-team-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid #E8EDF3}.daily-team-card{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,90px);align-items:center;gap:6px;border:1px solid #E2E8F0;border-left:5px solid #075B35;border-radius:10px;padding:9px 11px}.daily-team-card.external{border-left-color:#0EA5E9}.daily-team-name{font-size:.65rem;font-weight:950;color:#263349}.daily-team-metric{text-align:center}.daily-team-metric small{display:block;font-size:.45rem;font-weight:900;color:#748197}.daily-team-metric strong{display:block;font-size:1.08rem;line-height:1;color:#0F172A;margin-top:4px}
 .daily-rank-columns,.daily-rank-row{display:grid;grid-template-columns:48px minmax(190px,1fr) 62px 104px 112px 104px;align-items:center;gap:5px}
 .daily-rank-columns{padding:8px 14px;background:#F8FAFC;color:#64748B;font-size:.50rem;font-weight:900;letter-spacing:.035em;text-align:center;border-bottom:1px solid #E8EDF3}.daily-rank-columns span:nth-child(2){text-align:left}
-.daily-rank-row{padding:9px 14px;border-bottom:1px solid #EEF2F6}.daily-rank-row:last-child{border-bottom:0}.daily-rank-row.top{background:#FBFDFB}.daily-rank-pos{text-align:center;font-size:.77rem;font-weight:950;color:#334155}.daily-rank-name{min-width:0}.daily-rank-name b{display:block;font-size:.79rem;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.daily-rank-name small{display:block;font-size:.51rem;color:#8290A5;margin-top:2px}.daily-rank-emoji{text-align:center;font-size:1.45rem;line-height:1}.daily-rank-emoji small{display:block;font-size:.40rem;line-height:1;color:#64748B;font-weight:850;margin-top:4px}.daily-rank-metric{text-align:center}.daily-rank-metric strong{display:block;font-size:1.15rem;line-height:1;color:#0F172A;font-weight:950}.daily-rank-metric small{display:none}.daily-rank-metric.today strong{font-size:1.42rem;color:#075B35}.daily-rank-metric.neo{background:#EAF7FD;border-radius:8px;padding:7px 3px}.daily-rank-metric.neo strong{color:#0878B9}
+.daily-rank-row{padding:9px 14px;margin:6px 8px;border-radius:10px;background:var(--daily-color);color:var(--daily-text);box-shadow:0 2px 7px rgba(15,23,42,.10)}.daily-rank-pos{text-align:center;font-size:.77rem;font-weight:950;color:var(--daily-text)}.daily-rank-name{min-width:0}.daily-rank-name b{display:block;font-size:.79rem;color:var(--daily-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.daily-rank-name small{display:block;font-size:.51rem;color:var(--daily-muted);margin-top:2px}.daily-rank-emoji{text-align:center;font-size:1.45rem;line-height:1}.daily-rank-metric{text-align:center}.daily-rank-metric strong{display:block;font-size:1.15rem;line-height:1;color:var(--daily-text);font-weight:950}.daily-rank-metric small{display:none;color:var(--daily-muted)}.daily-rank-metric.today strong{font-size:1.42rem;color:var(--daily-text)}.daily-rank-metric.neo{background:rgba(255,255,255,.16);border-radius:8px;padding:7px 3px}.daily-rank-metric.neo strong{color:var(--daily-text)}
 @media(max-width:600px){
  .daily-share{border-radius:13px;margin-top:3px}.daily-share-head{padding:13px 12px;align-items:flex-start}.daily-share-title{font-size:1rem}.daily-share-date{font-size:.55rem}.daily-share-kicker{font-size:.48rem}
  .daily-total{padding:8px 4px}.daily-total small{font-size:.41rem}.daily-total strong{font-size:1.05rem}
  .daily-team-totals{grid-template-columns:1fr;gap:5px;padding:7px}.daily-team-card{grid-template-columns:minmax(0,1fr) repeat(2,60px);padding:7px 8px}.daily-team-name{font-size:.57rem}.daily-team-metric small{font-size:.38rem}.daily-team-metric strong{font-size:.92rem}
  .daily-rank-columns{display:none}.daily-rank-row{grid-template-columns:27px minmax(0,1fr) 28px repeat(3,47px);gap:2px;padding:7px 4px}.daily-rank-pos{font-size:.61rem}.daily-rank-name b{font-size:.64rem}.daily-rank-name small{font-size:.40rem}.daily-rank-emoji{font-size:1.15rem}.daily-rank-emoji small{display:none}
- .daily-rank-metric{min-width:0}.daily-rank-metric strong,.daily-rank-metric.today strong{font-size:1rem}.daily-rank-metric small{display:block;font-size:.35rem;line-height:1;color:#64748B;font-weight:900;margin-top:3px}.daily-rank-metric.neo{padding:5px 1px;border-radius:6px}
+ .daily-rank-metric{min-width:0}.daily-rank-metric strong,.daily-rank-metric.today strong{font-size:1rem}.daily-rank-metric small{display:block;font-size:.35rem;line-height:1;color:var(--daily-muted);font-weight:900;margin-top:3px}.daily-rank-metric.neo{padding:5px 1px;border-radius:6px}
 }
 
 @media(max-width:900px){
@@ -1264,6 +1264,14 @@ def weekly_current_index(cfg,max_weeks,today=None):
     return next((i for i,(a,b) in enumerate(ranges) if a<=ref<=b),max_weeks-1)
 
 
+def daily_performance(sales):
+    sales=int(sales or 0)
+    if sales>=3:return "Azul","#0891B2","😎"
+    if sales==2:return "Verde","#16A34A","🙂"
+    if sales==1:return "Amarelo","#F59E0B","😐"
+    return "Vermelho","#DC2626","😟"
+
+
 def daily_ranking_rows(team,rows,cfg,reference_day=None):
     """Monta o ranking do dia sem alterar os cálculos mensais ou semanais oficiais."""
     reference_day=reference_day or datetime.now(RECIFE_TZ).date()
@@ -1289,12 +1297,11 @@ def daily_ranking_rows(team,rows,cfg,reference_day=None):
     ranked=[]
     for item in team:
         seller_key=normalize_text(item.get("vendedor",""))
-        classification,color,_=performance(item.get("media",0))
-        emoji={"Azul":"😎","Verde":"🙂","Amarelo":"😐","Vermelho":"😟"}.get(classification,"😟")
         weekly_sales=0
         if week_index is not None and week_index<len(item.get("semanas",[])):
             weekly_sales=int(item.get("semanas",[])[week_index] or 0)
         counts=day_counts.get(seller_key,{"sales":0,"neo":0})
+        classification,color,emoji=daily_performance(counts["sales"])
         ranked.append({
             "vendedor":str(item.get("vendedor","")),
             "equipe":str(item.get("equipe","")),
@@ -1333,11 +1340,14 @@ def daily_ranking_html(ranking,reference_day,week_index,week_ranges):
     team_totals=daily_team_totals(ranking)
     rows_html=[]
     for pos,item in enumerate(ranking,1):
+        yellow=item["classificacao"]=="Amarelo"
+        text_color="#172033" if yellow else "#FFFFFF"
+        muted_color="#4B5563" if yellow else "rgba(255,255,255,.82)"
         rows_html.append(
-            f'<div class="daily-rank-row{" top" if pos<=3 else ""}">'
+            f'<div class="daily-rank-row" style="--daily-color:{item["cor_classificacao"]};--daily-text:{text_color};--daily-muted:{muted_color}">'
             f'<div class="daily-rank-pos">{pos}º</div>'
             f'<div class="daily-rank-name"><b>{html.escape(item["vendedor"])}</b><small>{html.escape(item["equipe"])}</small></div>'
-            f'<div class="daily-rank-emoji" title="Performance {html.escape(item["classificacao"])}">{item["emoji"]}<small>{html.escape(item["classificacao"])}</small></div>'
+            f'<div class="daily-rank-emoji" title="{item["vendas_dia"]} vendas hoje">{item["emoji"]}</div>'
             f'<div class="daily-rank-metric today"><strong>{item["vendas_dia"]}</strong><small>HOJE</small></div>'
             f'<div class="daily-rank-metric"><strong>{item["vendas_semana"]}</strong><small>SEMANA</small></div>'
             f'<div class="daily-rank-metric neo"><strong>{item["neo_dia"]}</strong><small>NEO HOJE</small></div>'
@@ -1406,19 +1416,20 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
     for x,label,anchor in columns:draw.text((x,columns_top+21),label,font=_daily_font(18,True),fill="#536176",anchor=anchor)
     y=columns_top+columns_h
     for pos,item in enumerate(ranking,1):
-        fill="#FFFFFF" if pos%2 else "#F8FAFC"
+        fill=item["cor_classificacao"]
+        text_fill="#172033" if item["classificacao"]=="Amarelo" else "#FFFFFF"
+        muted_fill="#4B5563" if item["classificacao"]=="Amarelo" else "#E8EEF5"
         draw.rectangle((34,y,width-34,y+row_h-2),fill=fill)
-        draw.text((78,y+31),f"{pos}º",font=_daily_font(24,True),fill="#334155",anchor="ma")
+        draw.text((78,y+31),f"{pos}º",font=_daily_font(24,True),fill=text_fill,anchor="ma")
         name=item["vendedor"] if len(item["vendedor"])<=34 else item["vendedor"][:31]+"..."
-        draw.text((135,y+20),name,font=_daily_font(23,True),fill="#172033")
-        draw.text((135,y+53),item["equipe"],font=_daily_font(17),fill="#8290A5")
+        draw.text((135,y+20),name,font=_daily_font(23,True),fill=text_fill)
+        draw.text((135,y+53),item["equipe"],font=_daily_font(17),fill=muted_fill)
         png_emoji="☺" if item["classificacao"]=="Verde" else item["emoji"]
-        draw.text((650,y+15),png_emoji,font=_daily_font(32),fill=item["cor_classificacao"],anchor="ma")
-        draw.text((650,y+57),item["classificacao"].upper(),font=_daily_font(13,True),fill="#64748B",anchor="ma")
-        draw.text((760,y+25),str(item["vendas_dia"]),font=_daily_font(36,True),fill="#075B35",anchor="ma")
-        draw.text((880,y+25),str(item["vendas_semana"]),font=_daily_font(32,True),fill="#172033",anchor="ma")
+        draw.text((650,y+28),png_emoji,font=_daily_font(36),fill=text_fill,anchor="ma")
+        draw.text((760,y+25),str(item["vendas_dia"]),font=_daily_font(36,True),fill=text_fill,anchor="ma")
+        draw.text((880,y+25),str(item["vendas_semana"]),font=_daily_font(32,True),fill=text_fill,anchor="ma")
         draw.rounded_rectangle((967,y+17,1053,y+72),radius=10,fill="#EAF7FD")
-        draw.text((1010,y+27),str(item["neo_dia"]),font=_daily_font(31,True),fill="#0878B9",anchor="ma")
+        draw.text((1010,y+27),str(item["neo_dia"]),font=_daily_font(31,True),fill=fill,anchor="ma")
         y+=row_h
     draw.text((width//2,height-39),"PAINEL COMERCIAL · AFOGADOS",font=_daily_font(18,True),fill="#758397",anchor="ma")
     output=io.BytesIO(); image.save(output,format="PNG",optimize=True); return output.getvalue()
