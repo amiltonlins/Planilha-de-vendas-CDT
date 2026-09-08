@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from PIL import Image, ImageDraw, ImageFont
+
 from gerar_painel import ROOT, build_sheets, summarize, tier_value, write_xlsx, month_weeks, month_weeks
 from painel_persistence import (
     RemotePersistenceError,
@@ -1189,6 +1191,22 @@ div[data-testid="stPopoverBody"] .stButton button:hover{background:#F1F5F9!impor
 .exec-performance-values .exec-main-value strong{font-size:1.72rem!important}
 .exec-pair-values strong{font-size:1.70rem!important;line-height:1!important;margin-top:17px!important;color:#111A31!important}
 
+/* Ranking diário: cartão enxuto para leitura e captura no celular. */
+.daily-share{background:#fff;border:1px solid #DDE5EE;border-radius:18px;overflow:hidden;box-shadow:0 7px 22px rgba(15,23,42,.07);margin:5px 0 10px}
+.daily-share-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:20px 22px;background:linear-gradient(120deg,#075B35,#08763F);color:#fff}
+.daily-share-kicker{font-size:.60rem;font-weight:900;letter-spacing:.10em;color:#91E665}.daily-share-title{font-size:1.35rem;line-height:1.05;font-weight:950;margin-top:5px}.daily-share-date{font-size:.72rem;font-weight:850;color:#E7F7EE;white-space:nowrap}
+.daily-share-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#E7EDF3;border-bottom:1px solid #E2E8F0}
+.daily-total{background:#F8FAFC;padding:11px 14px;text-align:center}.daily-total small{display:block;font-size:.51rem;font-weight:900;color:#64748B;letter-spacing:.035em}.daily-total strong{display:block;font-size:1.32rem;line-height:1;color:#0F172A;margin-top:5px}.daily-total.neo strong{color:#0878B9}
+.daily-rank-columns,.daily-rank-row{display:grid;grid-template-columns:48px minmax(190px,1fr) 104px 112px 104px;align-items:center;gap:5px}
+.daily-rank-columns{padding:8px 14px;background:#F8FAFC;color:#64748B;font-size:.50rem;font-weight:900;letter-spacing:.035em;text-align:center;border-bottom:1px solid #E8EDF3}.daily-rank-columns span:nth-child(2){text-align:left}
+.daily-rank-row{padding:9px 14px;border-bottom:1px solid #EEF2F6}.daily-rank-row:last-child{border-bottom:0}.daily-rank-row.top{background:#FBFDFB}.daily-rank-pos{text-align:center;font-size:.77rem;font-weight:950;color:#334155}.daily-rank-name{min-width:0}.daily-rank-name b{display:block;font-size:.79rem;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.daily-rank-name small{display:block;font-size:.51rem;color:#8290A5;margin-top:2px}.daily-rank-metric{text-align:center}.daily-rank-metric strong{display:block;font-size:1.15rem;line-height:1;color:#0F172A;font-weight:950}.daily-rank-metric small{display:none}.daily-rank-metric.today strong{font-size:1.42rem;color:#075B35}.daily-rank-metric.neo{background:#EAF7FD;border-radius:8px;padding:7px 3px}.daily-rank-metric.neo strong{color:#0878B9}
+@media(max-width:600px){
+ .daily-share{border-radius:13px;margin-top:3px}.daily-share-head{padding:13px 12px;align-items:flex-start}.daily-share-title{font-size:1rem}.daily-share-date{font-size:.55rem}.daily-share-kicker{font-size:.48rem}
+ .daily-total{padding:8px 4px}.daily-total small{font-size:.41rem}.daily-total strong{font-size:1.05rem}
+ .daily-rank-columns{display:none}.daily-rank-row{grid-template-columns:30px minmax(0,1fr) repeat(3,52px);gap:3px;padding:7px 5px}.daily-rank-pos{font-size:.64rem}.daily-rank-name b{font-size:.67rem}.daily-rank-name small{font-size:.42rem}
+ .daily-rank-metric{min-width:0}.daily-rank-metric strong,.daily-rank-metric.today strong{font-size:1rem}.daily-rank-metric small{display:block;font-size:.35rem;line-height:1;color:#64748B;font-weight:900;margin-top:3px}.daily-rank-metric.neo{padding:5px 1px;border-radius:6px}
+}
+
 @media(max-width:900px){
  .st-key-cdt_top_header{border-radius:18px!important;padding:18px 18px 14px!important;margin-bottom:16px!important}
  .cdt-brandline{font-size:.65rem!important;margin-bottom:8px!important}.cdt-title{font-size:1.55rem!important}.cdt-unit-emphasis{font-size:1.04rem!important;margin-top:10px!important}
@@ -1242,6 +1260,129 @@ def weekly_current_index(cfg,max_weeks,today=None):
     ref_day=max(1,min(int(cfg.get("dia_referencia",1) or 1),ranges[-1][1].day))
     ref=date(int(cfg["ano"]),int(cfg["mes"]),ref_day)
     return next((i for i,(a,b) in enumerate(ranges) if a<=ref<=b),max_weeks-1)
+
+
+def daily_ranking_rows(team,rows,cfg,reference_day=None):
+    """Monta o ranking do dia sem alterar os cálculos mensais ou semanais oficiais."""
+    reference_day=reference_day or datetime.now(RECIFE_TZ).date()
+    week_ranges=month_weeks(int(cfg["ano"]),int(cfg["mes"]))
+    week_index=next((i for i,(start,end) in enumerate(week_ranges) if start<=reference_day<=end),None)
+    last_day=week_ranges[-1][1].day if week_ranges else 1
+    cutoff_day=max(1,min(int(cfg.get("dia_referencia",1) or 1),last_day))
+    cutoff=date(int(cfg["ano"]),int(cfg["mes"]),cutoff_day)
+    allowed_names={normalize_text(item.get("vendedor","")) for item in team}
+    day_counts={name:{"sales":0,"neo":0} for name in allowed_names}
+
+    if reference_day.year==int(cfg["ano"]) and reference_day.month==int(cfg["mes"]) and reference_day<=cutoff:
+        for row in rows:
+            if row.get("data_venda")!=reference_day:
+                continue
+            seller_key=normalize_text(row.get("vendedor",""))
+            if seller_key not in day_counts:
+                continue
+            day_counts[seller_key]["sales"]+=1
+            if normalize_text(row.get("neoenergia","")) in {"sim","1","true","neoenergia celpe"}:
+                day_counts[seller_key]["neo"]+=1
+
+    ranked=[]
+    for item in team:
+        seller_key=normalize_text(item.get("vendedor",""))
+        weekly_sales=0
+        if week_index is not None and week_index<len(item.get("semanas",[])):
+            weekly_sales=int(item.get("semanas",[])[week_index] or 0)
+        counts=day_counts.get(seller_key,{"sales":0,"neo":0})
+        ranked.append({
+            "vendedor":str(item.get("vendedor","")),
+            "equipe":str(item.get("equipe","")),
+            "vendas_dia":counts["sales"],
+            "vendas_semana":weekly_sales,
+            "neo_dia":counts["neo"],
+        })
+    ranked.sort(key=lambda item:(-item["vendas_dia"],-item["vendas_semana"],-item["neo_dia"],normalize_text(item["vendedor"])))
+    return ranked,week_index,week_ranges
+
+
+def daily_ranking_html(ranking,reference_day,week_index,week_ranges):
+    week_text="SEMANA FORA DA COMPETÊNCIA"
+    if week_index is not None:
+        start,end=week_ranges[week_index]
+        week_text=f"S{week_index+1} · {start:%d/%m} A {end:%d/%m}"
+    total_day=sum(item["vendas_dia"] for item in ranking)
+    total_week=sum(item["vendas_semana"] for item in ranking)
+    total_neo=sum(item["neo_dia"] for item in ranking)
+    rows_html=[]
+    for pos,item in enumerate(ranking,1):
+        rows_html.append(
+            f'<div class="daily-rank-row{" top" if pos<=3 else ""}">'
+            f'<div class="daily-rank-pos">{pos}º</div>'
+            f'<div class="daily-rank-name"><b>{html.escape(item["vendedor"])}</b><small>{html.escape(item["equipe"])}</small></div>'
+            f'<div class="daily-rank-metric today"><strong>{item["vendas_dia"]}</strong><small>HOJE</small></div>'
+            f'<div class="daily-rank-metric"><strong>{item["vendas_semana"]}</strong><small>SEMANA</small></div>'
+            f'<div class="daily-rank-metric neo"><strong>{item["neo_dia"]}</strong><small>NEO HOJE</small></div>'
+            '</div>'
+        )
+    return (
+        '<div class="daily-share">'
+        '<div class="daily-share-head"><div><div class="daily-share-kicker">CARTÃO DE TODOS · AFOGADOS</div>'
+        '<div class="daily-share-title">RANKING DE VENDAS — HOJE</div></div>'
+        f'<div class="daily-share-date">{reference_day:%d/%m/%Y}</div></div>'
+        '<div class="daily-share-totals">'
+        f'<div class="daily-total"><small>VENDAS HOJE</small><strong>{total_day}</strong></div>'
+        f'<div class="daily-total"><small>{week_text}</small><strong>{total_week}</strong></div>'
+        f'<div class="daily-total neo"><small>NEO HOJE</small><strong>{total_neo}</strong></div></div>'
+        '<div class="daily-rank-columns"><span>POS.</span><span>VENDEDOR</span><span>HOJE</span><span>NA SEMANA</span><span>NEO HOJE</span></div>'
+        +''.join(rows_html)+'</div>'
+    )
+
+
+def _daily_font(size,bold=False):
+    candidates=(
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    )
+    for path in candidates:
+        try:return ImageFont.truetype(path,size)
+        except OSError:pass
+    return ImageFont.load_default(size=size)
+
+
+def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
+    """Gera uma imagem pronta para compartilhar no grupo."""
+    width=1080; header_h=270; columns_h=62; row_h=94; footer_h=70
+    height=header_h+columns_h+max(1,len(ranking))*row_h+footer_h
+    image=Image.new("RGB",(width,height),"#F4F7FB"); draw=ImageDraw.Draw(image)
+    draw.rectangle((0,0,width,header_h),fill="#075B35")
+    draw.text((56,38),"CARTÃO DE TODOS · AFOGADOS",font=_daily_font(25,True),fill="#91E665")
+    draw.text((56,78),"RANKING DE VENDAS — HOJE",font=_daily_font(48,True),fill="#FFFFFF")
+    draw.text((width-56,48),reference_day.strftime("%d/%m/%Y"),font=_daily_font(27,True),fill="#E7F7EE",anchor="ra")
+    total_day=sum(item["vendas_dia"] for item in ranking); total_week=sum(item["vendas_semana"] for item in ranking); total_neo=sum(item["neo_dia"] for item in ranking)
+    if week_index is not None:
+        start,end=week_ranges[week_index]; week_label=f"S{week_index+1} · {start:%d/%m} A {end:%d/%m}"
+    else:week_label="SEMANA"
+    cards=(("VENDAS HOJE",total_day),(week_label,total_week),("NEO HOJE",total_neo))
+    for idx,(label,value) in enumerate(cards):
+        left=56+idx*326; right=left+300
+        draw.rounded_rectangle((left,160,right,244),radius=13,fill="#FFFFFF" if idx<2 else "#EAF7FD")
+        draw.text(((left+right)//2,178),label,font=_daily_font(18,True),fill="#64748B",anchor="ma")
+        draw.text(((left+right)//2,205),str(value),font=_daily_font(34,True),fill="#075B35" if idx<2 else "#0878B9",anchor="ma")
+    draw.rectangle((34,header_h,width-34,header_h+columns_h),fill="#E9EFF5")
+    columns=((58,"POS.","la"),(145,"VENDEDOR","la"),(730,"HOJE","ma"),(860,"NA SEMANA","ma"),(1000,"NEO HOJE","ma"))
+    for x,label,anchor in columns:draw.text((x,header_h+21),label,font=_daily_font(18,True),fill="#536176",anchor=anchor)
+    y=header_h+columns_h
+    for pos,item in enumerate(ranking,1):
+        fill="#FFFFFF" if pos%2 else "#F8FAFC"
+        draw.rectangle((34,y,width-34,y+row_h-2),fill=fill)
+        draw.text((78,y+31),f"{pos}º",font=_daily_font(24,True),fill="#334155",anchor="ma")
+        name=item["vendedor"] if len(item["vendedor"])<=34 else item["vendedor"][:31]+"..."
+        draw.text((145,y+20),name,font=_daily_font(25,True),fill="#172033")
+        draw.text((145,y+53),item["equipe"],font=_daily_font(17),fill="#8290A5")
+        draw.text((730,y+25),str(item["vendas_dia"]),font=_daily_font(36,True),fill="#075B35",anchor="ma")
+        draw.text((860,y+25),str(item["vendas_semana"]),font=_daily_font(32,True),fill="#172033",anchor="ma")
+        draw.rounded_rectangle((957,y+17,1043,y+72),radius=10,fill="#EAF7FD")
+        draw.text((1000,y+27),str(item["neo_dia"]),font=_daily_font(31,True),fill="#0878B9",anchor="ma")
+        y+=row_h
+    draw.text((width//2,height-39),"PAINEL COMERCIAL · AFOGADOS",font=_daily_font(18,True),fill="#758397",anchor="ma")
+    output=io.BytesIO(); image.save(output,format="PNG",optimize=True); return output.getvalue()
 
 def weekly_tiers(cfg):
     return sorted(cfg.get("premiacao_semanal",[]),key=lambda x:int(x.get("vendas",0)))
@@ -1781,11 +1922,11 @@ div[data-testid="stDialog"] [data-testid="stVerticalBlock"]{gap:.42rem!important
 /* CORRECAO ESTRUTURAL FINAL DOS CONTROLES MOBILE.
    Substitui a dependencia visual do segmented_control por botoes em grids fixos. */
 @media(max-width:600px){
-  /* Navegacao principal: dois botoes obrigatoriamente lado a lado. */
+  /* Navegacao principal: três botoes obrigatoriamente lado a lado. */
   .st-key-top_nav_buttons{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;}
   .st-key-top_nav_buttons>[data-testid="stVerticalBlock"]{width:100%!important;gap:0!important;}
   .st-key-top_nav_buttons > div[data-testid="stHorizontalBlock"]{
-    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
     gap:0!important;width:100%!important;min-width:0!important;align-items:stretch!important;
   }
   .st-key-header_control_strip .st-key-top_nav_buttons [data-testid="column"]{
@@ -2491,7 +2632,7 @@ section.main>div{margin-top:0!important;padding-top:.35rem!important}
     if not st.session_state.get("dashboard_autenticado",False):
         render_login(st,cfg)
         return
-    areas=["VISÃO GERAL","SEMANAL"]
+    areas=["VISÃO GERAL","DIÁRIO","SEMANAL"]
     if st.session_state.get("area") not in areas+["GESTÃO"]:st.session_state.area="VISÃO GERAL"
     action=st.query_params.get("action")
     if action=="logout":
@@ -2726,11 +2867,14 @@ section.main>div,
             nav_col,update_col,month_col,spacer_col=st.columns([2.15,2.05,1.15,4.65],vertical_alignment="center")
             with nav_col:
                 with st.container(key="top_nav_buttons"):
-                    nav_a,nav_b=st.columns(2,gap="small")
+                    nav_a,nav_b,nav_c=st.columns(3,gap="small")
                     with nav_a:
                         if st.button("VISÃO GERAL",key="nav_visao_btn",use_container_width=True,type="primary" if st.session_state.area=="VISÃO GERAL" else "secondary"):
                             selected_area="VISÃO GERAL"
                     with nav_b:
+                        if st.button("DIÁRIO",key="nav_diario_btn",use_container_width=True,type="primary" if st.session_state.area=="DIÁRIO" else "secondary"):
+                            selected_area="DIÁRIO"
+                    with nav_c:
                         if st.button("SEMANAL",key="nav_semanal_btn",use_container_width=True,type="primary" if st.session_state.area=="SEMANAL" else "secondary"):
                             selected_area="SEMANAL"
             with update_col:
@@ -2785,6 +2929,19 @@ section.main>div,
             if name in channels:channels[name]+=item["vendas"]
         st.markdown(production_channel_dashboard_html(channels,total,summary,cfg,data_until,updated,team),unsafe_allow_html=True)
         render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color)
+    elif area=="DIÁRIO":
+        reference_day=datetime.now(RECIFE_TZ).date()
+        daily_ranking,day_week_index,day_week_ranges=daily_ranking_rows(team,rows,cfg,reference_day)
+        if not daily_ranking:st.warning("Nenhum vendedor local ativo.");return
+        st.markdown(daily_ranking_html(daily_ranking,reference_day,day_week_index,day_week_ranges),unsafe_allow_html=True)
+        st.download_button(
+            "BAIXAR RANKING EM PNG",
+            data=daily_ranking_png(daily_ranking,reference_day,day_week_index,day_week_ranges),
+            file_name=f"ranking-vendas-{reference_day:%Y-%m-%d}.png",
+            mime="image/png",
+            key="download_daily_ranking_png",
+            use_container_width=True,
+        )
     elif area=="SEMANAL":
         if not team:st.warning("Nenhum vendedor local ativo.");return
         max_weeks=max(len(x.get("semanas",[])) for x in team)
