@@ -1419,6 +1419,13 @@ def _draw_daily_status_icon(draw,x,y,classification):
             draw.arc((x-12,y+6,x+12,y+23),180,360,fill=ink,width=3)
 
 
+def _daily_overlay_color(hex_color,opacity=.16):
+    """Mistura branco à cor da linha para reproduzir o destaque translúcido do painel."""
+    value=hex_color.lstrip("#")
+    rgb=tuple(int(value[index:index+2],16) for index in (0,2,4))
+    return tuple(round(channel*(1-opacity)+255*opacity) for channel in rgb)
+
+
 def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
     """Gera uma imagem pronta para compartilhar no grupo."""
     width=1080; header_h=270; teams_h=142; columns_h=62; row_h=94; footer_h=70
@@ -1465,8 +1472,9 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
         _draw_daily_status_icon(draw,650,y+46,item["classificacao"])
         draw.text((760,y+25),str(item["vendas_dia"]),font=_daily_font(36,True),fill=text_fill,anchor="ma")
         draw.text((880,y+25),str(item["vendas_semana"]),font=_daily_font(32,True),fill=text_fill,anchor="ma")
-        draw.rounded_rectangle((967,y+17,1053,y+72),radius=10,fill="#EAF7FD")
-        draw.text((1010,y+27),str(item["neo_dia"]),font=_daily_font(31,True),fill=fill,anchor="ma")
+        neo_left,neo_right=974,1042
+        draw.rounded_rectangle((neo_left,y+17,neo_right,y+72),radius=10,fill=_daily_overlay_color(fill))
+        draw.text(((neo_left+neo_right)//2,y+27),str(item["neo_dia"]),font=_daily_font(31,True),fill=text_fill,anchor="ma")
         y+=row_h
     draw.text((width//2,height-39),"PAINEL COMERCIAL · AFOGADOS",font=_daily_font(18,True),fill="#758397",anchor="ma")
     output=io.BytesIO(); image.save(output,format="PNG",optimize=True); return output.getvalue()
