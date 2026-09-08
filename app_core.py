@@ -1197,14 +1197,14 @@ div[data-testid="stPopoverBody"] .stButton button:hover{background:#F1F5F9!impor
 .daily-share-kicker{font-size:.60rem;font-weight:900;letter-spacing:.10em;color:#91E665}.daily-share-title{font-size:1.35rem;line-height:1.05;font-weight:950;margin-top:5px}.daily-share-date{font-size:.72rem;font-weight:850;color:#E7F7EE;white-space:nowrap}
 .daily-share-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#E7EDF3;border-bottom:1px solid #E2E8F0}
 .daily-total{background:#F8FAFC;padding:11px 14px;text-align:center}.daily-total small{display:block;font-size:.51rem;font-weight:900;color:#64748B;letter-spacing:.035em}.daily-total strong{display:block;font-size:1.32rem;line-height:1;color:#0F172A;margin-top:5px}.daily-total.neo strong{color:#0878B9}
-.daily-team-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid #E8EDF3}.daily-team-card{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,90px);align-items:center;gap:6px;border:1px solid #E2E8F0;border-left:5px solid #075B35;border-radius:10px;padding:9px 11px}.daily-team-card.external{border-left-color:#0EA5E9}.daily-team-name{font-size:.65rem;font-weight:950;color:#263349}.daily-team-metric{text-align:center}.daily-team-metric small{display:block;font-size:.45rem;font-weight:900;color:#748197}.daily-team-metric strong{display:block;font-size:1.08rem;line-height:1;color:#0F172A;margin-top:4px}
+.daily-team-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid #E8EDF3}.daily-team-card{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,74px);align-items:center;gap:6px;border:1px solid #E2E8F0;border-left:5px solid #075B35;border-radius:10px;padding:9px 11px}.daily-team-card.external{border-left-color:#0EA5E9}.daily-team-name{font-size:.65rem;font-weight:950;color:#263349}.daily-team-metric{text-align:center}.daily-team-metric small{display:block;font-size:.45rem;font-weight:900;color:#748197}.daily-team-metric strong{display:block;font-size:1.08rem;line-height:1;color:#0F172A;margin-top:4px}.daily-team-metric.neo strong{color:#0878B9}
 .daily-rank-columns,.daily-rank-row{display:grid;grid-template-columns:48px minmax(190px,1fr) 62px 104px 112px 104px;align-items:center;gap:5px}
 .daily-rank-columns{padding:8px 14px;background:#F8FAFC;color:#64748B;font-size:.50rem;font-weight:900;letter-spacing:.035em;text-align:center;border-bottom:1px solid #E8EDF3}.daily-rank-columns span:nth-child(2){text-align:left}
 .daily-rank-row{padding:9px 14px;margin:6px 8px;border-radius:10px;background:var(--daily-color);color:var(--daily-text);box-shadow:0 2px 7px rgba(15,23,42,.10)}.daily-rank-pos{text-align:center;font-size:.77rem;font-weight:950;color:var(--daily-text)}.daily-rank-name{min-width:0}.daily-rank-name b{display:block;font-size:.79rem;color:var(--daily-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.daily-rank-name small{display:block;font-size:.51rem;color:var(--daily-muted);margin-top:2px}.daily-rank-emoji{text-align:center;font-size:1.45rem;line-height:1}.daily-rank-metric{text-align:center}.daily-rank-metric strong{display:block;font-size:1.15rem;line-height:1;color:var(--daily-text);font-weight:950}.daily-rank-metric small{display:none;color:var(--daily-muted)}.daily-rank-metric.today strong{font-size:1.42rem;color:var(--daily-text)}.daily-rank-metric.neo{background:rgba(255,255,255,.16);border-radius:8px;padding:7px 3px}.daily-rank-metric.neo strong{color:var(--daily-text)}
 @media(max-width:600px){
  .daily-share{border-radius:13px;margin-top:3px}.daily-share-head{padding:13px 12px;align-items:flex-start}.daily-share-title{font-size:1rem}.daily-share-date{font-size:.55rem}.daily-share-kicker{font-size:.48rem}
  .daily-total{padding:8px 4px}.daily-total small{font-size:.41rem}.daily-total strong{font-size:1.05rem}
- .daily-team-totals{grid-template-columns:1fr;gap:5px;padding:7px}.daily-team-card{grid-template-columns:minmax(0,1fr) repeat(2,60px);padding:7px 8px}.daily-team-name{font-size:.57rem}.daily-team-metric small{font-size:.38rem}.daily-team-metric strong{font-size:.92rem}
+ .daily-team-totals{grid-template-columns:1fr;gap:5px;padding:7px}.daily-team-card{grid-template-columns:minmax(0,1fr) repeat(3,52px);padding:7px 8px}.daily-team-name{font-size:.57rem}.daily-team-metric small{font-size:.38rem}.daily-team-metric strong{font-size:.92rem}
  .daily-rank-columns{display:none}.daily-rank-row{grid-template-columns:27px minmax(0,1fr) 28px repeat(3,47px);gap:2px;padding:7px 4px}.daily-rank-pos{font-size:.61rem}.daily-rank-name b{font-size:.64rem}.daily-rank-name small{font-size:.40rem}.daily-rank-emoji{font-size:1.15rem}.daily-rank-emoji small{display:none}
  .daily-rank-metric{min-width:0}.daily-rank-metric strong,.daily-rank-metric.today strong{font-size:1rem}.daily-rank-metric small{display:block;font-size:.35rem;line-height:1;color:var(--daily-muted);font-weight:900;margin-top:3px}.daily-rank-metric.neo{padding:5px 1px;border-radius:6px}
 }
@@ -1318,14 +1318,15 @@ def daily_ranking_rows(team,rows,cfg,reference_day=None):
 
 def daily_team_totals(ranking):
     totals={
-        "Equipe Interna":{"dia":0,"semana":0},
-        "Equipe Externa":{"dia":0,"semana":0},
+        "Equipe Interna":{"dia":0,"semana":0,"neo":0},
+        "Equipe Externa":{"dia":0,"semana":0,"neo":0},
     }
     for item in ranking:
         team_name=item.get("equipe")
         if team_name in totals:
             totals[team_name]["dia"]+=int(item.get("vendas_dia",0) or 0)
             totals[team_name]["semana"]+=int(item.get("vendas_semana",0) or 0)
+            totals[team_name]["neo"]+=int(item.get("neo_dia",0) or 0)
     return totals
 
 
@@ -1363,8 +1364,8 @@ def daily_ranking_html(ranking,reference_day,week_index,week_ranges):
         f'<div class="daily-total"><small>{week_text}</small><strong>{total_week}</strong></div>'
         f'<div class="daily-total neo"><small>NEO HOJE</small><strong>{total_neo}</strong></div></div>'
         '<div class="daily-team-totals">'
-        f'<div class="daily-team-card"><div class="daily-team-name">EQUIPE INTERNA</div><div class="daily-team-metric"><small>HOJE</small><strong>{team_totals["Equipe Interna"]["dia"]}</strong></div><div class="daily-team-metric"><small>SEMANA</small><strong>{team_totals["Equipe Interna"]["semana"]}</strong></div></div>'
-        f'<div class="daily-team-card external"><div class="daily-team-name">EQUIPE EXTERNA</div><div class="daily-team-metric"><small>HOJE</small><strong>{team_totals["Equipe Externa"]["dia"]}</strong></div><div class="daily-team-metric"><small>SEMANA</small><strong>{team_totals["Equipe Externa"]["semana"]}</strong></div></div></div>'
+        f'<div class="daily-team-card"><div class="daily-team-name">EQUIPE INTERNA</div><div class="daily-team-metric"><small>HOJE</small><strong>{team_totals["Equipe Interna"]["dia"]}</strong></div><div class="daily-team-metric"><small>SEMANA</small><strong>{team_totals["Equipe Interna"]["semana"]}</strong></div><div class="daily-team-metric neo"><small>NEO HOJE</small><strong>{team_totals["Equipe Interna"]["neo"]}</strong></div></div>'
+        f'<div class="daily-team-card external"><div class="daily-team-name">EQUIPE EXTERNA</div><div class="daily-team-metric"><small>HOJE</small><strong>{team_totals["Equipe Externa"]["dia"]}</strong></div><div class="daily-team-metric"><small>SEMANA</small><strong>{team_totals["Equipe Externa"]["semana"]}</strong></div><div class="daily-team-metric neo"><small>NEO HOJE</small><strong>{team_totals["Equipe Externa"]["neo"]}</strong></div></div></div>'
         '<div class="daily-rank-columns"><span>POS.</span><span>VENDEDOR</span><span>STATUS</span><span>HOJE</span><span>NA SEMANA</span><span>NEO HOJE</span></div>'
         +''.join(rows_html)+'</div>'
     )
@@ -1379,6 +1380,43 @@ def _daily_font(size,bold=False):
         try:return ImageFont.truetype(path,size)
         except OSError:pass
     return ImageFont.load_default(size=size)
+
+
+def _draw_daily_ordinal(draw,x,y,position,color):
+    """Desenha a posição sem depender do glifo Unicode do ordinal masculino."""
+    draw.rounded_rectangle((x-29,y-24,x+29,y+24),radius=14,fill="#FFFFFF")
+    number=str(position)
+    font=_daily_font(23,True)
+    number_box=draw.textbbox((0,0),number,font=font)
+    number_width=number_box[2]-number_box[0]
+    number_x=x-(number_width+10)/2
+    draw.text((number_x,y-14),number,font=font,fill=color)
+    marker_x=number_x+number_width+3
+    draw.ellipse((marker_x,y-12,marker_x+7,y-5),outline=color,width=2)
+    draw.line((marker_x,y-2,marker_x+7,y-2),fill=color,width=2)
+
+
+def _draw_daily_status_icon(draw,x,y,classification):
+    """Desenha um emoji compatível com o PNG mesmo sem fonte de emojis instalada."""
+    face="#FFD54A"
+    ink="#172033"
+    draw.ellipse((x-25,y-25,x+25,y+25),fill=face,outline="#E7A900",width=2)
+    if classification=="Azul":
+        draw.rounded_rectangle((x-20,y-10,x-2,y+1),radius=3,fill=ink)
+        draw.rounded_rectangle((x+2,y-10,x+20,y+1),radius=3,fill=ink)
+        draw.line((x-2,y-6,x+2,y-6),fill=ink,width=3)
+        draw.line((x-25,y-8,x-20,y-6),fill=ink,width=3)
+        draw.line((x+20,y-6,x+25,y-8),fill=ink,width=3)
+        draw.arc((x-12,y-2,x+12,y+17),0,180,fill=ink,width=3)
+    else:
+        draw.ellipse((x-13,y-9,x-7,y-3),fill=ink)
+        draw.ellipse((x+7,y-9,x+13,y-3),fill=ink)
+        if classification=="Verde":
+            draw.arc((x-12,y-3,x+12,y+17),0,180,fill=ink,width=3)
+        elif classification=="Amarelo":
+            draw.line((x-10,y+10,x+10,y+10),fill=ink,width=3)
+        else:
+            draw.arc((x-12,y+6,x+12,y+23),180,360,fill=ink,width=3)
 
 
 def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
@@ -1405,11 +1443,11 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
         left=56+idx*490; right=left+466; top=header_h+22; bottom=header_h+116
         draw.rounded_rectangle((left,top,right,bottom),radius=13,fill="#FFFFFF",outline="#DDE5EE",width=2)
         draw.rounded_rectangle((left,top,left+9,bottom),radius=5,fill=tone)
-        draw.text((left+28,top+18),team_name.upper(),font=_daily_font(21,True),fill="#263349")
-        draw.text((right-142,top+17),"HOJE",font=_daily_font(16,True),fill="#748197",anchor="ma")
-        draw.text((right-142,top+44),str(team_totals[team_name]["dia"]),font=_daily_font(30,True),fill="#172033",anchor="ma")
-        draw.text((right-54,top+17),"SEMANA",font=_daily_font(16,True),fill="#748197",anchor="ma")
-        draw.text((right-54,top+44),str(team_totals[team_name]["semana"]),font=_daily_font(30,True),fill="#172033",anchor="ma")
+        draw.text((left+28,top+17),team_name.upper(),font=_daily_font(19,True),fill="#263349")
+        metrics=((right-205,"HOJE","dia","#172033"),(right-120,"SEMANA","semana","#172033"),(right-38,"NEO HOJE","neo","#0878B9"))
+        for metric_x,label,key,value_color in metrics:
+            draw.text((metric_x,top+17),label,font=_daily_font(13,True),fill="#748197",anchor="ma")
+            draw.text((metric_x,top+43),str(team_totals[team_name][key]),font=_daily_font(29,True),fill=value_color,anchor="ma")
     columns_top=header_h+teams_h
     draw.rectangle((34,columns_top,width-34,columns_top+columns_h),fill="#E9EFF5")
     columns=((58,"POS.","la"),(135,"VENDEDOR","la"),(650,"STATUS","ma"),(760,"HOJE","ma"),(880,"NA SEMANA","ma"),(1010,"NEO HOJE","ma"))
@@ -1420,12 +1458,11 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
         text_fill="#172033" if item["classificacao"]=="Amarelo" else "#FFFFFF"
         muted_fill="#4B5563" if item["classificacao"]=="Amarelo" else "#E8EEF5"
         draw.rectangle((34,y,width-34,y+row_h-2),fill=fill)
-        draw.text((78,y+31),f"{pos}º",font=_daily_font(24,True),fill=text_fill,anchor="ma")
+        _draw_daily_ordinal(draw,78,y+45,pos,fill)
         name=item["vendedor"] if len(item["vendedor"])<=34 else item["vendedor"][:31]+"..."
         draw.text((135,y+20),name,font=_daily_font(23,True),fill=text_fill)
         draw.text((135,y+53),item["equipe"],font=_daily_font(17),fill=muted_fill)
-        png_emoji="☺" if item["classificacao"]=="Verde" else item["emoji"]
-        draw.text((650,y+28),png_emoji,font=_daily_font(36),fill=text_fill,anchor="ma")
+        _draw_daily_status_icon(draw,650,y+46,item["classificacao"])
         draw.text((760,y+25),str(item["vendas_dia"]),font=_daily_font(36,True),fill=text_fill,anchor="ma")
         draw.text((880,y+25),str(item["vendas_semana"]),font=_daily_font(32,True),fill=text_fill,anchor="ma")
         draw.rounded_rectangle((967,y+17,1053,y+72),radius=10,fill="#EAF7FD")
