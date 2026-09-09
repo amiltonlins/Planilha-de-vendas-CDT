@@ -3074,6 +3074,19 @@ section.main>div,
                     st.query_params.clear()
                     st.rerun()
 
+    sector=st.radio("Setor",("COMERCIAL","CONCILIAÇÃO"),horizontal=True,key="dashboard_sector")
+    if sector=="CONCILIAÇÃO":
+        from conciliacao_ui import render_conciliacao
+        def save_conciliation_registry(registry):
+            # Re-read before saving: never replace sales with a stale screen snapshot.
+            fresh_rows,fresh_cfg,fresh_metadata=load_published(base)
+            fresh_cfg["conciliacao_registry"]=registry
+            save_published(fresh_rows,fresh_cfg,fresh_metadata.get("arquivo","base atual"),
+                           fresh_metadata.get("historico_importacoes",[]),
+                           updated_at=datetime.fromisoformat(fresh_metadata["atualizado_em"]))
+        render_conciliacao(st,cfg.get("conciliacao_registry",{}),save_conciliation_registry,manager_password(st))
+        return
+
     # Seletor pequeno e discreto imediatamente antes do conteúdo principal.
     if st.session_state.area!="GESTÃO":
         with st.container(key="dashboard_view_controls"):
