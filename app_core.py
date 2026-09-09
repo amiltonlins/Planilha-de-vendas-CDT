@@ -1421,6 +1421,16 @@ def _draw_daily_brand(draw,x,y):
     )
 
 
+def _fit_image_text(draw,text,font,max_width):
+    """Encurta texto para caber na coluna da imagem sem invadir métricas vizinhas."""
+    value=str(text or "")
+    if draw.textlength(value,font=font)<=max_width:return value
+    suffix="..."
+    while value and draw.textlength(value+suffix,font=font)>max_width:
+        value=value[:-1]
+    return value.rstrip()+suffix
+
+
 def _draw_daily_status_icon(draw,x,y,classification):
     """Desenha um emoji compatível com o PNG mesmo sem fonte de emojis instalada."""
     face="#FFD54A"
@@ -1559,6 +1569,83 @@ def weekly_rank_gamified_html(team,week_index,cfg,is_current):
             f'{target}</div>'
         )
     return '<div class="weekly-game-list">'+''.join(rows)+'</div>'
+
+
+def weekly_prize_ranking_png(team,week_index,cfg):
+    """Gera o ranking da premiação referente à semana selecionada."""
+    ranked=sorted(
+        team,
+        key=lambda x:(
+            x.get("semanas",[])[week_index] if week_index<len(x.get("semanas",[])) else 0,
+            x.get("premios",[])[week_index] if week_index<len(x.get("premios",[])) else 0,
+        ),
+        reverse=True,
+    )
+    week_ranges=month_weeks(int(cfg["ano"]),int(cfg["mes"]))
+    week_start,week_end=week_ranges[week_index]
+    rows=[]
+    for item in ranked:
+        sales=int(item.get("semanas",[])[week_index] if week_index<len(item.get("semanas",[])) else 0)
+        prize=float(item.get("premios",[])[week_index] if week_index<len(item.get("premios",[])) else 0)
+        rows.append({
+            "vendedor":str(item.get("vendedor","")),
+            "equipe":str(item.get("equipe","")),
+            "vendas":sales,
+            "premio":prize,
+        })
+
+    width=1080; header_h=270; columns_h=62; row_h=96; footer_h=70
+    height=header_h+columns_h+max(1,len(rows))*row_h+footer_h
+    image=Image.new("RGB",(width,height),"#F4F7FB"); draw=ImageDraw.Draw(image)
+    draw.rectangle((0,0,width,header_h),fill="#075B35")
+    _draw_daily_brand(draw,56,38)
+    draw.text((56,78),f"RANKING DA PREMIAÇÃO - S{week_index+1}",font=_daily_font(44,True),fill="#FFFFFF")
+    draw.text((width-56,48),f"{week_start:%d/%m} A {week_end:%d/%m/%Y}",font=_daily_font(25,True),fill="#E7F7EE",anchor="ra")
+
+    total_sales=sum(item["vendas"] for item in rows)
+    total_prize=sum(item["premio"] for item in rows)
+    awarded=sum(1 for item in rows if item["premio"]>0)
+    cards=(("VENDAS NA SEMANA",str(total_sales)),("VENDEDORES PREMIADOS",str(awarded)),("TOTAL EM PRÊMIOS",money(total_prize)))
+    for idx,(label,value) in enumerate(cards):
+        left=56+idx*326; right=left+300
+        fill="#EAF7FD" if idx==2 else "#FFFFFF"
+        value_color="#0878B9" if idx==2 else "#075B35"
+        draw.rounded_rectangle((left,160,right,244),radius=13,fill=fill)
+        draw.text(((left+right)//2,178),label,font=_daily_font(16,True),fill="#64748B",anchor="ma")
+        draw.text(((left+right)//2,207),value,font=_daily_font(30 if idx==2 else 34,True),fill=value_color,anchor="ma")
+
+    columns_top=header_h
+    draw.rectangle((34,columns_top,width-34,columns_top+columns_h),fill="#E9EFF5")
+    columns=((58,"POS.","la"),(135,"VENDEDOR","la"),(610,"EQUIPE","ma"),(790,"VENDAS","ma"),(960,"PREMIAÇÃO","ma"))
+    for x,label,anchor in columns:
+        draw.text((x,columns_top+21),label,font=_daily_font(18,True),fill="#536176",anchor=anchor)
+
+    y=columns_top+columns_h
+    medal_colors=("#F5B301","#94A3B8","#B7791F")
+    for pos,item in enumerate(rows,1):
+        row_bottom=y+row_h-8
+        accent="#16A34A" if item["premio"]>0 else "#CBD5E1"
+        draw.rounded_rectangle((34,y,width-34,row_bottom),radius=18,fill="#FFFFFF",outline="#DDE5EE",width=2)
+        draw.rounded_rectangle((34,y,45,row_bottom),radius=5,fill=accent)
+        position_color=medal_colors[pos-1] if pos<=3 else "#64748B"
+        _draw_daily_ordinal(draw,80,y+44,pos,position_color)
+        name_font=_daily_font(23,True)
+        name=_fit_image_text(draw,item["vendedor"],name_font,370)
+        draw.text((135,y+18),name,font=name_font,fill="#172033")
+        status="PREMIADO" if item["premio"]>0 else "AINDA SEM PREMIAÇÃO"
+        draw.text((135,y+51),status,font=_daily_font(15,True),fill=accent if item["premio"]>0 else "#748197")
+        draw.text((610,y+30),item["equipe"],font=_daily_font(18,True),fill="#536176",anchor="ma")
+        draw.text((790,y+23),str(item["vendas"]),font=_daily_font(34,True),fill="#172033",anchor="ma")
+        prize_left,prize_right=870,1030
+        prize_fill="#E8F7EE" if item["premio"]>0 else "#F1F5F9"
+        prize_color="#08733F" if item["premio"]>0 else "#64748B"
+        draw.rounded_rectangle((prize_left,y+16,prize_right,y+69),radius=11,fill=prize_fill)
+        draw.text(((prize_left+prize_right)//2,y+27),money(item["premio"]),font=_daily_font(23,True),fill=prize_color,anchor="ma")
+        y+=row_h
+
+    draw.text((width//2,height-39),"PAINEL COMERCIAL · AFOGADOS",font=_daily_font(18,True),fill="#758397",anchor="ma")
+    output=io.BytesIO(); image.save(output,format="PNG",optimize=True); return output.getvalue()
+
 
 def weekly_management_table_html(team,max_weeks):
     heads=['VENDEDOR']
@@ -3099,5 +3186,13 @@ section.main>div,
         is_current=(week_index==current_index)
         st.markdown('<div class="section weekly-rank-title">Ranking da semana</div>',unsafe_allow_html=True)
         st.markdown(weekly_rank_gamified_html(team,week_index,cfg,is_current),unsafe_allow_html=True)
+        st.download_button(
+            "BAIXAR RANKING DA PREMIAÇÃO",
+            data=weekly_prize_ranking_png(team,week_index,cfg),
+            file_name=f"ranking-premiacao-s{week_index+1}-{int(cfg['ano'])}-{int(cfg['mes']):02d}.png",
+            mime="image/png",
+            key="download_weekly_prize_ranking_png",
+            use_container_width=True,
+        )
 
 if __name__=="__main__":render_app()
