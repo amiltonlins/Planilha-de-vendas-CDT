@@ -1395,6 +1395,32 @@ def _draw_daily_ordinal(draw,x,y,position,color):
     draw.line((marker_x,y-2,marker_x+7,y-2),fill=color,width=2)
 
 
+def _draw_daily_brand(draw,x,y):
+    """Desenha CARTÃO com til explícito para não depender do suporte da fonte."""
+    font=_daily_font(25,True)
+    color="#91E665"
+    prefix="CART"
+    prefix_width=draw.textlength(prefix,font=font)
+    letter_width=draw.textlength("A",font=font)
+    draw.text((x,y),prefix+"A",font=font,fill=color)
+    draw.text((x+prefix_width+letter_width,y),"O DE TODOS · AFOGADOS",font=font,fill=color)
+    tilde_x=x+prefix_width+2
+    tilde_y=y+1
+    draw.line(
+        (
+            tilde_x,tilde_y+3,
+            tilde_x+4,tilde_y,
+            tilde_x+8,tilde_y,
+            tilde_x+12,tilde_y+3,
+            tilde_x+16,tilde_y+3,
+            tilde_x+20,tilde_y,
+        ),
+        fill=color,
+        width=2,
+        joint="curve",
+    )
+
+
 def _draw_daily_status_icon(draw,x,y,classification):
     """Desenha um emoji compatível com o PNG mesmo sem fonte de emojis instalada."""
     face="#FFD54A"
@@ -1433,7 +1459,7 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges,team_name=Non
     height=header_h+teams_h+columns_h+max(1,len(ranking))*row_h+footer_h
     image=Image.new("RGB",(width,height),"#F4F7FB"); draw=ImageDraw.Draw(image)
     draw.rectangle((0,0,width,header_h),fill="#075B35")
-    draw.text((56,38),"CARTÃO DE TODOS · AFOGADOS",font=_daily_font(25,True),fill="#91E665")
+    _draw_daily_brand(draw,56,38)
     ranking_title=f"RANKING {team_name.upper()} - HOJE" if team_name else "RANKING DE VENDAS - HOJE"
     draw.text((56,78),ranking_title,font=_daily_font(48,True),fill="#FFFFFF")
     draw.text((width-56,48),reference_day.strftime("%d/%m/%Y"),font=_daily_font(27,True),fill="#E7F7EE",anchor="ra")
@@ -1469,7 +1495,7 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges,team_name=Non
         fill=item["cor_classificacao"]
         text_fill="#172033" if item["classificacao"]=="Amarelo" else "#FFFFFF"
         muted_fill="#4B5563" if item["classificacao"]=="Amarelo" else "#E8EEF5"
-        draw.rectangle((34,y,width-34,y+row_h-2),fill=fill)
+        draw.rounded_rectangle((34,y,width-34,y+row_h-8),radius=18,fill=fill)
         _draw_daily_ordinal(draw,78,y+45,pos,text_fill)
         name=item["vendedor"] if len(item["vendedor"])<=34 else item["vendedor"][:31]+"..."
         draw.text((135,y+20),name,font=_daily_font(23,True),fill=text_fill)
