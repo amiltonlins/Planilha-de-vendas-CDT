@@ -46,6 +46,8 @@ class DailyRankingTests(unittest.TestCase):
         self.assertNotIn("<small>Verde</small>", ranking_html)
         self.assertNotIn("<small>Amarelo</small>", ranking_html)
         self.assertTrue(daily_ranking_png(ranking, date(2026, 9, 8), week_index, week_ranges).startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertTrue(daily_ranking_png(ranking, date(2026, 9, 8), week_index, week_ranges, "Equipe Interna").startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertTrue(daily_ranking_png(ranking, date(2026, 9, 8), week_index, week_ranges, "Equipe Externa").startswith(b"\x89PNG\r\n\x1a\n"))
 
     def test_daily_color_thresholds(self):
         self.assertEqual(("Azul", "#0891B2", "😎"), daily_performance(3))

@@ -1425,14 +1425,17 @@ def _daily_overlay_color(hex_color,opacity=.16):
     return tuple(round(channel*(1-opacity)+255*opacity) for channel in rgb)
 
 
-def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
-    """Gera uma imagem pronta para compartilhar no grupo."""
+def daily_ranking_png(ranking,reference_day,week_index,week_ranges,team_name=None):
+    """Gera uma imagem geral ou filtrada por equipe pronta para compartilhar."""
+    if team_name:
+        ranking=[item for item in ranking if item.get("equipe")==team_name]
     width=1080; header_h=270; teams_h=142; columns_h=62; row_h=94; footer_h=70
     height=header_h+teams_h+columns_h+max(1,len(ranking))*row_h+footer_h
     image=Image.new("RGB",(width,height),"#F4F7FB"); draw=ImageDraw.Draw(image)
     draw.rectangle((0,0,width,header_h),fill="#075B35")
     draw.text((56,38),"CARTÃO DE TODOS · AFOGADOS",font=_daily_font(25,True),fill="#91E665")
-    draw.text((56,78),"RANKING DE VENDAS - HOJE",font=_daily_font(48,True),fill="#FFFFFF")
+    ranking_title=f"RANKING {team_name.upper()} - HOJE" if team_name else "RANKING DE VENDAS - HOJE"
+    draw.text((56,78),ranking_title,font=_daily_font(48,True),fill="#FFFFFF")
     draw.text((width-56,48),reference_day.strftime("%d/%m/%Y"),font=_daily_font(27,True),fill="#E7F7EE",anchor="ra")
     total_day=sum(item["vendas_dia"] for item in ranking); total_week=sum(item["vendas_semana"] for item in ranking); total_neo=sum(item["neo_dia"] for item in ranking)
     if week_index is not None:
@@ -1445,15 +1448,18 @@ def daily_ranking_png(ranking,reference_day,week_index,week_ranges):
         draw.text(((left+right)//2,178),label,font=_daily_font(18,True),fill="#64748B",anchor="ma")
         draw.text(((left+right)//2,205),str(value),font=_daily_font(34,True),fill="#075B35" if idx<2 else "#0878B9",anchor="ma")
     team_totals=daily_team_totals(ranking)
-    for idx,(team_name,tone) in enumerate((("Equipe Interna","#075B35"),("Equipe Externa","#0EA5E9"))):
-        left=56+idx*490; right=left+466; top=header_h+22; bottom=header_h+116
+    team_cards=((team_name,"#075B35" if team_name=="Equipe Interna" else "#0EA5E9"),) if team_name else (("Equipe Interna","#075B35"),("Equipe Externa","#0EA5E9"))
+    for idx,(card_team_name,tone) in enumerate(team_cards):
+        left=56 if team_name else 56+idx*490
+        right=1022 if team_name else left+466
+        top=header_h+22; bottom=header_h+116
         draw.rounded_rectangle((left,top,right,bottom),radius=13,fill="#FFFFFF",outline="#DDE5EE",width=2)
         draw.rounded_rectangle((left,top,left+9,bottom),radius=5,fill=tone)
-        draw.text((left+28,top+17),team_name.upper(),font=_daily_font(19,True),fill="#263349")
+        draw.text((left+28,top+17),card_team_name.upper(),font=_daily_font(19,True),fill="#263349")
         metrics=((right-205,"HOJE","dia","#172033"),(right-120,"SEMANA","semana","#172033"),(right-38,"NEO HOJE","neo","#0878B9"))
         for metric_x,label,key,value_color in metrics:
             draw.text((metric_x,top+17),label,font=_daily_font(13,True),fill="#748197",anchor="ma")
-            draw.text((metric_x,top+43),str(team_totals[team_name][key]),font=_daily_font(29,True),fill=value_color,anchor="ma")
+            draw.text((metric_x,top+43),str(team_totals[card_team_name][key]),font=_daily_font(29,True),fill=value_color,anchor="ma")
     columns_top=header_h+teams_h
     draw.rectangle((34,columns_top,width-34,columns_top+columns_h),fill="#E9EFF5")
     columns=((58,"POS.","la"),(135,"VENDEDOR","la"),(650,"STATUS","ma"),(760,"HOJE","ma"),(880,"NA SEMANA","ma"),(1010,"NEO HOJE","ma"))
@@ -3028,14 +3034,34 @@ section.main>div,
         daily_ranking,day_week_index,day_week_ranges=daily_ranking_rows(team,rows,cfg,reference_day)
         if not daily_ranking:st.warning("Nenhum vendedor local ativo.");return
         st.markdown(daily_ranking_html(daily_ranking,reference_day,day_week_index,day_week_ranges),unsafe_allow_html=True)
-        st.download_button(
-            "BAIXAR RANKING EM PNG",
-            data=daily_ranking_png(daily_ranking,reference_day,day_week_index,day_week_ranges),
-            file_name=f"ranking-vendas-{reference_day:%Y-%m-%d}.png",
-            mime="image/png",
-            key="download_daily_ranking_png",
-            use_container_width=True,
-        )
+        download_general,download_internal,download_external=st.columns(3,gap="small")
+        with download_general:
+            st.download_button(
+                "BAIXAR GERAL",
+                data=daily_ranking_png(daily_ranking,reference_day,day_week_index,day_week_ranges),
+                file_name=f"ranking-vendas-{reference_day:%Y-%m-%d}.png",
+                mime="image/png",
+                key="download_daily_ranking_png",
+                use_container_width=True,
+            )
+        with download_internal:
+            st.download_button(
+                "BAIXAR EQUIPE INTERNA",
+                data=daily_ranking_png(daily_ranking,reference_day,day_week_index,day_week_ranges,"Equipe Interna"),
+                file_name=f"ranking-equipe-interna-{reference_day:%Y-%m-%d}.png",
+                mime="image/png",
+                key="download_daily_internal_png",
+                use_container_width=True,
+            )
+        with download_external:
+            st.download_button(
+                "BAIXAR EQUIPE EXTERNA",
+                data=daily_ranking_png(daily_ranking,reference_day,day_week_index,day_week_ranges,"Equipe Externa"),
+                file_name=f"ranking-equipe-externa-{reference_day:%Y-%m-%d}.png",
+                mime="image/png",
+                key="download_daily_external_png",
+                use_container_width=True,
+            )
     elif area=="SEMANAL":
         if not team:st.warning("Nenhum vendedor local ativo.");return
         max_weeks=max(len(x.get("semanas",[])) for x in team)
