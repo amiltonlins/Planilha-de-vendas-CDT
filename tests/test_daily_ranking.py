@@ -1,7 +1,10 @@
 from datetime import date
+import io
 import json
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 from app_core import _daily_overlay_color, apply_team_labels, daily_performance, daily_ranking_html, daily_ranking_png, daily_ranking_rows, daily_team_totals, regular
 from gerar_painel import summarize
@@ -59,6 +62,20 @@ class DailyRankingTests(unittest.TestCase):
     def test_png_neo_highlight_matches_translucent_dashboard_style(self):
         self.assertEqual((59, 178, 103), _daily_overlay_color("#16A34A"))
         self.assertEqual((247, 174, 50), _daily_overlay_color("#F59E0B"))
+
+    def test_png_seller_rows_have_rounded_corners_and_spacing(self):
+        ranking = [{
+            "vendedor": "Ana", "equipe": "Equipe Interna", "vendas_dia": 2,
+            "vendas_semana": 5, "neo_dia": 1, "classificacao": "Verde",
+            "cor_classificacao": "#16A34A", "emoji": "🙂",
+        }]
+        png = daily_ranking_png(ranking, date(2026, 9, 8), 1, [(date(2026, 9, 1), date(2026, 9, 6)), (date(2026, 9, 7), date(2026, 9, 13))])
+        image = Image.open(io.BytesIO(png)).convert("RGB")
+        row_top = 270 + 142 + 62
+
+        self.assertEqual((244, 247, 251), image.getpixel((34, row_top + 1)))
+        self.assertEqual((22, 163, 74), image.getpixel((52, row_top + 18)))
+        self.assertEqual((244, 247, 251), image.getpixel((52, row_top + 90)))
 
     def test_does_not_show_unpublished_future_day(self):
         team = [{"vendedor": "Ana", "equipe": "Equipe Interna", "semanas": [2]}]
