@@ -278,6 +278,20 @@ def save_published(rows,cfg,source_name,history=None,updated_at=None):
         # publicação que já foi confirmada no Supabase.
         if not remote_persistence_enabled():raise
 
+def save_conciliation_settings(base, *, registry=None, goals=None):
+    """Update only the edited Conciliação setting in the latest published state."""
+    fresh_rows,fresh_cfg,metadata=load_published(base)
+    if registry is not None:
+        fresh_cfg["conciliacao_registry"]=copy.deepcopy(registry)
+    if goals is not None:
+        fresh_cfg["conciliacao_goals"]={key:int(goals[key]) for key in ("qias","changes")}
+        if any(value<0 for value in fresh_cfg["conciliacao_goals"].values()):
+            raise ValueError("Metas não podem ser negativas")
+    save_published(fresh_rows,fresh_cfg,metadata.get("arquivo","base atual"),
+                   metadata.get("historico_importacoes",[]),
+                   updated_at=datetime.fromisoformat(metadata["atualizado_em"]))
+
+
 def load_published(base):
     if remote_persistence_enabled():
         try:payload=load_remote_payload()
@@ -3065,7 +3079,12 @@ section.main>div,
             with st.popover(account_label,use_container_width=True):
                 st.caption(user_name_raw)
                 if management_available and st.button("Gestão",key="cdt_menu_management",use_container_width=True):
+                    st.session_state.dashboard_sector="COMERCIAL"
                     st.session_state.area="GESTÃO"
+                    st.rerun()
+                if management_available and st.button("Gestão da Conciliação",key="cdt_menu_conc_management",use_container_width=True):
+                    st.session_state.dashboard_sector="CONCILIAÇÃO"
+                    st.session_state.conc_management=True
                     st.rerun()
                 if st.button("Sair",key="cdt_menu_logout",use_container_width=True):
                     for key in ("dashboard_autenticado","dashboard_usuario","dashboard_auth_token","seller_detail","gestor_autenticado","login_duplicate_first"):
@@ -3077,14 +3096,10 @@ section.main>div,
     sector=st.radio("Setor",("COMERCIAL","CONCILIAÇÃO"),horizontal=True,key="dashboard_sector")
     if sector=="CONCILIAÇÃO":
         from conciliacao_ui import render_conciliacao
-        def save_conciliation_registry(registry):
-            # Re-read before saving: never replace sales with a stale screen snapshot.
-            fresh_rows,fresh_cfg,fresh_metadata=load_published(base)
-            fresh_cfg["conciliacao_registry"]=registry
-            save_published(fresh_rows,fresh_cfg,fresh_metadata.get("arquivo","base atual"),
-                           fresh_metadata.get("historico_importacoes",[]),
-                           updated_at=datetime.fromisoformat(fresh_metadata["atualizado_em"]))
-        render_conciliacao(st,cfg.get("conciliacao_registry",{}),save_conciliation_registry,manager_password(st))
+        render_conciliacao(st,cfg.get("conciliacao_registry",{}),
+                          lambda registry:save_conciliation_settings(base,registry=registry),manager_password(st),
+                          goals=cfg.get("conciliacao_goals",{}),
+                          save_goals=lambda goals:save_conciliation_settings(base,goals=goals))
         return
 
     # Seletor pequeno e discreto imediatamente antes do conteúdo principal.

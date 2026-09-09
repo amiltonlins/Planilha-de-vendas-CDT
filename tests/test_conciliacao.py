@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from conciliacao import SCOPE, aggregate, award_for, parse_rows, parse_tiers, read_source, summarize, useful_days, weeks
 from conciliacao_ui import SourceCache, analytical_xlsx, ranking_png, weekly_ranking
+from conciliacao_visual import daily_color, projection_color, ranking_html, regimes_html
 
 
 HEADER = ["Carimbo de data/hora", "MATRÍCULA", "TOTAL DE QIA'S", "Régua", "VALOR RECEBIDO", "FORMA", "COMPROVANTE", "FEZ ALTERAÇÃO", "OBS", "CONCILIADOR (A)"]
@@ -154,15 +155,35 @@ render_conciliacao(st, {}, lambda value: None, "test-manager")
         with patch.object(SourceCache, "get", return_value=(payload, False)):
             app.run()
             self.assertFalse(app.exception)
-            for view in ("DIÁRIO", "SEMANAL", "GESTÃO"):
-                app.radio(key="conc_view").set_value(view).run()
+            for view in ("DIÁRIO", "SEMANAL"):
+                app.button(key="conc_nav_"+view).click().run()
                 self.assertFalse(app.exception)
+            self.assertFalse(app.radio)
+            self.assertTrue(any(b.label=="S1" for b in app.button))
+            app.session_state["conc_management"] = True
+            app.run()
             self.assertEqual(len(app.text_input), 1)
             app.text_input(key="conc_password").set_value("test-manager")
             app.button(key="conc_login").click().run()
             self.assertFalse(app.exception)
             self.assertTrue(app.session_state["gestor_autenticado"])
             self.assertTrue(app.checkbox)
+
+    def test_exact_color_boundaries(self):
+        for qias,color in ((0,"red"),(14,"red"),(15,"orange"),(19,"orange"),(20,"yellow"),(24,"yellow"),(25,"green"),(29,"green"),(30,"blue")):
+            self.assertEqual(daily_color(qias),color)
+        for percent,color in (("49.999","red"),("50","orange"),("74.999","orange"),("75","yellow"),("99.999","yellow"),("100","green"),("100.999","green"),("101","blue")):
+            self.assertEqual(projection_color(Decimal(percent)*650/100,650),color)
+
+    def test_compact_regimes_and_zero_ranking(self):
+        from conciliacao_ui import prepare_summary
+        rows,_=parse_rows([HEADER,raw(qias=0,cash=0,change="NÃO REALIZADA")])
+        summary=prepare_summary(rows,parse_tiers(CONFIG),2026,9,date(2026,9,9),{})
+        rendered=ranking_html(summary,"VISÃO GERAL")
+        self.assertIn("ANANNDA BRITO",rendered)
+        self.assertIn("#B91C1C",rendered)
+        self.assertIn("TICKET MÉDIO",rendered)
+        self.assertNotIn("OUTRAS",regimes_html(aggregate(rows)))
 
 
 if __name__ == "__main__":

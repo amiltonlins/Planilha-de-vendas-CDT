@@ -7,6 +7,8 @@ from calendar import monthrange
 from datetime import date, datetime
 from decimal import Decimal
 
+from conciliacao_visual import STYLE, daily_color, projection_color, ranking_html, ranking_png, regimes_html, summary_html
+
 from conciliacao import TZ, aggregate, award_for, normalized, read_source, summarize, useful_days, weeks
 
 
@@ -34,35 +36,6 @@ class SourceCache:
                 else:
                     self.value, self.stale = value, False
             return self.value, self.stale
-
-
-def ranking_png(rows, title, period, synced_at):
-    from PIL import Image, ImageDraw
-    from app_core import _daily_font, _draw_daily_brand, _fit_image_text
-    image = Image.new("RGB", (1080, max(430, 235 + len(rows) * 125)), "#f1f5f9")
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((20, 20, 1060, 165), radius=20, fill="#064e3b")
-    _draw_daily_brand(draw, 45, 32)
-    draw.text((45, 81), title, font=_daily_font(30, True), fill="white")
-    draw.text((45, 124), period, font=_daily_font(22), fill="white")
-    for i, row in enumerate(rows):
-        y = 182 + i * 125
-        draw.rounded_rectangle((20, y, 1060, y + 113), radius=18, fill="#ffffff")
-        draw.text((42, y + 13), f"{i + 1}º", font=_daily_font(29, True), fill="#047857")
-        name = _fit_image_text(draw, row["name"], _daily_font(28, True), 835)
-        draw.text((118, y + 12), name, font=_daily_font(28, True), fill="#0f172a")
-        draw.text((42, y + 53), f"QIAs: {row['qias']}   Trocas: {row['changes']}   Caixa: {money(row['cash'])}", font=_daily_font(23), fill="#0f172a")
-        detail = f"Crédito: {row['credit']}   Neoenergia: {row['neo']}   Ticket: {money(row['ticket'])}"
-        if "award" in row:
-            detail += f"   Prêmio*: {money(row['award'])}"
-        draw.text((42, y + 84), detail, font=_daily_font(19), fill="#475569")
-    footer = f"Sincronizado {synced_at:%d/%m/%Y %H:%M} · *Semana aberta: projeção."
-    if any(r.get("cash_invalid") for r in rows):
-        footer += " Caixa/ticket parciais."
-    draw.text((30, image.height - 32), footer, font=_daily_font(17), fill="#475569")
-    output = io.BytesIO()
-    image.save(output, "PNG")
-    return output.getvalue()
 
 
 def analytical_xlsx(records, summary, tiers):
@@ -132,39 +105,95 @@ def weekly_ranking(records, names, start, end, today, tiers):
             row[metric + "_projection"] = Decimal(row[metric]) * total / elapsed if elapsed else Decimal(0)
         row["projected_tier"], projected = award_for(row["qias_projection"], row["changes_projection"], tiers)
         row["award"] = row["earned_award"] if end < today else projected
+        row["closed_award"] = row["earned_award"] if end < today else Decimal(0)
     return rows
 
 
-def render_ranking(st, rows):
-    st.markdown("""<style>
-.conciliation-row{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px 16px;margin:8px 0;color:#0f172a}
-.conciliation-row strong{font-size:1rem}.conciliation-row p{margin:5px 0 0;font-size:.85rem}
-@media(max-width:600px){.conciliation-row{padding:10px}.conciliation-row p{font-size:.76rem}}
-</style>""", unsafe_allow_html=True)
-    for i, row in enumerate(rows, 1):
-        award = f" · Premiação: {money(row['award'])}" if "award" in row else ""
-        if "tier" in row:
-            award += f" · Faixa atual: {row['tier']}ª" if row["tier"] else " · Sem faixa atingida"
-        st.markdown(f'<div class="conciliation-row"><strong>{i}º · {html.escape(row["name"])}</strong><p>'
-                    f'QIAs: {row["qias"]} · Trocas: {row["changes"]} · Caixa: {money(row["cash"])}{award}</p><p>'
-                    f'Crédito: {row["credit"]} · Neoenergia: {row["neo"]} · Ticket: {money(row["ticket"])}</p></div>', unsafe_allow_html=True)
-        if row.get("cash_invalid"):
-            st.caption("Caixa e ticket parciais: há valores inválidos na origem.")
+def prepare_summary(records, tiers, year, month, today, registry):
+    rows = summarize(records, tiers, year, month, today, registry)
+    for row in rows:
+        row["qias_goal"] = tiers["monthly"][0]["qias"]
+        row["goal_percent"] = row["qias_projection"] * 100 / row["qias_goal"]
+        row["color"] = projection_color(row["qias_projection"], row["qias_goal"])
+    return rows
 
 
-def render_conciliacao(st, registry, save_registry, manager_password):
+def render_management(st, registry, goals, save_registry, save_goals, password, payload, stale, year, month, summary, month_rows):
+    if st.button("VOLTAR AO PAINEL", key="conc_back"):
+        st.session_state.conc_management = False
+        st.rerun()
+    if not st.session_state.get("gestor_autenticado"):
+        supplied = st.text_input("Senha do gestor", type="password", key="conc_password")
+        if st.button("ENTRAR NA GESTÃO", key="conc_login"):
+            import hmac
+            if password and hmac.compare_digest(supplied, password):
+                st.session_state.gestor_autenticado = True
+                st.rerun()
+            else:
+                st.error("Senha inválida ou não configurada.")
+        return
+    st.markdown("#### GESTÃO DA CONCILIAÇÃO")
+    with st.form("conc_goals"):
+        a, b = st.columns(2)
+        qias = a.number_input("Meta mensal geral de QIA’s", min_value=0, value=int(goals.get("qias", 0)), step=1, key="conc_goal_qias")
+        changes = b.number_input("Meta mensal geral de trocas", min_value=0, value=int(goals.get("changes", 0)), step=1, key="conc_goal_changes")
+        st.caption("Metas gerais permanecem salvas até você editá-las. As faixas individuais e premiações continuam na aba Config.")
+        if st.form_submit_button("SALVAR METAS GERAIS"):
+            try:
+                save_goals({"qias": qias, "changes": changes})
+            except Exception:
+                st.error("Não foi possível salvar as metas. Os valores anteriores foram mantidos.")
+            else:
+                st.session_state.conc_saved = "Metas gerais salvas."
+                st.rerun()
+    if st.session_state.get("conc_saved"):
+        st.success(st.session_state.pop("conc_saved"))
+    if payload is None:
+        st.info("A conexão precisa estar disponível para consultar o cadastro e exportar resultados.")
+        return
+    records, tiers = payload["records"], payload["tiers"]
+    st.caption(f"Conexão: {'desatualizada' if stale else 'ativa'} · {len(records)} registros · {len(tiers['monthly'])} faixas mensais · {len(tiers['weekly'])} semanais")
+    issues = [r["source_line"] for r in records if r.get("cash_invalid")]
+    if issues:
+        st.warning("Corrigir valores da coluna E na aba operacional, linhas: " + ", ".join(map(str, issues)))
+    all_names = {r["key"]: r["name"] for r in records}
+    all_names.update({key: flags.get("name", all_names.get(key, key)) for key, flags in registry.items()})
+    with st.form("conc_registry"):
+        updated = {}
+        for key, name in sorted(all_names.items()):
+            a,b,c=st.columns([3,1,1]);a.write(name)
+            updated[key] = {"name":name,
+                            "active":b.checkbox("Ativo",value=registry.get(key,{}).get("active",True),key="conc_active_"+key),
+                            "visible":c.checkbox("Exibir",value=registry.get(key,{}).get("visible",True),key="conc_visible_"+key)}
+        added=st.text_input("Adicionar conciliador sem lançamentos (nome oficial)",key="conc_new_name")
+        if st.form_submit_button("SALVAR CONCILIADORES"):
+            if normalized(added):
+                updated.setdefault(normalized(added),{"name":" ".join(added.split()),"active":True,"visible":True})
+            try:
+                save_registry(updated)
+            except Exception:
+                st.error("Não foi possível salvar o cadastro. As configurações anteriores foram mantidas.")
+            else:
+                st.rerun()
+    st.download_button("BAIXAR RELATÓRIO ANALÍTICO",analytical_xlsx(month_rows,summary,tiers),
+                       file_name=f"conciliacao-{year}-{month:02d}.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def render_conciliacao(st, registry, save_registry, manager_password, goals=None, save_goals=None):
     import hashlib
-    import hmac
     import json
-    st.subheader("CONCILIAÇÃO · AFOGADOS")
+    goals = goals or {}
+    st.markdown(STYLE, unsafe_allow_html=True)
+    settings = None
+    ttl = 300
     try:
         settings = dict(st.secrets["conciliacao"])
         settings["service_account"] = dict(settings["service_account"])
         ttl = max(60, int(settings.get("cache_seconds", 300)))
-        identity = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()).hexdigest()
-    except (KeyError, FileNotFoundError, ValueError, TypeError):
+        identity = hashlib.sha256(json.dumps(settings,sort_keys=True).encode()).hexdigest()
+    except (KeyError,FileNotFoundError,ValueError,TypeError):
+        settings = None
         st.error("Configure a seção conciliacao e a conta de serviço nos Secrets do Streamlit.")
-        return
 
     @st.cache_resource(show_spinner=False)
     def source_cache(source_identity):
@@ -174,135 +203,94 @@ def render_conciliacao(st, registry, save_registry, manager_password):
     def body():
         if not st.session_state.get("dashboard_autenticado"):
             return
-        force = st.button("ATUALIZAR DADOS", key="conc_refresh")
-        payload, stale = source_cache(identity).get(settings, ttl, force)
+        view = st.session_state.setdefault("conc_view", "VISÃO GERAL")
+        managing = st.session_state.get("conc_management", False)
+        force = False
+        today = datetime.now(TZ).date()
+        with st.container(key="dashboard_view_controls"):
+            nav, refresh = st.columns([5,1],vertical_alignment="center")
+            with nav:
+                if not managing:
+                    with st.container(key="top_nav_buttons"):
+                        for col,label in zip(st.columns(3,gap="small"),("VISÃO GERAL","DIÁRIO","SEMANAL")):
+                            if col.button(label,key="conc_nav_"+label,use_container_width=True,type="primary" if view==label else "secondary"):
+                                st.session_state.conc_view=label
+                                st.rerun()
+            with refresh:
+                force=st.button("↻ Atualizar dados",key="conc_refresh",help="Consultar novamente os resultados e as faixas da planilha")
+        payload,stale=source_cache(identity).get(settings,ttl,force) if settings else (None,True)
         if stale:
-            st.warning("Não foi possível atualizar. Confira API ativada, compartilhamento e credenciais. Última leitura válida mantida, quando disponível.")
-        if payload is None:
-            st.error("Ainda não há leitura válida da planilha. Nenhum resultado foi estimado.")
+            st.warning("Não foi possível atualizar. Última leitura válida mantida, quando disponível.")
+        records=payload["records"] if payload else []
+        months=sorted({(r["date"].year,r["date"].month) for r in records}|{(today.year,today.month)},reverse=True)
+        a,b=st.columns([1,3],vertical_alignment="center")
+        with a:
+            year,month=st.selectbox("Competência",months,format_func=lambda p:f"{p[1]:02d}/{p[0]}",key="conc_month",label_visibility="collapsed")
+        if payload:
+            b.caption(f"Atualizado {payload['synced_at']:%d/%m às %H:%M} · automático a cada {ttl//60} min")
+        summary=prepare_summary(records,payload["tiers"],year,month,today,registry) if payload else []
+        names={r["key"]:r["name"] for r in summary}
+        month_rows=[r for r in records if r["key"] in names and (r["date"].year,r["date"].month)==(year,month) and r["date"]<=today]
+        if managing:
+            render_management(st,registry,goals,save_registry,save_goals,manager_password,payload,stale,year,month,summary,month_rows)
             return
-        st.caption(f"Última sincronização: {payload['synced_at']:%d/%m/%Y %H:%M:%S} · somente leitura · atualização a cada {ttl // 60} min")
+        if payload is None:
+            st.error("Ainda não há leitura válida da planilha.")
+            return
         if payload["duplicates"]:
             st.caption(f"{payload['duplicates']} registros duplicados desconsiderados.")
-        records, tiers = payload["records"], payload["tiers"]
-        today = datetime.now(TZ).date()
-        months = sorted({(r["date"].year, r["date"].month) for r in records} | {(today.year, today.month)}, reverse=True)
-        year, month = st.selectbox("Competência", months, format_func=lambda p: f"{p[1]:02d}/{p[0]}", key="conc_month")
-        summary = summarize(records, tiers, year, month, today, registry)
-        names = {r["key"]: r["name"] for r in summary}
-        month_rows = [r for r in records if r["key"] in names and (r["date"].year, r["date"].month) == (year, month) and r["date"] <= today]
-        if any(r.get("cash_invalid") for r in month_rows):
-            st.warning("Caixa, ticket e projeção de caixa parciais nesta competência: valores inválidos não foram somados. QIAs e trocas foram preservados. Consulte as linhas em Gestão.")
-        view = st.radio("Visualização", ["VISÃO GERAL", "DIÁRIO", "SEMANAL", "GESTÃO"], horizontal=True, key="conc_view")
-        if view == "GESTÃO":
-            if not st.session_state.get("gestor_autenticado"):
-                supplied = st.text_input("Senha do gestor", type="password", key="conc_password")
-                if st.button("ENTRAR NA GESTÃO", key="conc_login"):
-                    if manager_password and hmac.compare_digest(supplied, manager_password):
-                        st.session_state.gestor_autenticado = True
+        periods=weeks(year,month)
+        default_day=today.day if (year,month)==(today.year,today.month) else 1
+        if view=="SEMANAL":
+            week_key=f"conc_week_{year}_{month}"
+            index=st.session_state.setdefault(week_key,min((default_day-1)//7,len(periods)-1))
+            with st.container(key="week_nav_buttons"):
+                for i,col in enumerate(st.columns(len(periods),gap="small")):
+                    if col.button(f"S{i+1}",key=f"conc_week_btn_{year}_{month}_{i}",type="primary" if i==index else "secondary",help=f"{periods[i][0]:%d/%m} a {periods[i][1]:%d/%m}"):
+                        st.session_state[week_key]=i
                         st.rerun()
-                    else:
-                        st.error("Senha inválida ou não configurada.")
-                return
-            st.info("Metas e premiações são editadas exclusivamente na aba Config da planilha.")
-            all_names = {r["key"]: r["name"] for r in records}
-            all_names.update({key: flags.get("name", all_names.get(key, key)) for key, flags in registry.items()})
-            issues = [r["source_line"] for r in records if r.get("cash_invalid")]
-            if issues:
-                st.warning("Corrigir valores da coluna E na aba operacional, linhas: " + ", ".join(map(str, issues)))
-            st.caption(f"Conexão: {'desatualizada' if stale else 'ativa'} · {len(records)} registros · {len(tiers['monthly'])} faixas mensais · {len(tiers['weekly'])} semanais")
-            with st.form("conc_registry"):
-                updated = {}
-                for key, name in sorted(all_names.items()):
-                    a, b, c = st.columns([3, 1, 1])
-                    a.write(name)
-                    updated[key] = {"name": name, "active": b.checkbox("Ativo", value=registry.get(key, {}).get("active", True), key="conc_active_" + key),
-                                    "visible": c.checkbox("Exibir", value=registry.get(key, {}).get("visible", True), key="conc_visible_" + key)}
-                added = st.text_input("Adicionar conciliador sem lançamentos (nome oficial)", key="conc_new_name")
-                if st.form_submit_button("SALVAR CONCILIADORES"):
-                    if normalized(added):
-                        updated.setdefault(normalized(added), {"name": " ".join(added.split()), "active": True, "visible": True})
-                    try:
-                        save_registry(updated)
-                    except Exception:
-                        st.error("Não foi possível salvar o cadastro. As configurações anteriores foram mantidas.")
-                    else:
-                        st.rerun()
-            st.download_button("BAIXAR RELATÓRIO ANALÍTICO", analytical_xlsx(month_rows, summary, tiers),
-                               file_name=f"conciliacao-{year}-{month:02d}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-            return
-        if view == "VISÃO GERAL":
-            selected = st.selectbox("Conciliador", [""] + list(names), format_func=lambda k: names.get(k, "TODOS"), key="conc_person")
-            displayed = [r for r in summary if not selected or r["key"] == selected]
-            filtered = [r for r in month_rows if not selected or r["key"] == selected]
-            totals = aggregate(filtered)
-            from app_core import cards
-            cards(st, [("QIAs", totals["qias"]), ("TROCAS", totals["changes"]), ("CAIXA", money(totals["cash"])), ("TICKET MÉDIO", money(totals["ticket"]))])
-            first = tiers["monthly"][0]
-            count = len(displayed)
-            st.caption(f"Meta inicial individual: {first['qias']} QIAs + {first['changes']} trocas. Meta agregada: soma de {count} conciliadores exibidos.")
-            goal = first["qias"] * count
-            st.write(f"QIAs: {totals['qias'] / goal * 100 if goal else 0:.1f}% de {goal} · Meta de trocas: {first['changes'] * count}")
-            cards(st, [("PROJEÇÃO QIAs", f"{sum(r['qias_projection'] for r in displayed):.0f}"),
-                       ("PROJEÇÃO TROCAS", f"{sum(r['changes_projection'] for r in displayed):.0f}"),
-                       ("PROJEÇÃO CAIXA", money(sum(r["cash_projection"] for r in displayed))),
-                       ("COMISSÃO PROJETADA", money(sum(r["commission_projection"] for r in displayed)))])
-            st.caption(f"Média diária: {sum(r['qias_average'] for r in displayed):.1f} QIAs · {sum(r['changes_average'] for r in displayed):.1f} trocas. Segunda a sábado; domingos excluídos do divisor.")
-            for regime in ("NR", "1 A 3", "4 A 6", "OUTRAS"):
-                st.write(f"{regime}: {totals[regime]} QIAs ({totals[regime] / totals['qias'] * 100 if totals['qias'] else 0:.1f}%)")
-            st.caption(f"Trocas crédito: {totals['credit']} ({totals['credit'] / totals['changes'] * 100 if totals['changes'] else 0:.1f}%) · Neoenergia: {totals['neo']} ({totals['neo'] / totals['changes'] * 100 if totals['changes'] else 0:.1f}%)")
-            st.write(f"Premiação mensal atual: {money(sum(r['monthly_award'] for r in displayed))} · Mensal projetada: {money(sum(r['projected_award'] for r in displayed))} · Semanais conquistadas: {money(sum(r['weekly_award'] for r in displayed))}")
-            with st.expander("Evolução de QIAs por régua"):
-                import pandas as pd
-                for label, grouping in (("Diária", lambda r: r["date"].isoformat()), ("Semanal", lambda r: f"S{(r['date'].day - 1) // 7 + 1}")):
-                    groups = {}
-                    for record in filtered:
-                        groups.setdefault(grouping(record), []).append(record)
-                    table = [{"Período": key, **{k: aggregate(value)[k] for k in ("NR", "1 A 3", "4 A 6")}} for key, value in sorted(groups.items())]
-                    st.write(label)
-                    if table:
-                        st.bar_chart(pd.DataFrame(table).set_index("Período"))
-            render_ranking(st, displayed)
-            for row in displayed:
-                with st.expander(row["name"] + " · projeções e premiação"):
-                    st.write(f"QIAs projetados: {row['qias_projection']:.1f} · Trocas projetadas: {row['changes_projection']:.1f}")
-                    st.write(f"Faixa mensal atual: {row['tier']} · Projetada: {row['projected_tier']}")
-                    st.write(f"Mensal atual: {money(row['monthly_award'])} · Projetada: {money(row['projected_award'])}")
-                    st.write(f"Semanas encerradas: {money(row['weekly_award'])} · Total projetado: {money(row['commission_projection'])}")
-                    st.write(f"Réguas: NR {row['NR']} · 1 A 3 {row['1 A 3']} · 4 A 6 {row['4 A 6']}")
-                    st.write(f"Para a próxima faixa: {row['qias_remaining']} QIAs e {row['changes_remaining']} trocas.")
-            return
-        periods = weeks(year, month)
-        default_day = min(today.day, monthrange(year, month)[1]) if (year, month) == (today.year, today.month) else 1
-        if view == "DIÁRIO":
-            start = end = st.date_input("Dia", date(year, month, default_day), min_value=date(year, month, 1), max_value=date(year, month, monthrange(year, month)[1]), key=f"conc_day_{year}_{month}")
-            ranked = period_ranking(records, names, start, end, today)
-            a, b = periods[(start.day - 1) // 7]
-            weekly = {r["key"]: r for r in period_ranking(records, names, a, b, today)}
-            monthly = {r["key"]: r for r in summary}
-            period = f"{start:%d/%m/%Y}"
+            start,end=periods[index]
+            ranked=weekly_ranking(records,names,start,end,today,payload["tiers"]["weekly"])
+            for row in ranked:
+                row["color"]=projection_color(row["qias_projection"],payload["tiers"]["weekly"][0]["qias"])
+            period=f"S{index+1} · {start:%d/%m/%Y} a {end:%d/%m/%Y}"
+            st.caption(period + (" · premiação conquistada" if end<today else " · premiação projetada; semana em andamento" if start<=today else " · semana futura"))
+        elif view=="DIÁRIO":
+            start=end=st.date_input("Dia",date(year,month,default_day),min_value=date(year,month,1),max_value=date(year,month,monthrange(year,month)[1]),key=f"conc_day_{year}_{month}")
+            ranked=period_ranking(records,names,start,end,today)
+            week={r["key"]:r for r in period_ranking(records,names,*periods[(start.day-1)//7],today)}
+            monthly={r["key"]:r for r in summary}
+            for row in ranked:
+                row.update(color=daily_color(row["qias"]),week_qias=week[row["key"]]["qias"],month_qias=monthly[row["key"]]["qias"])
+            period=f"{start:%d/%m/%Y}"
         else:
-            index = st.selectbox("Semana", range(len(periods)), index=min((default_day - 1) // 7, len(periods) - 1), format_func=lambda i: f"S{i+1} · {periods[i][0]:%d/%m} a {periods[i][1]:%d/%m}", key=f"conc_week_{year}_{month}")
-            start, end = periods[index]
-            ranked = weekly_ranking(records, names, start, end, today, tiers["weekly"])
-            st.info("Semana encerrada: premiação conquistada." if end < today else "Semana aberta ou futura: premiação projetada, não somada às conquistadas.")
-            if index:
-                previous = period_ranking(records, names, *periods[index - 1], today)
-                st.caption(f"Comparativo do total com a semana anterior: QIAs {sum(r['qias'] for r in ranked) - sum(r['qias'] for r in previous):+d} · Trocas {sum(r['changes'] for r in ranked) - sum(r['changes'] for r in previous):+d} · Caixa {money(sum(r['cash'] for r in ranked) - sum(r['cash'] for r in previous))}")
-            period = f"S{index+1} · {start:%d/%m/%Y} a {end:%d/%m/%Y}"
-        from app_core import cards
-        totals = aggregate([r for r in month_rows if start <= r["date"] <= end])
-        cards(st, [("QIAs", totals["qias"]), ("TROCAS", totals["changes"]), ("CAIXA", money(totals["cash"])), ("TICKET MÉDIO", money(totals["ticket"]))])
-        render_ranking(st, ranked)
-        if view == "SEMANAL":
-            with st.expander("Projeções da semana"):
-                for row in ranked:
-                    st.write(f"{row['name']}: {row['qias_projection']:.1f} QIAs · {row['changes_projection']:.1f} trocas · Caixa {money(row['cash_projection'])} · Faixa projetada {row['projected_tier']} · Prêmio {money(row['award'])}")
-        if view == "DIÁRIO":
-            with st.expander("Acumulados semanal e mensal"):
-                for row in ranked:
-                    w, m = weekly[row["key"]], monthly[row["key"]]
-                    st.write(f"{row['name']}: semana {w['qias']} QIAs / {w['changes']} trocas · mês {m['qias']} QIAs / {m['changes']} trocas")
-        st.download_button("BAIXAR RANKING PNG", ranking_png(ranked, "CONCILIAÇÃO · " + view, period, payload["synced_at"]),
-                           file_name=f"ranking-conciliacao-{view.lower()}-{start.isoformat()}.png", mime="image/png")
+            start,end=date(year,month,1),date(year,month,monthrange(year,month)[1])
+            ranked=summary
+            period=f"{month:02d}/{year}"
+        filtered=[r for r in month_rows if start<=r["date"]<=end]
+        totals=aggregate(filtered)
+        if totals["cash_invalid"]:
+            st.warning("Caixa e Ticket Médio parciais: há valores inválidos na coluna E. QIAs e trocas foram preservados. Consulte Gestão.")
+        if view=="VISÃO GERAL":
+            st.markdown(summary_html(totals,summary,goals),unsafe_allow_html=True)
+        else:
+            from app_core import cards
+            cards(st,[("QIAs",totals["qias"]),("TROCAS",totals["changes"]),("CRÉDITO / NEO",f"{totals['credit']} / {totals['neo']}"),("Ticket Médio",money(totals["ticket"]))])
+        st.markdown(regimes_html(totals),unsafe_allow_html=True)
+        if view=="DIÁRIO":
+            st.caption("🔴 0–14 · 🟠 15–19 · 🟡 20–24 · 🟢 25–29 · 🔵 30 ou mais QIAs")
+            png=ranking_png(ranked,"RANKING DIÁRIO · CONCILIAÇÃO",period,payload["synced_at"],view)
+            st.image(png,use_container_width=True)
+        else:
+            if view=="VISÃO GERAL":
+                st.caption("Projeção da meta individual de QIAs · 🔵 ≥101% · 🟢 100–<101% · 🟡 75–<100% · 🟠 50–<75% · 🔴 <50%")
+            st.markdown(ranking_html(ranked,view),unsafe_allow_html=True)
+            png=None
+        if view=="SEMANAL" and index:
+            previous=aggregate([r for r in month_rows if periods[index-1][0]<=r["date"]<=periods[index-1][1]])
+            st.caption(f"Variação para S{index}: {totals['qias']-previous['qias']:+d} QIAs · {totals['changes']-previous['changes']:+d} trocas")
+        if view in ("DIÁRIO","SEMANAL"):
+            if png is None:
+                png=ranking_png(ranked,"RANKING SEMANAL · CONCILIAÇÃO",period,payload["synced_at"],view)
+            st.download_button("BAIXAR RANKING PNG",png,file_name=f"ranking-conciliacao-{view.lower()}-{start.isoformat()}.png",mime="image/png",key="conc_download")
     body()
