@@ -55,6 +55,22 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(date(2026, 8, 27), rows[0]["data_venda"])
         self.assertEqual("supabase", metadata["persistencia"])
 
+    def test_conciliation_goals_survive_reload_and_registry_edits(self):
+        from copy import deepcopy
+        payload = {"atualizado_em":"2026-09-09T14:30:00-03:00","arquivo":"vendas.csv",
+                   "config":deepcopy(self.base),"historico_importacoes":[],
+                   "vendas":[app_core.serialize_row(self.rows[0])]}
+        def save(value):
+            payload.clear();payload.update(deepcopy(value))
+        with patch("app_core.remote_persistence_enabled",return_value=True), patch("app_core.load_remote_payload",side_effect=lambda:deepcopy(payload)), patch("app_core.save_remote_payload",side_effect=save), patch("app_core._write_local_payload"):
+            app_core.save_conciliation_settings(self.base,goals={"qias":4800,"changes":600})
+            app_core.save_conciliation_settings(self.base,registry={"TESTE":{"active":True}})
+            rows,cfg,metadata=app_core.load_published(self.base)
+            self.assertEqual(cfg["conciliacao_goals"],{"qias":4800,"changes":600})
+            self.assertEqual(rows[0]["id_venda"],"TESTE-1")
+            self.assertEqual(metadata["atualizado_em"],"2026-09-09T14:30:00-03:00")
+            self.assertEqual(cfg["meta_empresa"],self.base["meta_empresa"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,7 @@
 # Conciliação
 
-O seletor de setor abre Visão Geral, Diário, Semanal e Gestão. A origem é somente
+O seletor de setor abre Visão Geral, Diário e Semanal. A Gestão da Conciliação
+fica no menu da conta, junto à Gestão principal. A origem é somente
 leitura: aba `2026` para resultados e `Config` para faixas. A aplicação usa
 `conciliacao.spreadsheet_id`, `data_sheet`, `config_sheet`, `cache_seconds` e
 `conciliacao.service_account` nos Secrets do Streamlit. Nenhuma chave é versionada.
@@ -25,9 +26,12 @@ Data ou QIAs inválidos impedem a atualização e preservam o cache anterior.
 
 Gestão permite ativar/ocultar e cadastrar nomes sem lançamentos. O cadastro usa o
 armazenamento existente do painel e não altera a planilha. Inicialmente aparecem
-todos os nomes encontrados; o gestor deve ajustar os ativos. A meta agregada é
-a soma das primeiras metas individuais dos conciliadores exibidos, pois a Config
-consultada não tem campo separado de meta da unidade. Competências históricas
+todos os nomes encontrados; o gestor deve ajustar os ativos. As metas mensais
+gerais de QIAs e trocas são editadas na Gestão e persistidas em
+`config.conciliacao_goals` no mesmo estado remoto do Comercial, preservando
+vendas e cadastros. Não se recalculam ao reiniciar ou mudar os ativos. Valores
+ainda não definidos aparecem como “Não definida”. A meta individual usada
+na cor é a primeira faixa mensal da Config. Competências históricas
 usam as faixas atualmente disponíveis na Config, que não contém versionamento.
 
 ## Conferência em 09/09/2026
@@ -46,6 +50,18 @@ contém R$ 150 constantes nas células de premiação atual e semanal. O painel
 calcula pelas regras da Config; não replica esses valores preenchidos manualmente.
 
 ## Validação
+
+Atualização visual: rankings com barra inteira colorida e cantos arredondados;
+Diário usa 0–14 vermelho, 15–19 laranja, 20–24 amarelo, 25–29 verde e >=30 azul.
+Visão Geral usa projeção/meta individual sem arredondamento: <50% vermelho,
+50–<75% laranja, 75–<100% amarelo, 100–<101% verde, >=101% azul.
+O Diário exibe os mesmos bytes PNG usados no download. NR, 1 A 3 e 4 A 6
+aparecem nas barras e nos pequenos cards do período; OUTRAS segue apenas na
+base analítica. Navegação usa os botões e classes do Comercial, incluindo S1–S5.
+
+Na atualização visual, 18 testes da Conciliação, 3 de persistência e 7 de
+rankings do Comercial passaram, incluindo limites das cores e recarga de metas
+remotas após editar o cadastro. Os testes anteriores abaixo registram a primeira entrega.
 
 - 16 testes da Conciliação: parser, faixas, projeções, duplicidades, cache,
   leitura com escopo restrito, PNG, Excel e navegação Streamlit com acesso à Gestão.
