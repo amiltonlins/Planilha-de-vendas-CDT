@@ -1386,7 +1386,10 @@ def daily_ranking_html(ranking,reference_day,week_index,week_ranges):
 
 
 def _daily_font(size,bold=False):
+    from pathlib import Path
+    bundled = Path(__file__).resolve().parent / "assets" / "fonts"
     candidates=(
+        str(bundled / ("DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf")),
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/dejavu/DejaVuSans.ttf",
     )
