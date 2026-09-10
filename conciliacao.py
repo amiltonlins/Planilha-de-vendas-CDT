@@ -162,7 +162,12 @@ def aggregate(records):
     qias = sum(r["qias"] for r in records)
     cash = sum((r["cash"] for r in records), Decimal(0))
     credit, neo = sum(r["credit"] for r in records), sum(r["neo"] for r in records)
-    return {"qias": qias, "cash": cash, "credit": credit, "neo": neo, "changes": credit + neo,
+    regime_tickets = {}
+    for regime in ("NR", "1 A 3", "4 A 6", "OUTRAS"):
+        selected = [r for r in records if r["regime"] == regime]
+        count = sum(r["qias"] for r in selected)
+        regime_tickets[regime] = sum((r["cash"] for r in selected), Decimal(0)) / count if count else Decimal(0)
+    return {"regime_tickets": regime_tickets, "qias": qias, "cash": cash, "credit": credit, "neo": neo, "changes": credit + neo,
             "cash_invalid": sum(bool(r.get("cash_invalid")) for r in records),
             "ticket": cash / qias if qias else Decimal(0),
             **{regime: sum(r["qias"] for r in records if r["regime"] == regime) for regime in ("NR", "1 A 3", "4 A 6", "OUTRAS")}}
