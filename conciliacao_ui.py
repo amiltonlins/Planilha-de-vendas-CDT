@@ -7,7 +7,7 @@ from calendar import monthrange
 from datetime import date, datetime
 from decimal import Decimal
 
-from conciliacao_visual import STYLE, daily_color, projection_color, ranking_html, ranking_png, regimes_html, summary_html
+from conciliacao_visual import integer, STYLE, daily_color, projection_color, ranking_html, ranking_png, regimes_html, summary_html
 
 from conciliacao import TZ, aggregate, award_for, normalized, read_source, summarize, useful_days, weeks
 
@@ -275,15 +275,14 @@ def render_conciliacao(st, registry, save_registry, manager_password, goals=None
             st.markdown(summary_html(totals,summary,goals),unsafe_allow_html=True)
         else:
             from app_core import cards
-            cards(st,[("QIAs",totals["qias"]),("TROCAS",totals["changes"]),("CRÉDITO / NEO",f"{totals['credit']} / {totals['neo']}"),("Ticket Médio",money(totals["ticket"]))])
+            period_cards=[("TOTAL DE QIAs HOJE" if start==today and view=="DIÁRIO" else "TOTAL DE QIAs",integer(totals["qias"])),("TOTAL DE TROCAS HOJE" if start==today and view=="DIÁRIO" else "TOTAL DE TROCAS",integer(totals["changes"])),("CRÉDITO / NEO",f"{totals['credit']} / {totals['neo']}"),("Ticket Médio",money(totals["ticket"]))]
+            cards(st,period_cards[:2] if view=="DIÁRIO" else period_cards)
         st.markdown(regimes_html(totals),unsafe_allow_html=True)
         if view=="DIÁRIO":
             st.caption("🔴 0–14 · 🟠 15–19 · 🟡 20–24 · 🟢 25–29 · 🔵 30 ou mais QIAs")
             png=ranking_png(ranked,"RANKING DIÁRIO · CONCILIAÇÃO",period,payload["synced_at"],view)
             st.image(png,use_container_width=True)
         else:
-            if view=="VISÃO GERAL":
-                st.caption("Projeção da meta individual de QIAs · 🔵 ≥101% · 🟢 100–<101% · 🟡 75–<100% · 🟠 50–<75% · 🔴 <50%")
             st.markdown(ranking_html(ranked,view),unsafe_allow_html=True)
             png=None
         if view=="SEMANAL" and index:

@@ -21,7 +21,7 @@ def integer(value):
 
 
 def percentage(value):
-    return f"{value:.1f}%".replace(".", ",")
+    return f"{value:.1f}".rstrip("0").rstrip(".").replace(".", ",") + "%"
 
 
 def daily_color(qias):
@@ -40,7 +40,7 @@ def row_metrics(row, view):
         return [
             ("QIAs", integer(row["qias"])), ("PROJEÇÃO QIAs", integer(row["qias_projection"])),
             ("TROCAS", integer(row["changes"])), ("PROJEÇÃO TROCAS", integer(row["changes_projection"])),
-            ("CRÉDITO", integer(row["credit"])), ("NEOENERGIA", integer(row["neo"])),
+            ("CAIXA", money(row["cash"])), ("CRÉDITO", integer(row["credit"])), ("NEOENERGIA", integer(row["neo"])),
             ("TICKET MÉDIO", money(row["ticket"])), ("% META PROJETADA", percentage(row["goal_percent"])),
             ("MENSAL ATUAL", money(row["monthly_award"])), ("SEMANAIS CONQUISTADAS", money(row["weekly_award"])),
             ("MENSAL PROJETADA", money(row["projected_award"])), ("TOTAL PROJETADO", money(row["commission_projection"])),
@@ -63,17 +63,23 @@ def row_metrics(row, view):
 
 def ranking_html(rows, view):
     result = []
+    priority = ("QIAs", "PROJEÇÃO QIAs", "TROCAS", "PROJEÇÃO TROCAS")
     for index, row in enumerate(rows, 1):
         emoji, color, ink = PALETTE[row["color"]]
-        metrics = ''.join(f'<span><strong>{html.escape(value)}</strong><small>{label}</small></span>'
-                          for label, value in row_metrics(row, view))
-        regime = ' · '.join(f'{label}: {integer(row[label])}' for label in ("NR", "1 A 3", "4 A 6"))
-        goal = f' · Meta individual: {integer(row["qias_goal"])} QIAs' if "qias_goal" in row else ""
+        metrics = row_metrics(row, view)
+        def fields(items):
+            return ''.join(f'<span><strong>{html.escape(value)}</strong><small>{label}</small></span>' for label, value in items)
+        primary = [(label, dict(metrics)[label]) for label in priority if label in dict(metrics)]
+        secondary = [(label, value) for label, value in metrics if label not in priority]
+        regime = ''.join(f'<span><small>{label}</small><b>{integer(row[label])}</b></span>' for label in ("NR", "1 A 3", "4 A 6"))
+        goal = f'Meta individual: {integer(row["qias_goal"])} QIAs' if "qias_goal" in row else ""
         warning = ' · Caixa e ticket parciais' if row.get("cash_invalid") else ''
         result.append(f'<article class="conc-rank-row" style="--tone:{color};--ink:{ink}">'
                       f'<div class="conc-person"><b>{index}º · {html.escape(row["name"])}</b><span>{emoji}</span></div>'
-                      f'<div class="conc-indicators">{metrics}</div>'
-                      f'<div class="conc-regime">{regime}{goal}{warning}</div></article>')
+                      f'<div class="conc-indicators conc-primary">{fields(primary)}</div>'
+                      f'<div class="conc-breakdown">{regime}</div>'
+                      f'<div class="conc-indicators conc-secondary">{fields(secondary)}</div>'
+                      f'<div class="conc-regime">{goal}{warning}</div></article>')
     return '<div class="conc-ranking" translate="no">' + ''.join(result) + '</div>'
 
 
@@ -84,8 +90,6 @@ def summary_html(totals, summary, goals, monthly=True):
     if monthly:
         results += [("PROJEÇÃO QIAs", integer(sum(r["qias_projection"] for r in summary))),
                     ("PROJEÇÃO TROCAS", integer(sum(r["changes_projection"] for r in summary)))]
-    awards = [("ACUMULADA", money(sum(r["monthly_award"] + r["weekly_award"] for r in summary))),
-              ("PROJETADA", money(sum(r["commission_projection"] for r in summary)))]
     goals_values = []
     for key, label in (("qias", "QIAs"), ("changes", "TROCAS")):
         goal = goals.get(key, 0)
@@ -93,23 +97,20 @@ def summary_html(totals, summary, goals, monthly=True):
         goals_values.append((f"% META {label}", percentage(Decimal(totals[key])*100/goal) if goal else "—"))
     return ('<div class="exec-compact-grid conc-summary" translate="no">'
             '<div class="exec-compact-card exec-performance"><div class="exec-compact-title">DESEMPENHO GERAL</div>'
-            f'<div class="conc-summary-values">{fields(results)}</div></div>'
+            f'<div class="conc-summary-values">{fields(results)}</div><div class="conc-ticket">Ticket Médio <b>{money(totals["ticket"])}</b></div></div>'
             '<div class="exec-compact-card"><div class="exec-compact-title">METAS MENSAIS GERAIS</div>'
-            f'<div class="conc-summary-values">{fields(goals_values)}</div></div>'
-            '<div class="exec-compact-card"><div class="exec-compact-title">PREMIAÇÃO DO MÊS</div>'
-            f'<div class="conc-summary-values">{fields(awards)}</div>'
-            f'<div class="conc-ticket">Ticket Médio <b>{money(totals["ticket"])}</b></div></div></div>')
+            f'<div class="conc-summary-values">{fields(goals_values)}</div></div></div>')
 
 
 def regimes_html(totals):
     return '<div class="conc-regimes">' + ''.join(
         f'<div><small>{label}</small><b>{integer(totals[label])} QIAs</b><span>'
-        f'{percentage(Decimal(totals[label])*100/totals["qias"]) if totals["qias"] else "0,0%"}</span></div>'
+        f'{percentage(Decimal(totals[label])*100/totals["qias"]) if totals["qias"] else "0%"}</span></div>'
         for label in ("NR", "1 A 3", "4 A 6")) + '</div>'
 
 
 STYLE = """<style>
-.conc-summary.exec-compact-grid{grid-template-columns:1.3fr 1fr 1fr!important;gap:10px!important;margin:8px 0!important}
+.conc-summary.exec-compact-grid{grid-template-columns:1.4fr 1fr!important;gap:10px!important;margin:8px 0!important}
 .conc-summary .exec-compact-card{min-height:0!important;padding:14px 16px!important;border-radius:14px!important}
 .conc-summary .exec-compact-title{font-size:.64rem!important;margin-bottom:12px!important}
 .conc-summary-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -140,13 +141,37 @@ STYLE = """<style>
 .conc-rank-row{padding:10px;border-radius:13px;margin:8px 0}.conc-person{font-size:.82rem}
 .conc-regime{font-size:.58rem}.conc-regimes>div{padding:7px 6px;gap:3px;flex-direction:column}.conc-regimes span{margin:0}.conc-regimes b{font-size:.75rem}
 }
+ .conc-primary{grid-template-columns:1.3fr 1.2fr 1fr 1fr;margin:10px 0}
+.conc-primary span:nth-child(1) strong{font-size:2.5rem}
+.conc-primary span:nth-child(2) strong{font-size:2rem}
+.conc-primary span:nth-child(3) strong{font-size:1.65rem}
+.conc-primary span:nth-child(4) strong{font-size:1.4rem}
+.conc-primary small{font-size:.66rem;font-weight:700}
+.conc-secondary strong{font-size:.95rem;font-weight:700}
+.conc-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.conc-breakdown span{background:#ffffff20;border:1px solid #ffffff50;border-radius:9px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+.conc-breakdown small{font-size:.7rem;font-weight:700}.conc-breakdown b{font-size:1.15rem}
+@media(max-width:700px){
+.conc-summary.exec-compact-grid{grid-template-columns:1fr!important}.conc-summary .exec-performance{grid-column:auto}
+.conc-summary .exec-performance .conc-summary-values{grid-template-columns:repeat(2,1fr)}
+.conc-primary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.conc-primary span:nth-child(1) strong{font-size:2rem}.conc-primary span:nth-child(2) strong{font-size:1.7rem}
+.conc-primary span:nth-child(3) strong{font-size:1.45rem}.conc-primary span:nth-child(4) strong{font-size:1.2rem}
+.conc-secondary{grid-template-columns:repeat(3,minmax(0,1fr))}.conc-secondary strong{font-size:.75rem}
+.conc-breakdown span{padding:6px;gap:4px}.conc-breakdown b{font-size:1rem}
+}
 </style>"""
 
 
 def ranking_png(rows, title, period, synced_at, view="DIÁRIO"):
     """The daily screen displays these exact bytes, so exporting cannot change its layout."""
     from PIL import Image, ImageDraw
-    from app_core import _daily_font, _draw_daily_brand, _fit_image_text
+    from app_core import _draw_daily_brand, _fit_image_text, _draw_daily_status_icon, _draw_daily_ordinal
+    from PIL import ImageFont
+    from pathlib import Path
+    def _daily_font(size, bold=False):
+        path = Path(__file__).resolve().parent / "assets" / "fonts" / ("DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf")
+        return ImageFont.truetype(str(path), size)
     count = len(row_metrics(rows[0], view)) if rows else 8
     grid_rows = (count + 3) // 4
     row_height = 112 + grid_rows * 82
@@ -160,20 +185,23 @@ def ranking_png(rows, title, period, synced_at, view="DIÁRIO"):
         y = 167 + i * (row_height + 14)
         _, color, ink = PALETTE[row.get("color", daily_color(row["qias"]))]
         draw.rounded_rectangle((16,y,1064,y+row_height),radius=24,fill=color)
-        name = _fit_image_text(draw, f"{i+1}º · {row['name']}", _daily_font(31,True), 926)
-        draw.text((38,y+15),name,font=_daily_font(31,True),fill=ink)
-        draw.ellipse((1006,y+22,1034,y+50),fill=ink)
-        draw.ellipse((1010,y+26,1030,y+46),fill=color)
+        name = _fit_image_text(draw, row["name"], _daily_font(31,True), 875)
+        _draw_daily_ordinal(draw, 48, y+34, i+1, ink)
+        draw.text((82,y+15),name,font=_daily_font(31,True),fill=ink)
+        _draw_daily_status_icon(draw, 1020, y+36, {"blue":"Azul","green":"Verde","yellow":"Amarelo","orange":"Laranja","red":"Vermelho"}[row.get("color",daily_color(row["qias"]))])
         for j,(label,value) in enumerate(row_metrics(row,view)):
             x, top = 38+(j%4)*254, y+64+(j//4)*82
             if j%4:
                 draw.line((x-12,top+2,x-12,top+59),fill=ink,width=1)
-            font = _daily_font(30,True)
+            font = _daily_font(42 if j == 0 else 36 if j == 1 else 27,True)
             fitted = _fit_image_text(draw,value,font,232)
             draw.text((x,top),fitted,font=font,fill=ink)
             draw.text((x,top+40),label,font=_daily_font(18),fill=ink)
-        regime = '   ·   '.join(f'{label}: {integer(row[label])}' for label in ("NR","1 A 3","4 A 6"))
-        draw.text((38,y+row_height-34),regime,font=_daily_font(22,True),fill=ink)
+        for k, label in enumerate(("NR", "1 A 3", "4 A 6")):
+            x = 38 + k * 338
+            draw.rounded_rectangle((x,y+row_height-47,x+324,y+row_height-10),radius=8,outline=ink,width=1)
+            draw.text((x+12,y+row_height-43),label,font=_daily_font(19),fill=ink)
+            draw.text((x+306,y+row_height-43),integer(row[label]),font=_daily_font(23,True),fill=ink,anchor="ra")
     if not rows:
         draw.text((40,205),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
     footer = f"Atualizado em {synced_at:%d/%m/%Y %H:%M}"

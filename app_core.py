@@ -3073,7 +3073,7 @@ section.main>div,
         with header_left:
             st.markdown(
                 '<div class="cdt-brandline">CARTÃO DE TODOS</div>'
-                '<div class="cdt-title">PAINEL COMERCIAL</div>'
+                '<div class="cdt-title">PAINEL DE RESULTADOS</div>'
                 '<div class="cdt-unit-emphasis">AFOGADOS</div>',
                 unsafe_allow_html=True
             )
