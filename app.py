@@ -6,6 +6,12 @@ import math
 from urllib.parse import quote
 import app_core as _core
 
+# Load both sectors at startup so Streamlit watches their source files even
+# when the session starts on the login screen or the Commercial dashboard.
+import conciliacao as _conciliacao_data
+import conciliacao_visual as _conciliacao_visual
+import conciliacao_ui as _conciliacao_ui
+
 _original_team_card_html = _core.team_performance_card_html
 _original_render_management = _core.render_management
 
