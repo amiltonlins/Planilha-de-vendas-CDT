@@ -113,6 +113,7 @@ def prepare_summary(records, tiers, year, month, today, registry):
     rows = summarize(records, tiers, year, month, today, registry)
     for row in rows:
         row["qias_goal"] = tiers["monthly"][0]["qias"]
+        row["changes_goal"] = tiers["monthly"][0]["changes"]
         row["goal_percent"] = row["qias_projection"] * 100 / row["qias_goal"]
         row["color"] = projection_color(row["qias_projection"], row["qias_goal"])
     return rows
