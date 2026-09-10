@@ -38,8 +38,8 @@ def projection_color(projected, goal):
 def row_metrics(row, view):
     if view == "VISÃO GERAL":
         return [
-            ("QIAs", integer(row["qias"])), ("PROJEÇÃO QIAs", integer(row["qias_projection"])),
-            ("TROCAS", integer(row["changes"])), ("PROJEÇÃO TROCAS", integer(row["changes_projection"])),
+            ("QIAs", integer(row["qias"])), ("% META QIAs", percentage(Decimal(row["qias"])*100/row["qias_goal"]) if row.get("qias_goal") else "—"), ("PROJEÇÃO QIAs", integer(row["qias_projection"])),
+            ("TROCAS", integer(row["changes"])), ("% META TROCAS", percentage(Decimal(row["changes"])*100/row["changes_goal"]) if row.get("changes_goal") else "—"), ("PROJEÇÃO TROCAS", integer(row["changes_projection"])),
             ("CAIXA", money(row["cash"])), ("CRÉDITO", integer(row["credit"])), ("NEOENERGIA", integer(row["neo"])),
             ("TICKET MÉDIO", money(row["ticket"])), ("% META PROJETADA", percentage(row["goal_percent"])),
             ("MENSAL ATUAL", money(row["monthly_award"])), ("SEMANAIS CONQUISTADAS", money(row["weekly_award"])),
@@ -63,7 +63,7 @@ def row_metrics(row, view):
 
 def ranking_html(rows, view):
     result = []
-    priority = ("QIAs", "PROJEÇÃO QIAs", "TROCAS", "PROJEÇÃO TROCAS")
+    priority = ("QIAs", "% META QIAs", "PROJEÇÃO QIAs", "TROCAS", "% META TROCAS", "PROJEÇÃO TROCAS")
     for index, row in enumerate(rows, 1):
         emoji, color, ink = PALETTE[row["color"]]
         metrics = row_metrics(row, view)
@@ -96,10 +96,13 @@ def summary_html(totals, summary, goals, monthly=True):
         goals_values.append((f"META {label}", integer(goal) if goal else "Não definida"))
         results.append((f"% META {label}", percentage(Decimal(totals[key])*100/goal) if goal else "—"))
     values = dict(results)
-    order = ["QIAs REALIZADOS", "% META QIAs", "TROCAS REALIZADAS", "% META TROCAS"]
+    order = ["QIAs REALIZADOS", "% META QIAs"]
     if monthly:
-        order += ["PROJEÇÃO QIAs", "PROJEÇÃO TROCAS"]
-    results = [(label, values[label]) for label in order] + [("TICKET MÉDIO", money(totals["ticket"]))]
+        order += ["PROJEÇÃO QIAs"]
+    order += ["TROCAS REALIZADAS", "% META TROCAS"]
+    if monthly:
+        order += ["PROJEÇÃO TROCAS"]
+    results = [(label, values[label]) for label in order] + [("TICKET MÉDIO GERAL", money(totals["ticket"]))]
     return ('<div class="exec-compact-grid conc-summary" translate="no">'
             '<div class="exec-compact-card exec-performance"><div class="exec-compact-title">DESEMPENHO GERAL</div>'
             f'<div class="exec-performance-values conc-performance-values">{fields(results)}</div></div>'
@@ -159,6 +162,28 @@ STYLE = """<style>
 .conc-indicators strong{font-size:.76rem!important}.conc-indicators small{font-size:.48rem!important}
 .conc-breakdown span{padding:5px}.conc-breakdown em{font-size:.56rem!important}
 .conc-regimes>div{padding:6px;gap:4px}.conc-regimes span{margin:0}.conc-regimes b{font-size:.72rem!important}
+}
+
+.conc-summary .conc-performance-values{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px 12px!important}
+.conc-summary .conc-performance-values>div:last-child{grid-column:1/-1}
+.conc-summary .conc-performance-values strong{font-size:1.42rem!important;line-height:1.02!important}
+.conc-summary .conc-performance-values>div:nth-child(1) strong,.conc-summary .conc-performance-values>div:nth-child(3) strong{font-size:1.42rem!important}
+.conc-summary .conc-performance-values small{font-size:.52rem!important}
+.conc-rank-row{padding:7px 10px;margin:6px 0}
+.conc-primary{grid-template-columns:repeat(6,minmax(0,1fr));margin:3px 0;gap:4px}
+.conc-primary span:nth-child(n) strong{font-size:1rem!important}
+.conc-primary small{font-size:.49rem!important}
+.conc-secondary{grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
+.conc-secondary strong{font-size:.75rem!important}.conc-secondary small{font-size:.46rem!important}
+.conc-breakdown{margin:4px 0;gap:4px}.conc-breakdown span{padding:4px 7px;justify-content:flex-start;gap:6px}
+.conc-breakdown em{flex-basis:auto;margin-left:auto;font-size:.6rem!important}.conc-breakdown b{font-size:.8rem!important}
+@media(max-width:700px){
+.conc-summary .conc-performance-values{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+.conc-summary .conc-performance-values strong,.conc-summary .conc-performance-values>div:nth-child(1) strong,.conc-summary .conc-performance-values>div:nth-child(3) strong{font-size:1.14rem!important}
+.conc-summary .conc-performance-values small{font-size:.45rem!important}
+.conc-primary{grid-template-columns:repeat(3,minmax(0,1fr))}.conc-primary span:nth-child(n) strong{font-size:1.02rem!important}
+.conc-secondary{grid-template-columns:repeat(3,minmax(0,1fr))}.conc-secondary strong{font-size:.72rem!important}
+.conc-breakdown em{flex-basis:100%;margin:0;font-size:.56rem!important}
 }
 </style>"""
 
