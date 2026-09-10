@@ -95,6 +95,11 @@ def summary_html(totals, summary, goals, monthly=True):
         goal = goals.get(key, 0)
         goals_values.append((f"META {label}", integer(goal) if goal else "Não definida"))
         results.append((f"% META {label}", percentage(Decimal(totals[key])*100/goal) if goal else "—"))
+    values = dict(results)
+    order = ["QIAs REALIZADOS", "% META QIAs", "TROCAS REALIZADAS", "% META TROCAS"]
+    if monthly:
+        order += ["PROJEÇÃO QIAs", "PROJEÇÃO TROCAS"]
+    results = [(label, values[label]) for label in order]
     return ('<div class="exec-compact-grid conc-summary" translate="no">'
             '<div class="exec-compact-card exec-performance"><div class="exec-compact-title">DESEMPENHO GERAL</div>'
             f'<div class="exec-performance-values conc-performance-values">{fields(results)}</div><div class="conc-ticket">Ticket Médio <b>{money(totals["ticket"])}</b></div></div>'
@@ -113,7 +118,7 @@ STYLE = """<style>
 .conc-summary.exec-compact-grid{grid-template-columns:1.4fr 1fr!important;gap:10px!important;margin:8px 0!important}
 .conc-summary .exec-compact-card{min-height:0!important;padding:14px 16px!important;border-radius:14px!important}
 .conc-summary .exec-compact-title{font-size:.64rem!important;margin-bottom:12px!important}
-.conc-performance-values{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}.conc-performance-values>div:nth-child(-n+2) strong{font-size:1.85rem}.conc-performance-values>div:nth-child(n+5) strong{font-size:1.2rem}
+.conc-performance-values{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}.conc-performance-values>div:nth-child(1) strong,.conc-performance-values>div:nth-child(3) strong{font-size:1.85rem}.conc-performance-values>div:nth-child(2) strong,.conc-performance-values>div:nth-child(4) strong{font-size:1.35rem}.conc-performance-values>div:nth-child(n+5) strong{font-size:1.2rem}
 .conc-summary-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .conc-summary-values small{display:block;font-size:.58rem;color:#64748b}
 .conc-summary-values strong{display:block;font-size:1.2rem;line-height:1.4;white-space:nowrap}
@@ -185,7 +190,7 @@ def ranking_png(rows, title, period, synced_at, view="DIÁRIO", totals=None, goa
     draw.text((38, 117), period, font=_daily_font(23), fill="white")
     if totals is not None:
         draw.rounded_rectangle((16,167,1064,359),radius=20,fill="#172554")
-        draw.text((38,181),"RESULTADO GERAL DA EQUIPE",font=_daily_font(22,True),fill="white")
+        draw.text((38,181),"RESULTADO DA EQUIPE NO DIA" if view=="DIÁRIO" else "RESULTADO GERAL DA EQUIPE",font=_daily_font(22,True),fill="white")
         team = [("QIAs",integer(totals["qias"])),("TROCAS",integer(totals["changes"])),
                 ("CAIXA",money(totals["cash"])),("TICKET MÉDIO",money(totals["ticket"]))]
         if view == "VISÃO GERAL":
