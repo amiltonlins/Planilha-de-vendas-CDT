@@ -280,7 +280,7 @@ def render_conciliacao(st, registry, save_registry, manager_password, goals=None
         st.markdown(regimes_html(totals),unsafe_allow_html=True)
         if view=="DIÁRIO":
             st.caption("🔴 0–14 · 🟠 15–19 · 🟡 20–24 · 🟢 25–29 · 🔵 30 ou mais QIAs")
-            png=ranking_png(ranked,"RANKING DIÁRIO · CONCILIAÇÃO",period,payload["synced_at"],view)
+            png=ranking_png(ranked,"RANKING DIÁRIO · CONCILIAÇÃO",period,payload["synced_at"],view,totals,goals)
             st.image(png,use_container_width=True)
         else:
             st.markdown(ranking_html(ranked,view),unsafe_allow_html=True)
@@ -288,8 +288,8 @@ def render_conciliacao(st, registry, save_registry, manager_password, goals=None
         if view=="SEMANAL" and index:
             previous=aggregate([r for r in month_rows if periods[index-1][0]<=r["date"]<=periods[index-1][1]])
             st.caption(f"Variação para S{index}: {totals['qias']-previous['qias']:+d} QIAs · {totals['changes']-previous['changes']:+d} trocas")
-        if view in ("DIÁRIO","SEMANAL"):
+        if view in ("VISÃO GERAL","DIÁRIO","SEMANAL"):
             if png is None:
-                png=ranking_png(ranked,"RANKING SEMANAL · CONCILIAÇÃO",period,payload["synced_at"],view)
+                png=ranking_png(ranked,"RANKING GERAL · CONCILIAÇÃO" if view=="VISÃO GERAL" else "RANKING SEMANAL · CONCILIAÇÃO",period,payload["synced_at"],view,totals,goals)
             st.download_button("BAIXAR RANKING PNG",png,file_name=f"ranking-conciliacao-{view.lower()}-{start.isoformat()}.png",mime="image/png",key="conc_download")
     body()

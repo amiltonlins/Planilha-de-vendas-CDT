@@ -94,10 +94,10 @@ def summary_html(totals, summary, goals, monthly=True):
     for key, label in (("qias", "QIAs"), ("changes", "TROCAS")):
         goal = goals.get(key, 0)
         goals_values.append((f"META {label}", integer(goal) if goal else "Não definida"))
-        goals_values.append((f"% META {label}", percentage(Decimal(totals[key])*100/goal) if goal else "—"))
+        results.append((f"% META {label}", percentage(Decimal(totals[key])*100/goal) if goal else "—"))
     return ('<div class="exec-compact-grid conc-summary" translate="no">'
             '<div class="exec-compact-card exec-performance"><div class="exec-compact-title">DESEMPENHO GERAL</div>'
-            f'<div class="conc-summary-values">{fields(results)}</div><div class="conc-ticket">Ticket Médio <b>{money(totals["ticket"])}</b></div></div>'
+            f'<div class="exec-performance-values conc-performance-values">{fields(results)}</div><div class="conc-ticket">Ticket Médio <b>{money(totals["ticket"])}</b></div></div>'
             '<div class="exec-compact-card"><div class="exec-compact-title">METAS MENSAIS GERAIS</div>'
             f'<div class="conc-summary-values">{fields(goals_values)}</div></div></div>')
 
@@ -113,6 +113,7 @@ STYLE = """<style>
 .conc-summary.exec-compact-grid{grid-template-columns:1.4fr 1fr!important;gap:10px!important;margin:8px 0!important}
 .conc-summary .exec-compact-card{min-height:0!important;padding:14px 16px!important;border-radius:14px!important}
 .conc-summary .exec-compact-title{font-size:.64rem!important;margin-bottom:12px!important}
+.conc-performance-values{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}.conc-performance-values>div:nth-child(-n+2) strong{font-size:1.85rem}.conc-performance-values>div:nth-child(n+5) strong{font-size:1.2rem}
 .conc-summary-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .conc-summary-values small{display:block;font-size:.58rem;color:#64748b}
 .conc-summary-values strong{display:block;font-size:1.2rem;line-height:1.4;white-space:nowrap}
@@ -163,7 +164,7 @@ STYLE = """<style>
 </style>"""
 
 
-def ranking_png(rows, title, period, synced_at, view="DIÁRIO"):
+def ranking_png(rows, title, period, synced_at, view="DIÁRIO", totals=None, goals=None):
     """The daily screen displays these exact bytes, so exporting cannot change its layout."""
     from PIL import Image, ImageDraw
     from app_core import _draw_daily_brand, _fit_image_text, _draw_daily_status_icon, _draw_daily_ordinal
@@ -175,14 +176,33 @@ def ranking_png(rows, title, period, synced_at, view="DIÁRIO"):
     count = len(row_metrics(rows[0], view)) if rows else 8
     grid_rows = (count + 3) // 4
     row_height = 112 + grid_rows * 82
-    image = Image.new("RGB", (1080, 220 + max(1, len(rows)) * (row_height + 14)), "#F1F5F9")
+    team_height = 208 if totals is not None else 0
+    image = Image.new("RGB", (1080, 220 + team_height + max(1, len(rows)) * (row_height + 14)), "#F1F5F9")
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle((16, 10, 1064, 151), radius=24, fill="#064E3B")
     _draw_daily_brand(draw, 38, 23)
     draw.text((38, 73), title, font=_daily_font(30, True), fill="white")
     draw.text((38, 117), period, font=_daily_font(23), fill="white")
+    if totals is not None:
+        draw.rounded_rectangle((16,167,1064,359),radius=20,fill="#172554")
+        draw.text((38,181),"RESULTADO GERAL DA EQUIPE",font=_daily_font(22,True),fill="white")
+        team = [("QIAs",integer(totals["qias"])),("TROCAS",integer(totals["changes"])),
+                ("CAIXA",money(totals["cash"])),("TICKET MÉDIO",money(totals["ticket"]))]
+        if view == "VISÃO GERAL":
+            team += [("PROJEÇÃO QIAs",integer(sum(r["qias_projection"] for r in rows))),
+                     ("PROJEÇÃO TROCAS",integer(sum(r["changes_projection"] for r in rows)))]
+            for key,label in (("qias","QIAs"),("changes","TROCAS")):
+                goal=(goals or {}).get(key,0)
+                team.append((f"% META {label}",percentage(Decimal(totals[key])*100/goal) if goal else "—"))
+        else:
+            team += [("CRÉDITO",integer(totals["credit"])),("NEOENERGIA",integer(totals["neo"])),
+                     ("NR",integer(totals["NR"])),("1 A 3 / 4 A 6",f'{integer(totals["1 A 3"])} / {integer(totals["4 A 6"])}')]
+        for j,(label,value) in enumerate(team):
+            x,y=38+(j%4)*254,220+(j//4)*65
+            draw.text((x,y),_fit_image_text(draw,value,_daily_font(27,True),240),font=_daily_font(27,True),fill="white")
+            draw.text((x,y+33),label,font=_daily_font(16),fill="#CBD5E1")
     for i, row in enumerate(rows):
-        y = 167 + i * (row_height + 14)
+        y = 167 + team_height + i * (row_height + 14)
         _, color, ink = PALETTE[row.get("color", daily_color(row["qias"]))]
         draw.rounded_rectangle((16,y,1064,y+row_height),radius=24,fill=color)
         name = _fit_image_text(draw, row["name"], _daily_font(31,True), 875)
@@ -196,14 +216,17 @@ def ranking_png(rows, title, period, synced_at, view="DIÁRIO"):
             font = _daily_font(42 if j == 0 else 36 if j == 1 else 27,True)
             fitted = _fit_image_text(draw,value,font,232)
             draw.text((x,top),fitted,font=font,fill=ink)
-            draw.text((x,top+40),label,font=_daily_font(18),fill=ink)
+            label_font = _daily_font(18)
+            if draw.textlength(label,font=label_font)>238:
+                label_font = _daily_font(15)
+            draw.text((x,top+40),label,font=label_font,fill=ink)
         for k, label in enumerate(("NR", "1 A 3", "4 A 6")):
             x = 38 + k * 338
             draw.rounded_rectangle((x,y+row_height-47,x+324,y+row_height-10),radius=8,outline=ink,width=1)
             draw.text((x+12,y+row_height-43),label,font=_daily_font(19),fill=ink)
             draw.text((x+306,y+row_height-43),integer(row[label]),font=_daily_font(23,True),fill=ink,anchor="ra")
     if not rows:
-        draw.text((40,205),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
+        draw.text((40,205+team_height),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
     footer = f"Atualizado em {synced_at:%d/%m/%Y %H:%M}"
     if any(r.get("cash_invalid") for r in rows):
         footer += " · Caixa e Ticket Médio parciais"
