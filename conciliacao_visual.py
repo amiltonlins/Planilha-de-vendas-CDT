@@ -147,7 +147,7 @@ def ranking_png(rows,view,period,totals,goals,synced_at):
     width = 1080
     header_height = 150
     footer_height = 54
-    row_height = 730 if view == "VISÃO GERAL" else 550 if view == "DIÁRIO" else 455
+    row_height = 765 if view == "VISÃO GERAL" else 570 if view == "DIÁRIO" else 455
     gap = 18
     image_height = header_height + max(1, len(rows)) * (row_height + gap) + footer_height
     image = Image.new("RGB", (width, image_height), "#F8FAFC")
@@ -206,18 +206,18 @@ def ranking_png(rows,view,period,totals,goals,synced_at):
         draw.text((x + 16, y + 14), "QIAs POR RÉGUA", font=_daily_font(16, True), fill=navy)
         mini_gap = 8
         mini_w = (w - 32 - mini_gap * 2) / 3
-        mini_top = y + 48
-        mini_h = h - 64
+        mini_top = y + 42
+        mini_h = h - 54
         specs = (("NR", "NR", "#FEE2E2", "#991B1B"), ("1 a 3", "1 A 3", "#DBEAFE", "#1D4ED8"), ("4 a 6", "4 A 6", "#DCFCE7", "#166534"))
         for j, (label, key, bg, fg) in enumerate(specs):
             mx = x + 16 + j * (mini_w + mini_gap)
             draw.rounded_rectangle((mx, mini_top, mx + mini_w, mini_top + mini_h), radius=12, fill=bg)
             draw.text((mx + mini_w / 2, mini_top + 12), label, font=_daily_font(14, True), fill=fg, anchor="ma")
             draw.text((mx + mini_w / 2, mini_top + 48), integer(row.get(key, 0)), font=_daily_font(30, True), fill=fg, anchor="ma")
-            cursor = mini_top + 90
+            cursor = mini_top + 80
             if projections:
                 draw.text((mx + mini_w / 2, cursor), "Proj. " + integer(_project_value(row, key, "qias")), font=_daily_font(13), fill=fg, anchor="ma")
-                cursor += 25
+                cursor += 24
             draw.text((mx + mini_w / 2, cursor), "TM " + money(row.get("regime_tickets", {}).get(key, 0)), font=_daily_font(12), fill=fg, anchor="ma")
 
     def two_cols():
@@ -247,8 +247,8 @@ def ranking_png(rows,view,period,totals,goals,synced_at):
             text_card(left, top2, cw, h, "Trocas Crédito", integer(row["credit"]), integer(_project_value(row, "credit", "changes")), progress=(row["credit"], cgoal))
             text_card(left + cw + gx, top2, cw, h, "Trocas Neoenergia", integer(row["neo"]), integer(_project_value(row, "neo", "changes")), progress=(row["neo"], cgoal))
             top3 = top2 + h + 12
-            regimes_card(left, top3, width - 72, 160, row, True)
-            top4 = top3 + 172
+            regimes_card(left, top3, width - 72, 185, row, True)
+            top4 = top3 + 197
             award_w = (width - 72 - gx) / 2
             text_card(left, top4, award_w, 112, "Prêmio Semanal", money(row.get("weekly_award", 0)), money(row.get("weekly_projection", row.get("weekly_award", 0))), value_color="#067647")
             text_card(left + award_w + gx, top4, award_w, 112, "Premiação Mensal", money(row.get("projected_award", 0)), note="projetado", value_color="#4C1D95")
@@ -264,7 +264,7 @@ def ranking_png(rows,view,period,totals,goals,synced_at):
             text_card(left3, top2, cw3, 118, "Trocas hoje", integer(row["changes"]))
             text_card(left3 + cw3 + gx3, top2, cw3, 118, "Crédito", integer(row["credit"]))
             text_card(left3 + 2 * (cw3 + gx3), top2, cw3, 118, "Neoenergia", integer(row["neo"]))
-            regimes_card(36, top2 + 130, width - 72, 155, row, False)
+            regimes_card(36, top2 + 130, width - 72, 170, row, False)
         else:
             qgoal = row.get("weekly_qias_goal", 0)
             cgoal = row.get("weekly_changes_goal", 0)
