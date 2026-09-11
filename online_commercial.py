@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Sincroniza o Painel Comercial com a aba VENDAS de uma planilha Google Sheets.
-
-Esta camada cuida somente dos dados. Nenhum elemento visual é criado aqui para
-não interferir no layout nativo do Comercial, especialmente na aba DIÁRIO.
-"""
+"""Sincroniza o Painel Comercial com a aba VENDAS de uma planilha Google Sheets."""
 from __future__ import annotations
 
 import os
@@ -14,10 +10,9 @@ import streamlit as st
 DEFAULT_SHEET_ID = "14uhlJmDA3UeTZb7sZ3zu-Fovr8utzQbFcpU8LEbuKXE"
 DEFAULT_GID = "56831808"  # aba VENDAS
 SOURCE_NAME = "google_sheets_vendas.csv"
-REFRESH_SECONDS = 300
 
 
-@st.cache_data(ttl=REFRESH_SECONDS, show_spinner=False)
+@st.cache_data(ttl=120, show_spinner=False)
 def _download_csv(sheet_id: str, gid: str) -> bytes:
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -34,11 +29,6 @@ def _download_csv(sheet_id: str, gid: str) -> bytes:
             "Compartilhe a planilha como 'qualquer pessoa com o link - leitor' ou publique a aba para leitura."
         )
     return data
-
-
-def force_refresh():
-    """Limpa somente o cache da fonte online; não cria componentes Streamlit."""
-    _download_csv.clear()
 
 
 def _signature(rows, days):
@@ -79,7 +69,7 @@ def _prepare_online_rows(core, base):
 
 
 def install(core):
-    """Sincroniza a fonte online preservando integralmente a renderização do app_core."""
+    """Substitui load_published por uma versão que sincroniza a fonte online antes de renderizar."""
     original_load_published = core.load_published
 
     def load_published_online(base):
@@ -93,24 +83,9 @@ def install(core):
             merged, imported_days = core.merge_daily_history(rows, incoming)
             after = _signature(merged, imported_days)
 
-            previous_competence = (
-                int(cfg.get("ano", 0) or 0),
-                int(cfg.get("mes", 0) or 0),
-                int(cfg.get("dia_referencia", 0) or 0),
-            )
-
             if imported_days:
                 latest = max(imported_days)
                 cfg = core.prepare_config(core.merge_registry(base, cfg), merged, latest.month, latest.year)
-                # O Diário usa dia_referencia como corte oficial. Com a fonte online,
-                # esse corte precisa acompanhar automaticamente o último dia recebido.
-                cfg["dia_referencia"] = latest.day
-
-            current_competence = (
-                int(cfg.get("ano", 0) or 0),
-                int(cfg.get("mes", 0) or 0),
-                int(cfg.get("dia_referencia", 0) or 0),
-            )
 
             now = core.datetime.now(core.RECIFE_TZ)
             metadata.update(
@@ -119,11 +94,10 @@ def install(core):
                     "fonte_online": "Google Sheets · VENDAS",
                     "fonte_online_status": "ok",
                     "fonte_online_datas_inferidas": inferred_dates,
-                    "fonte_online_intervalo_segundos": REFRESH_SECONDS,
                 }
             )
 
-            if before != after or previous_competence != current_competence:
+            if before != after:
                 history = metadata.get("historico_importacoes", [])
                 core.save_published(merged, cfg, SOURCE_NAME, history, updated_at=now)
                 metadata["atualizado_em"] = now.isoformat(timespec="seconds")
@@ -133,7 +107,6 @@ def install(core):
             metadata["fonte_online"] = "Google Sheets · VENDAS"
             metadata["fonte_online_status"] = "fallback"
             metadata["fonte_online_erro"] = str(exc)
-            metadata["fonte_online_intervalo_segundos"] = REFRESH_SECONDS
             return rows, cfg, metadata
 
     core.load_published = load_published_online
