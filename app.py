@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Camada de interação sobre o núcleo existente do painel."""
+# Redeploy marker: versão estável sem interceptação global de st.markdown.
 import copy
 import html
 import math
