@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Sincroniza o Painel Comercial com a aba VENDAS de uma planilha Google Sheets."""
+"""Sincroniza o Painel Comercial com a aba VENDAS de uma planilha Google Sheets.
+
+Esta camada cuida somente dos dados. Nenhum elemento visual é criado aqui para
+não interferir no layout nativo do Comercial, especialmente na aba DIÁRIO.
+"""
 from __future__ import annotations
 
-import inspect
 import os
-import time
 from urllib.request import Request, urlopen
 
 import streamlit as st
@@ -32,6 +34,11 @@ def _download_csv(sheet_id: str, gid: str) -> bytes:
             "Compartilhe a planilha como 'qualquer pessoa com o link - leitor' ou publique a aba para leitura."
         )
     return data
+
+
+def force_refresh():
+    """Limpa somente o cache da fonte online; não cria componentes Streamlit."""
+    _download_csv.clear()
 
 
 def _signature(rows, days):
@@ -71,58 +78,13 @@ def _prepare_online_rows(core, base):
     return incoming, inferred_dates
 
 
-def _is_primary_render_call() -> bool:
-    """Só a leitura feita diretamente pelo render_app deve criar controles visuais."""
-    frame = inspect.currentframe()
-    try:
-        caller = frame.f_back.f_back if frame and frame.f_back else None
-        return bool(caller and caller.f_code.co_name == "load_published_online" and caller.f_back and caller.f_back.f_code.co_name == "render_app")
-    finally:
-        del frame
-
-
-def _render_refresh_control():
-    """Mantém o comercial vivo e permite ignorar o cache sob demanda."""
-    if not st.session_state.get("dashboard_autenticado", False):
-        return
-
-    @st.fragment(run_every=REFRESH_SECONDS)
-    def refresh_fragment():
-        now = time.monotonic()
-        last_tick = st.session_state.get("commercial_auto_refresh_tick")
-        if last_tick is None:
-            st.session_state.commercial_auto_refresh_tick = now
-        elif now - last_tick >= REFRESH_SECONDS - 5:
-            st.session_state.commercial_auto_refresh_tick = now
-            _download_csv.clear()
-            st.rerun()
-
-        _, refresh = st.columns([5, 1], vertical_alignment="center")
-        with refresh:
-            if st.button(
-                "↻ Atualizar dados",
-                key="commercial_refresh",
-                help="Consultar novamente a aba VENDAS agora, sem aguardar os 5 minutos",
-                use_container_width=True,
-            ):
-                _download_csv.clear()
-                st.session_state.commercial_auto_refresh_tick = now
-                st.rerun()
-
-    refresh_fragment()
-
-
 def install(core):
-    """Substitui load_published por uma versão que sincroniza a fonte online antes de renderizar."""
+    """Sincroniza a fonte online preservando integralmente a renderização do app_core."""
     original_load_published = core.load_published
 
     def load_published_online(base):
         rows, cfg, metadata = original_load_published(base)
         metadata = dict(metadata or {})
-        render_controls = False
-        caller = inspect.currentframe().f_back
-        if caller is not None:
-            render_controls = caller.f_code.co_name == "render_app"
 
         try:
             incoming, inferred_dates = _prepare_online_rows(core, base)
@@ -151,16 +113,12 @@ def install(core):
                 core.save_published(merged, cfg, SOURCE_NAME, history, updated_at=now)
                 metadata["atualizado_em"] = now.isoformat(timespec="seconds")
 
-            if render_controls:
-                _render_refresh_control()
             return merged, cfg, metadata
         except Exception as exc:
             metadata["fonte_online"] = "Google Sheets · VENDAS"
             metadata["fonte_online_status"] = "fallback"
             metadata["fonte_online_erro"] = str(exc)
             metadata["fonte_online_intervalo_segundos"] = REFRESH_SECONDS
-            if render_controls:
-                _render_refresh_control()
             return rows, cfg, metadata
 
     core.load_published = load_published_online
