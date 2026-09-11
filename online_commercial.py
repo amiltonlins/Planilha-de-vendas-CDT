@@ -75,6 +75,9 @@ def install(core):
     def load_published_online(base):
         rows, cfg, metadata = original_load_published(base)
         metadata = dict(metadata or {})
+        force_refresh = bool(st.session_state.pop("commercial_force_refresh", False))
+        if force_refresh:
+            _download_csv.clear()
 
         try:
             incoming, inferred_dates = _prepare_online_rows(core, base)
@@ -97,7 +100,7 @@ def install(core):
                 }
             )
 
-            if before != after:
+            if before != after or force_refresh:
                 history = metadata.get("historico_importacoes", [])
                 core.save_published(merged, cfg, SOURCE_NAME, history, updated_at=now)
                 metadata["atualizado_em"] = now.isoformat(timespec="seconds")
@@ -107,6 +110,8 @@ def install(core):
             metadata["fonte_online"] = "Google Sheets · VENDAS"
             metadata["fonte_online_status"] = "fallback"
             metadata["fonte_online_erro"] = str(exc)
+            if force_refresh:
+                st.warning("Não foi possível atualizar. Última leitura válida mantida, quando disponível.")
             return rows, cfg, metadata
 
     core.load_published = load_published_online
