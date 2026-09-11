@@ -78,8 +78,8 @@ def _install_refresh_button():
         with cols[2]:
             st.markdown("""<style>
 .st-key-commercial_refresh{margin:0!important;padding:0!important}
-.st-key-commercial_refresh button{background:transparent!important;color:#64748B!important;border:1px solid #DDE7E2!important;border-radius:6px!important;min-height:27px!important;height:27px!important;padding:0 7px!important;box-shadow:none!important;font-size:.57rem!important;font-weight:800!important;white-space:nowrap!important}
-.st-key-commercial_refresh button:hover{background:#F8FAFC!important;color:#075B35!important;border-color:#CBDDD3!important}
+.st-key-commercial_refresh button{background:transparent!important;color:#64748B!important;border:0!important;border-radius:6px!important;min-height:27px!important;height:27px!important;padding:0 7px!important;box-shadow:none!important;font-size:.57rem!important;font-weight:800!important;white-space:nowrap!important}
+.st-key-commercial_refresh button:hover{background:#F8FAFC!important;color:#075B35!important;border:0!important}
 @media(max-width:700px){
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"],.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important}
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1),.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){grid-column:1/-1!important;grid-row:1!important}
