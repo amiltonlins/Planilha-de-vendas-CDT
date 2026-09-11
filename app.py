@@ -4,6 +4,8 @@ import copy
 import html
 import math
 from urllib.parse import quote
+
+import streamlit as st
 import app_core as _core
 
 # Load both sectors at startup so Streamlit watches their source files even
@@ -15,6 +17,80 @@ import online_commercial as _online_commercial
 
 _original_team_card_html = _core.team_performance_card_html
 _original_render_management = _core.render_management
+_original_markdown = st.markdown
+
+
+def _markdown_with_inline_commercial_refresh(body, *args, **kwargs):
+    """Renderiza o refresh manual ao lado do horário somente no Comercial > Diário."""
+    is_update_label = isinstance(body, str) and 'class="header-meta header-update"' in body
+    is_commercial_daily = (
+        st.session_state.get("dashboard_autenticado", False)
+        and st.session_state.get("dashboard_sector", "COMERCIAL") == "COMERCIAL"
+        and st.session_state.get("area", "VISÃO GERAL") == "DIÁRIO"
+    )
+
+    if not (is_update_label and is_commercial_daily):
+        return _original_markdown(body, *args, **kwargs)
+
+    with st.container(key="commercial_update_inline"):
+        _original_markdown(
+            """<style>
+.st-key-commercial_update_inline > div[data-testid="stVerticalBlock"]{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:7px!important;
+    flex-wrap:nowrap!important;
+}
+.st-key-commercial_update_inline .header-meta{
+    margin:0!important;
+    padding:0!important;
+    white-space:nowrap!important;
+}
+.st-key-commercial_update_inline .stButton{
+    width:auto!important;
+    margin:0!important;
+    padding:0!important;
+}
+.st-key-commercial_update_inline .stButton > div{
+    width:auto!important;
+    margin:0!important;
+    padding:0!important;
+}
+.st-key-commercial_update_inline .stButton button{
+    width:auto!important;
+    min-width:0!important;
+    height:26px!important;
+    min-height:26px!important;
+    padding:0 3px!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    color:#526988!important;
+    font-size:.76rem!important;
+    font-weight:400!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+}
+.st-key-commercial_update_inline .stButton button:hover{
+    background:transparent!important;
+    border:0!important;
+    color:#334E72!important;
+}
+</style>""",
+            unsafe_allow_html=True,
+        )
+        result = _original_markdown(body, *args, **kwargs)
+        if st.button(
+            "↻ Atualizar dados",
+            key="commercial_refresh",
+            help="Consultar novamente a aba VENDAS agora",
+        ):
+            _online_commercial.force_refresh()
+            st.rerun()
+        return result
 
 
 def _merge_registry_preserving_sellers(base, current):
@@ -92,8 +168,6 @@ def _prepare_config_preserving_sellers(base, rows, month, year):
 
 def _render_management_full_tables(*args, **kwargs):
     """Mantém Relatório Geral e tabela detalhada de Premiações visíveis."""
-    import streamlit as st
-
     if st.query_params.get("team"):
         try:
             del st.query_params["team"]
@@ -132,8 +206,6 @@ def _popup_css():
 
 
 def _open_team_dialog_if_requested():
-    import streamlit as st
-
     if st.session_state.get("gestor_autenticado", False):
         if st.query_params.get("team"):
             try:
@@ -212,6 +284,7 @@ _core.prepare_config = _prepare_config_preserving_sellers
 _core.render_management = _render_management_full_tables
 _core.team_performance_card_html = _clickable_team_card
 _online_commercial.install(_core)
+st.markdown = _markdown_with_inline_commercial_refresh
 
 if __name__ == "__main__":
     _core.render_app()
