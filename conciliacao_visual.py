@@ -141,121 +141,156 @@ def _daily_font(size,bold=False):
     return ImageFont.load_default()
 
 def ranking_png(rows,view,period,totals,goals,synced_at):
-    from PIL import Image,ImageDraw
+    """Generate a phone-friendly portrait PNG matching the dashboard hierarchy."""
+    from PIL import Image, ImageDraw
 
-    row_height=245 if view=="SEMANAL" else 260 if view=="DIÁRIO" else 275
-    header_height=122
-    footer_height=50
-    image=Image.new("RGB",(1440,header_height+max(1,len(rows))*(row_height+14)+footer_height),"#F8FAFC")
-    draw=ImageDraw.Draw(image)
+    width = 1080
+    header_height = 150
+    footer_height = 54
+    row_height = 765 if view == "VISÃO GERAL" else 570 if view == "DIÁRIO" else 455
+    gap = 18
+    image_height = header_height + max(1, len(rows)) * (row_height + gap) + footer_height
+    image = Image.new("RGB", (width, image_height), "#F8FAFC")
+    draw = ImageDraw.Draw(image)
 
-    navy="#0F2B63"; muted="#64748B"; card_bg="#FFFFFF"; border="#DCE6F1"
-    draw.text((28,20),"PAINEL DE RESULTADOS · CONCILIAÇÃO",font=_daily_font(34,True),fill="#0F172A")
-    draw.text((28,66),period,font=_daily_font(22),fill=muted)
+    navy = "#0F2B63"
+    muted = "#64748B"
+    border = "#DCE6F1"
+    card_bg = "#FFFFFF"
 
-    def progress_bar(x,y,w,value,goal,fg="#0EA5E9"):
-        p=_pct(value,goal)
-        draw.rounded_rectangle((x,y,x+w,y+10),radius=5,fill="#CFE4F8")
-        if p>0:
-            draw.rounded_rectangle((x,y,x+max(8,w*p/100),y+10),radius=5,fill=fg)
+    draw.text((34, 24), "PAINEL DE RESULTADOS · CONCILIAÇÃO", font=_daily_font(31, True), fill="#0F172A")
+    draw.text((34, 68), period, font=_daily_font(21), fill=muted)
+    draw.text((34, 105), "Ranking preparado para visualização no celular", font=_daily_font(14), fill=muted)
+
+    def progress_bar(x, y, w, value, goal, fg="#0EA5E9", bg="#CFE4F8", height=12):
+        p = _pct(value, goal)
+        draw.rounded_rectangle((x, y, x + w, y + height), radius=height // 2, fill=bg)
+        if p > 0:
+            fill_w = max(height, w * p / 100)
+            draw.rounded_rectangle((x, y, x + fill_w, y + height), radius=height // 2, fill=fg)
         return p
 
-    def card(x,y,w,h,label,value,projection=None,note=None,value_color=navy,progress=None,fill=card_bg):
-        draw.rounded_rectangle((x,y,x+w,y+h),radius=12,fill=fill,outline=border,width=1)
-        draw.text((x+12,y+10),label.upper(),font=_daily_font(13,True),fill=navy)
-        value_font=_daily_font(28,True)
-        draw.text((x+12,y+36),_fit_image_text(draw,value,value_font,w-24),font=value_font,fill=value_color)
-        cursor=y+72
+    def text_card(x, y, w, h, label, value, projection=None, note=None,
+                  value_color=navy, progress=None, fill=card_bg):
+        draw.rounded_rectangle((x, y, x + w, y + h), radius=18, fill=fill, outline=border, width=1)
+        draw.text((x + 16, y + 14), label.upper(), font=_daily_font(16, True), fill=navy)
+        value_font = _daily_font(34, True)
+        draw.text((x + 16, y + 46), _fit_image_text(draw, value, value_font, w - 32), font=value_font, fill=value_color)
+        cursor = y + 92
         if projection is not None:
-            text="Projeção: "+str(projection)
-            draw.text((x+12,cursor),_fit_image_text(draw,text,_daily_font(13),w-24),font=_daily_font(13),fill="#52657E")
-            cursor+=20
+            projection_text = "Projeção: " + str(projection)
+            draw.text((x + 16, cursor), _fit_image_text(draw, projection_text, _daily_font(17), w - 32), font=_daily_font(17), fill="#52657E")
+            cursor += 27
         if note:
-            draw.text((x+12,cursor),_fit_image_text(draw,note,_daily_font(12),w-24),font=_daily_font(12),fill="#52657E")
+            draw.text((x + 16, cursor), _fit_image_text(draw, note, _daily_font(15), w - 32), font=_daily_font(15), fill="#52657E")
         if progress:
-            progress_bar(x+12,y+h-22,w-24,progress[0],progress[1])
+            progress_bar(x + 16, y + h - 26, w - 32, progress[0], progress[1])
 
-    def hero(y,row,pos,label,goal,value=None):
-        value=row.get("qias",0) if value is None else value
-        _,tone,ink=PALETTE[row.get("color",daily_color(row.get("qias",0)))]
-        draw.rounded_rectangle((18,y,1422,y+row_height),radius=20,fill=tone)
-        draw.ellipse((34,y+18,78,y+62),fill="#00000044")
-        draw.text((56,y+40),f"{pos}º",font=_daily_font(18,True),fill=ink,anchor="mm")
-        draw.text((94,y+19),_fit_image_text(draw,row["name"],_daily_font(28,True),530),font=_daily_font(28,True),fill=ink)
-        draw.text((635,y+21),f"{label}: {integer(goal)} QIAs",font=_daily_font(15,True),fill=ink)
-        progress_bar(860,y+29,330,value,goal,fg="#FFFFFF")
-        draw.text((1210,y+21),f"{integer(value)} / {integer(goal)} ({_pct(value,goal):.0f}%)",font=_daily_font(15,True),fill=ink)
-        return tone,ink
+    def hero(y, row, pos, label, goal, value=None):
+        value = row.get("qias", 0) if value is None else value
+        _, tone, ink = PALETTE[row.get("color", daily_color(row.get("qias", 0)))]
+        draw.rounded_rectangle((18, y, width - 18, y + row_height), radius=28, fill=tone)
+        draw.ellipse((38, y + 24, 94, y + 80), fill="#00000044")
+        draw.text((66, y + 52), f"{pos}º", font=_daily_font(21, True), fill=ink, anchor="mm")
+        draw.text((112, y + 25), _fit_image_text(draw, row["name"], _daily_font(29, True), 470), font=_daily_font(29, True), fill=ink)
+        draw.text((112, y + 63), f"{label}: {integer(goal)} QIAs", font=_daily_font(16, True), fill=ink)
+        bar_x = 600
+        bar_w = 270
+        progress_bar(bar_x, y + 38, bar_w, value, goal, fg="#FFFFFF", bg="#DCEBFA", height=14)
+        draw.text((892, y + 28), f"{integer(value)} / {integer(goal)}", font=_daily_font(18, True), fill=ink)
+        draw.text((892, y + 53), f"{_pct(value, goal):.0f}%", font=_daily_font(15, True), fill=ink)
+        return tone, ink
 
-    def widths(ratios,left=34,right=1406,gap=8):
-        total=right-left-gap*(len(ratios)-1)
-        scale=total/sum(ratios)
-        result=[]; x=left
-        for i,r in enumerate(ratios):
-            w=round(r*scale) if i<len(ratios)-1 else right-x
-            result.append((x,w)); x+=w+gap
-        return result
+    def regimes_card(x, y, w, h, row, projections):
+        draw.rounded_rectangle((x, y, x + w, y + h), radius=18, fill=card_bg, outline=border, width=1)
+        draw.text((x + 16, y + 14), "QIAs POR RÉGUA", font=_daily_font(16, True), fill=navy)
+        mini_gap = 8
+        mini_w = (w - 32 - mini_gap * 2) / 3
+        mini_top = y + 42
+        mini_h = h - 54
+        specs = (("NR", "NR", "#FEE2E2", "#991B1B"), ("1 a 3", "1 A 3", "#DBEAFE", "#1D4ED8"), ("4 a 6", "4 A 6", "#DCFCE7", "#166534"))
+        for j, (label, key, bg, fg) in enumerate(specs):
+            mx = x + 16 + j * (mini_w + mini_gap)
+            draw.rounded_rectangle((mx, mini_top, mx + mini_w, mini_top + mini_h), radius=12, fill=bg)
+            draw.text((mx + mini_w / 2, mini_top + 12), label, font=_daily_font(14, True), fill=fg, anchor="ma")
+            draw.text((mx + mini_w / 2, mini_top + 48), integer(row.get(key, 0)), font=_daily_font(30, True), fill=fg, anchor="ma")
+            cursor = mini_top + 80
+            if projections:
+                draw.text((mx + mini_w / 2, cursor), "Proj. " + integer(_project_value(row, key, "qias")), font=_daily_font(13), fill=fg, anchor="ma")
+                cursor += 24
+            draw.text((mx + mini_w / 2, cursor), "TM " + money(row.get("regime_tickets", {}).get(key, 0)), font=_daily_font(12), fill=fg, anchor="ma")
 
-    for i,row in enumerate(rows):
-        y=header_height+i*(row_height+14)
-        if view=="VISÃO GERAL":
-            qgoal=row.get("qias_goal",0); cgoal=row.get("changes_goal",0)
-            hero(y,row,i+1,"Meta individual",qgoal)
-            top=y+82; h=174
-            slots=widths([1.05,1.05,1.05,1,1.75,1.15,1.15])
-            x,w=slots[0]; card(x,top,w,h,"QIAs",integer(row["qias"]),integer(row["qias_projection"]),progress=(row["qias"],qgoal))
-            x,w=slots[1]; card(x,top,w,h,"Trocas Crédito",integer(row["credit"]),integer(_project_value(row,"credit","changes")),progress=(row["credit"],cgoal))
-            x,w=slots[2]; card(x,top,w,h,"Trocas Neoenergia",integer(row["neo"]),integer(_project_value(row,"neo","changes")),progress=(row["neo"],cgoal))
-            x,w=slots[3]; card(x,top,w,h,"Ticket Médio Geral",money(row["ticket"]),value_color="#174BD6")
-            x,w=slots[4]
-            draw.rounded_rectangle((x,top,x+w,top+h),radius=12,fill=card_bg,outline=border,width=1)
-            draw.text((x+10,top+10),"QIAs POR RÉGUA",font=_daily_font(13,True),fill=navy)
-            mini_gap=6; mini_w=(w-20-mini_gap*2)/3
-            for j,(label,key,bg,fg) in enumerate((("NR","NR","#FEE2E2","#991B1B"),("1 a 3","1 A 3","#DBEAFE","#1D4ED8"),("4 a 6","4 A 6","#DCFCE7","#166534"))):
-                mx=x+10+j*(mini_w+mini_gap); my=top+36
-                draw.rounded_rectangle((mx,my,mx+mini_w,my+h-48),radius=8,fill=bg)
-                draw.text((mx+mini_w/2,my+9),label,font=_daily_font(12,True),fill=fg,anchor="ma")
-                draw.text((mx+mini_w/2,my+36),integer(row.get(key,0)),font=_daily_font(24,True),fill=fg,anchor="ma")
-                draw.text((mx+mini_w/2,my+69),"Proj. "+integer(_project_value(row,key,"qias")),font=_daily_font(11),fill=fg,anchor="ma")
-                draw.text((mx+mini_w/2,my+89),"TM "+money(row.get("regime_tickets",{}).get(key,0)),font=_daily_font(10),fill=fg,anchor="ma")
-            x,w=slots[5]; card(x,top,w,h,"Prêmio Semanal",money(row.get("weekly_award",0)),money(row.get("weekly_projection",row.get("weekly_award",0))),value_color="#067647")
-            x,w=slots[6]; card(x,top,w,h,"Premiação Mensal",money(row.get("projected_award",0)),note="projetado",value_color="#4C1D95")
-        elif view=="DIÁRIO":
-            hero(y,row,i+1,"Referência diária",30)
-            top=y+82; h=158
-            slots=widths([1.15,1,1,1,1.1,1.9])
-            x,w=slots[0]; card(x,top,w,h,"QIAs hoje",integer(row["qias"]),note=f'{integer(row.get("week_qias",0))} na semana · {integer(row.get("month_qias",0))} no mês',progress=(row["qias"],30))
-            x,w=slots[1]; card(x,top,w,h,"Trocas hoje",integer(row["changes"]))
-            x,w=slots[2]; card(x,top,w,h,"Trocas Crédito",integer(row["credit"]))
-            x,w=slots[3]; card(x,top,w,h,"Trocas Neoenergia",integer(row["neo"]))
-            x,w=slots[4]; card(x,top,w,h,"Ticket Médio",money(row["ticket"]),value_color="#174BD6")
-            x,w=slots[5]
-            draw.rounded_rectangle((x,top,x+w,top+h),radius=12,fill=card_bg,outline=border,width=1)
-            draw.text((x+10,top+10),"QIAs POR RÉGUA",font=_daily_font(13,True),fill=navy)
-            mini_gap=6; mini_w=(w-20-mini_gap*2)/3
-            for j,(label,key,bg,fg) in enumerate((("NR","NR","#FEE2E2","#991B1B"),("1 a 3","1 A 3","#DBEAFE","#1D4ED8"),("4 a 6","4 A 6","#DCFCE7","#166534"))):
-                mx=x+10+j*(mini_w+mini_gap); my=top+36
-                draw.rounded_rectangle((mx,my,mx+mini_w,my+h-48),radius=8,fill=bg)
-                draw.text((mx+mini_w/2,my+8),label,font=_daily_font(11,True),fill=fg,anchor="ma")
-                draw.text((mx+mini_w/2,my+34),integer(row.get(key,0)),font=_daily_font(22,True),fill=fg,anchor="ma")
-                draw.text((mx+mini_w/2,my+68),"TM "+money(row.get("regime_tickets",{}).get(key,0)),font=_daily_font(10),fill=fg,anchor="ma")
+    def two_cols():
+        left = 36
+        gap_x = 12
+        card_w = (width - 72 - gap_x) / 2
+        return left, card_w, gap_x
+
+    def three_cols():
+        left = 36
+        gap_x = 12
+        card_w = (width - 72 - gap_x * 2) / 3
+        return left, card_w, gap_x
+
+    for i, row in enumerate(rows):
+        y = header_height + i * (row_height + gap)
+        if view == "VISÃO GERAL":
+            qgoal = row.get("qias_goal", 0)
+            cgoal = row.get("changes_goal", 0)
+            hero(y, row, i + 1, "Meta individual", qgoal)
+            left, cw, gx = two_cols()
+            top = y + 104
+            h = 150
+            text_card(left, top, cw, h, "QIAs", integer(row["qias"]), integer(row["qias_projection"]), progress=(row["qias"], qgoal))
+            text_card(left + cw + gx, top, cw, h, "Ticket Médio Geral", money(row["ticket"]), value_color="#174BD6")
+            top2 = top + h + 12
+            text_card(left, top2, cw, h, "Trocas Crédito", integer(row["credit"]), integer(_project_value(row, "credit", "changes")), progress=(row["credit"], cgoal))
+            text_card(left + cw + gx, top2, cw, h, "Trocas Neoenergia", integer(row["neo"]), integer(_project_value(row, "neo", "changes")), progress=(row["neo"], cgoal))
+            top3 = top2 + h + 12
+            regimes_card(left, top3, width - 72, 185, row, True)
+            top4 = top3 + 197
+            award_w = (width - 72 - gx) / 2
+            text_card(left, top4, award_w, 112, "Prêmio Semanal", money(row.get("weekly_award", 0)), money(row.get("weekly_projection", row.get("weekly_award", 0))), value_color="#067647")
+            text_card(left + award_w + gx, top4, award_w, 112, "Premiação Mensal", money(row.get("projected_award", 0)), note="projetado", value_color="#4C1D95")
+        elif view == "DIÁRIO":
+            hero(y, row, i + 1, "Referência diária", 30)
+            left, cw, gx = two_cols()
+            top = y + 104
+            h = 132
+            text_card(left, top, cw, h, "QIAs hoje", integer(row["qias"]), note=f'{integer(row.get("week_qias", 0))} na semana · {integer(row.get("month_qias", 0))} no mês', progress=(row["qias"], 30))
+            text_card(left + cw + gx, top, cw, h, "Ticket Médio", money(row["ticket"]), value_color="#174BD6")
+            top2 = top + h + 12
+            left3, cw3, gx3 = three_cols()
+            text_card(left3, top2, cw3, 118, "Trocas hoje", integer(row["changes"]))
+            text_card(left3 + cw3 + gx3, top2, cw3, 118, "Crédito", integer(row["credit"]))
+            text_card(left3 + 2 * (cw3 + gx3), top2, cw3, 118, "Neoenergia", integer(row["neo"]))
+            regimes_card(36, top2 + 130, width - 72, 170, row, False)
         else:
-            qgoal=row.get("weekly_qias_goal",0); cgoal=row.get("weekly_changes_goal",0)
-            hero(y,row,i+1,"Meta inicial da semana",qgoal)
-            top=y+82; h=143
-            slots=widths([1.1,1.1,1.05,1.05,1.7])
-            x,w=slots[0]; card(x,top,w,h,"QIAs",integer(row["qias"]),integer(row["qias_projection"]),progress=(row["qias"],qgoal))
-            x,w=slots[1]; card(x,top,w,h,"Trocas",integer(row["changes"]),integer(row["changes_projection"]),progress=(row["changes"],cgoal))
-            x,w=slots[2]; card(x,top,w,h,"Prêmio conquistado",money(row.get("earned_award",0)),value_color="#067647")
-            x,w=slots[3]; card(x,top,w,h,"Prêmio projetado",money(row.get("award",0)),value_color="#4C1D95")
-            remain_q=int(row.get("qias_remaining",0) or 0); remain_c=int(row.get("changes_remaining",0) or 0)
-            if row.get("next_award",0):
-                next_value=money(row.get("next_award",0)); remain=f"Faltam {remain_q} QIAs e {remain_c} trocas"
+            qgoal = row.get("weekly_qias_goal", 0)
+            cgoal = row.get("weekly_changes_goal", 0)
+            hero(y, row, i + 1, "Meta inicial da semana", qgoal)
+            left, cw, gx = two_cols()
+            top = y + 104
+            h = 138
+            text_card(left, top, cw, h, "QIAs", integer(row["qias"]), integer(row["qias_projection"]), progress=(row["qias"], qgoal))
+            text_card(left + cw + gx, top, cw, h, "Trocas", integer(row["changes"]), integer(row["changes_projection"]), progress=(row["changes"], cgoal))
+            top2 = top + h + 12
+            left3, cw3, gx3 = three_cols()
+            text_card(left3, top2, cw3, 132, "Prêmio conquistado", money(row.get("earned_award", 0)), value_color="#067647")
+            text_card(left3 + cw3 + gx3, top2, cw3, 132, "Prêmio projetado", money(row.get("award", 0)), value_color="#4C1D95")
+            remain_q = int(row.get("qias_remaining", 0) or 0)
+            remain_c = int(row.get("changes_remaining", 0) or 0)
+            if row.get("next_award", 0):
+                next_value = money(row.get("next_award", 0))
+                remain = f"Faltam {remain_q} QIAs e {remain_c} trocas"
             else:
-                next_value="Máximo"; remain="Faixa máxima atingida"
-            x,w=slots[4]; card(x,top,w,h,"Próximo prêmio",next_value,note=remain,value_color="#9A3412",fill="#FFF7ED")
+                next_value = "Máximo"
+                remain = "Faixa máxima atingida"
+            text_card(left3 + 2 * (cw3 + gx3), top2, cw3, 132, "Próximo prêmio", next_value, note=remain, value_color="#9A3412", fill="#FFF7ED")
 
     if not rows:
-        draw.text((40,160),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
-    draw.text((28,image.height-34),f"Atualizado em {synced_at:%d/%m/%Y %H:%M}",font=_daily_font(17),fill=muted)
-    output=io.BytesIO(); image.save(output,"PNG"); return output.getvalue()
+        draw.text((40, 180), "Nenhum conciliador habilitado.", font=_daily_font(28), fill="#475569")
+    draw.text((34, image.height - 36), f"Atualizado em {synced_at:%d/%m/%Y %H:%M}", font=_daily_font(17), fill=muted)
+    output = io.BytesIO()
+    image.save(output, "PNG", optimize=True)
+    return output.getvalue()
