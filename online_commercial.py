@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from urllib.request import Request, urlopen
 
 import streamlit as st
@@ -10,9 +11,10 @@ import streamlit as st
 DEFAULT_SHEET_ID = "14uhlJmDA3UeTZb7sZ3zu-Fovr8utzQbFcpU8LEbuKXE"
 DEFAULT_GID = "56831808"  # aba VENDAS
 SOURCE_NAME = "google_sheets_vendas.csv"
+REFRESH_SECONDS = 300
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=REFRESH_SECONDS, show_spinner=False)
 def _download_csv(sheet_id: str, gid: str) -> bytes:
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -68,6 +70,37 @@ def _prepare_online_rows(core, base):
     return incoming, inferred_dates
 
 
+def _render_refresh_control():
+    """Mantém o comercial vivo e permite ignorar o cache sob demanda."""
+    if not st.session_state.get("dashboard_autenticado", False):
+        return
+
+    @st.fragment(run_every=REFRESH_SECONDS)
+    def refresh_fragment():
+        now = time.monotonic()
+        last_tick = st.session_state.get("commercial_auto_refresh_tick")
+        if last_tick is None:
+            st.session_state.commercial_auto_refresh_tick = now
+        elif now - last_tick >= REFRESH_SECONDS - 5:
+            st.session_state.commercial_auto_refresh_tick = now
+            _download_csv.clear()
+            st.rerun()
+
+        _, refresh = st.columns([5, 1], vertical_alignment="center")
+        with refresh:
+            if st.button(
+                "↻ Atualizar dados",
+                key="commercial_refresh",
+                help="Consultar novamente a aba VENDAS agora, sem aguardar os 5 minutos",
+                use_container_width=True,
+            ):
+                _download_csv.clear()
+                st.session_state.commercial_auto_refresh_tick = now
+                st.rerun()
+
+    refresh_fragment()
+
+
 def install(core):
     """Substitui load_published por uma versão que sincroniza a fonte online antes de renderizar."""
     original_load_published = core.load_published
@@ -94,6 +127,7 @@ def install(core):
                     "fonte_online": "Google Sheets · VENDAS",
                     "fonte_online_status": "ok",
                     "fonte_online_datas_inferidas": inferred_dates,
+                    "fonte_online_intervalo_segundos": REFRESH_SECONDS,
                 }
             )
 
@@ -102,11 +136,14 @@ def install(core):
                 core.save_published(merged, cfg, SOURCE_NAME, history, updated_at=now)
                 metadata["atualizado_em"] = now.isoformat(timespec="seconds")
 
+            _render_refresh_control()
             return merged, cfg, metadata
         except Exception as exc:
             metadata["fonte_online"] = "Google Sheets · VENDAS"
             metadata["fonte_online_status"] = "fallback"
             metadata["fonte_online_erro"] = str(exc)
+            metadata["fonte_online_intervalo_segundos"] = REFRESH_SECONDS
+            _render_refresh_control()
             return rows, cfg, metadata
 
     core.load_published = load_published_online
