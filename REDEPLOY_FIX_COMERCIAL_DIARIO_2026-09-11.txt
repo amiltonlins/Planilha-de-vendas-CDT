@@ -1,0 +1,1 @@
+Força novo deploy do Streamlit para carregar a versão atual de app.py, que já não possui a interceptação global de st.markdown responsável pelo StreamlitDuplicateElementKey no Comercial Diário.
