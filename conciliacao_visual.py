@@ -142,24 +142,120 @@ def _daily_font(size,bold=False):
 
 def ranking_png(rows,view,period,totals,goals,synced_at):
     from PIL import Image,ImageDraw
-    row_height=300 if view=="SEMANAL" else 365 if view=="DIÁRIO" else 430
-    image=Image.new("RGB",(1080,300+max(1,len(rows))*(row_height+14)),"white");draw=ImageDraw.Draw(image)
-    draw.text((24,22),"PAINEL DE RESULTADOS · CONCILIAÇÃO",font=_daily_font(34,True),fill="#0F172A");draw.text((24,68),period,font=_daily_font(24),fill="#475569")
-    team=[("QIAs",integer(totals["qias"])),("TROCAS",integer(totals["changes"])),("CRÉDITO",integer(totals["credit"])),("NEO",integer(totals["neo"]))]
-    for j,(label,value) in enumerate(team):
-        x=38+j*254;draw.text((x,118),value,font=_daily_font(27,True),fill="#0F172A");draw.text((x,151),label,font=_daily_font(16),fill="#64748B")
+
+    row_height=245 if view=="SEMANAL" else 260 if view=="DIÁRIO" else 275
+    header_height=122
+    footer_height=50
+    image=Image.new("RGB",(1440,header_height+max(1,len(rows))*(row_height+14)+footer_height),"#F8FAFC")
+    draw=ImageDraw.Draw(image)
+
+    navy="#0F2B63"; muted="#64748B"; card_bg="#FFFFFF"; border="#DCE6F1"
+    draw.text((28,20),"PAINEL DE RESULTADOS · CONCILIAÇÃO",font=_daily_font(34,True),fill="#0F172A")
+    draw.text((28,66),period,font=_daily_font(22),fill=muted)
+
+    def progress_bar(x,y,w,value,goal,fg="#0EA5E9"):
+        p=_pct(value,goal)
+        draw.rounded_rectangle((x,y,x+w,y+10),radius=5,fill="#CFE4F8")
+        if p>0:
+            draw.rounded_rectangle((x,y,x+max(8,w*p/100),y+10),radius=5,fill=fg)
+        return p
+
+    def card(x,y,w,h,label,value,projection=None,note=None,value_color=navy,progress=None,fill=card_bg):
+        draw.rounded_rectangle((x,y,x+w,y+h),radius=12,fill=fill,outline=border,width=1)
+        draw.text((x+12,y+10),label.upper(),font=_daily_font(13,True),fill=navy)
+        value_font=_daily_font(28,True)
+        draw.text((x+12,y+36),_fit_image_text(draw,value,value_font,w-24),font=value_font,fill=value_color)
+        cursor=y+72
+        if projection is not None:
+            text="Projeção: "+str(projection)
+            draw.text((x+12,cursor),_fit_image_text(draw,text,_daily_font(13),w-24),font=_daily_font(13),fill="#52657E")
+            cursor+=20
+        if note:
+            draw.text((x+12,cursor),_fit_image_text(draw,note,_daily_font(12),w-24),font=_daily_font(12),fill="#52657E")
+        if progress:
+            progress_bar(x+12,y+h-22,w-24,progress[0],progress[1])
+
+    def hero(y,row,pos,label,goal,value=None):
+        value=row.get("qias",0) if value is None else value
+        _,tone,ink=PALETTE[row.get("color",daily_color(row.get("qias",0)))]
+        draw.rounded_rectangle((18,y,1422,y+row_height),radius=20,fill=tone)
+        draw.ellipse((34,y+18,78,y+62),fill="#00000044")
+        draw.text((56,y+40),f"{pos}º",font=_daily_font(18,True),fill=ink,anchor="mm")
+        draw.text((94,y+19),_fit_image_text(draw,row["name"],_daily_font(28,True),530),font=_daily_font(28,True),fill=ink)
+        draw.text((635,y+21),f"{label}: {integer(goal)} QIAs",font=_daily_font(15,True),fill=ink)
+        progress_bar(860,y+29,330,value,goal,fg="#FFFFFF")
+        draw.text((1210,y+21),f"{integer(value)} / {integer(goal)} ({_pct(value,goal):.0f}%)",font=_daily_font(15,True),fill=ink)
+        return tone,ink
+
+    def widths(ratios,left=34,right=1406,gap=8):
+        total=right-left-gap*(len(ratios)-1)
+        scale=total/sum(ratios)
+        result=[]; x=left
+        for i,r in enumerate(ratios):
+            w=round(r*scale) if i<len(ratios)-1 else right-x
+            result.append((x,w)); x+=w+gap
+        return result
+
     for i,row in enumerate(rows):
-        y=205+i*(row_height+14);_,color,ink=PALETTE[row.get("color",daily_color(row["qias"]))];draw.rounded_rectangle((16,y,1064,y+row_height),radius=24,fill=color)
-        draw.text((38,y+18),f'{i+1}º',font=_daily_font(26,True),fill=ink);draw.text((90,y+16),_fit_image_text(draw,row["name"],_daily_font(29,True),560),font=_daily_font(29,True),fill=ink)
-        metrics=row_metrics(row,view)
-        cols=5 if view=="SEMANAL" else 4
-        card_w=190 if cols==5 else 238
-        for j,(label,value) in enumerate(metrics):
-            col,line=j%cols,j//cols;x=38+col*(card_w+12);top=y+68+line*92
-            draw.rounded_rectangle((x,top,x+card_w,top+80),radius=10,outline=ink,width=1);draw.text((x+9,top+8),label,font=_daily_font(12,True),fill=ink);draw.text((x+9,top+31),_fit_image_text(draw,value,_daily_font(22,True),card_w-18),font=_daily_font(22,True),fill=ink)
-        if view=="SEMANAL":
-            remain=f'Faltam {int(row.get("qias_remaining",0) or 0)} QIAs e {int(row.get("changes_remaining",0) or 0)} trocas' if row.get("next_award",0) else 'Faixa máxima atingida'
-            draw.text((38,y+row_height-34),remain,font=_daily_font(15,True),fill=ink)
-    if not rows:draw.text((40,230),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
-    draw.text((26,image.height-34),f"Atualizado em {synced_at:%d/%m/%Y %H:%M}",font=_daily_font(18),fill="#475569")
-    output=io.BytesIO();image.save(output,"PNG");return output.getvalue()
+        y=header_height+i*(row_height+14)
+        if view=="VISÃO GERAL":
+            qgoal=row.get("qias_goal",0); cgoal=row.get("changes_goal",0)
+            hero(y,row,i+1,"Meta individual",qgoal)
+            top=y+82; h=174
+            slots=widths([1.05,1.05,1.05,1,1.75,1.15,1.15])
+            x,w=slots[0]; card(x,top,w,h,"QIAs",integer(row["qias"]),integer(row["qias_projection"]),progress=(row["qias"],qgoal))
+            x,w=slots[1]; card(x,top,w,h,"Trocas Crédito",integer(row["credit"]),integer(_project_value(row,"credit","changes")),progress=(row["credit"],cgoal))
+            x,w=slots[2]; card(x,top,w,h,"Trocas Neoenergia",integer(row["neo"]),integer(_project_value(row,"neo","changes")),progress=(row["neo"],cgoal))
+            x,w=slots[3]; card(x,top,w,h,"Ticket Médio Geral",money(row["ticket"]),value_color="#174BD6")
+            x,w=slots[4]
+            draw.rounded_rectangle((x,top,x+w,top+h),radius=12,fill=card_bg,outline=border,width=1)
+            draw.text((x+10,top+10),"QIAs POR RÉGUA",font=_daily_font(13,True),fill=navy)
+            mini_gap=6; mini_w=(w-20-mini_gap*2)/3
+            for j,(label,key,bg,fg) in enumerate((("NR","NR","#FEE2E2","#991B1B"),("1 a 3","1 A 3","#DBEAFE","#1D4ED8"),("4 a 6","4 A 6","#DCFCE7","#166534"))):
+                mx=x+10+j*(mini_w+mini_gap); my=top+36
+                draw.rounded_rectangle((mx,my,mx+mini_w,my+h-48),radius=8,fill=bg)
+                draw.text((mx+mini_w/2,my+9),label,font=_daily_font(12,True),fill=fg,anchor="ma")
+                draw.text((mx+mini_w/2,my+36),integer(row.get(key,0)),font=_daily_font(24,True),fill=fg,anchor="ma")
+                draw.text((mx+mini_w/2,my+69),"Proj. "+integer(_project_value(row,key,"qias")),font=_daily_font(11),fill=fg,anchor="ma")
+                draw.text((mx+mini_w/2,my+89),"TM "+money(row.get("regime_tickets",{}).get(key,0)),font=_daily_font(10),fill=fg,anchor="ma")
+            x,w=slots[5]; card(x,top,w,h,"Prêmio Semanal",money(row.get("weekly_award",0)),money(row.get("weekly_projection",row.get("weekly_award",0))),value_color="#067647")
+            x,w=slots[6]; card(x,top,w,h,"Premiação Mensal",money(row.get("projected_award",0)),note="projetado",value_color="#4C1D95")
+        elif view=="DIÁRIO":
+            hero(y,row,i+1,"Referência diária",30)
+            top=y+82; h=158
+            slots=widths([1.15,1,1,1,1.1,1.9])
+            x,w=slots[0]; card(x,top,w,h,"QIAs hoje",integer(row["qias"]),note=f'{integer(row.get("week_qias",0))} na semana · {integer(row.get("month_qias",0))} no mês',progress=(row["qias"],30))
+            x,w=slots[1]; card(x,top,w,h,"Trocas hoje",integer(row["changes"]))
+            x,w=slots[2]; card(x,top,w,h,"Trocas Crédito",integer(row["credit"]))
+            x,w=slots[3]; card(x,top,w,h,"Trocas Neoenergia",integer(row["neo"]))
+            x,w=slots[4]; card(x,top,w,h,"Ticket Médio",money(row["ticket"]),value_color="#174BD6")
+            x,w=slots[5]
+            draw.rounded_rectangle((x,top,x+w,top+h),radius=12,fill=card_bg,outline=border,width=1)
+            draw.text((x+10,top+10),"QIAs POR RÉGUA",font=_daily_font(13,True),fill=navy)
+            mini_gap=6; mini_w=(w-20-mini_gap*2)/3
+            for j,(label,key,bg,fg) in enumerate((("NR","NR","#FEE2E2","#991B1B"),("1 a 3","1 A 3","#DBEAFE","#1D4ED8"),("4 a 6","4 A 6","#DCFCE7","#166534"))):
+                mx=x+10+j*(mini_w+mini_gap); my=top+36
+                draw.rounded_rectangle((mx,my,mx+mini_w,my+h-48),radius=8,fill=bg)
+                draw.text((mx+mini_w/2,my+8),label,font=_daily_font(11,True),fill=fg,anchor="ma")
+                draw.text((mx+mini_w/2,my+34),integer(row.get(key,0)),font=_daily_font(22,True),fill=fg,anchor="ma")
+                draw.text((mx+mini_w/2,my+68),"TM "+money(row.get("regime_tickets",{}).get(key,0)),font=_daily_font(10),fill=fg,anchor="ma")
+        else:
+            qgoal=row.get("weekly_qias_goal",0); cgoal=row.get("weekly_changes_goal",0)
+            hero(y,row,i+1,"Meta inicial da semana",qgoal)
+            top=y+82; h=143
+            slots=widths([1.1,1.1,1.05,1.05,1.7])
+            x,w=slots[0]; card(x,top,w,h,"QIAs",integer(row["qias"]),integer(row["qias_projection"]),progress=(row["qias"],qgoal))
+            x,w=slots[1]; card(x,top,w,h,"Trocas",integer(row["changes"]),integer(row["changes_projection"]),progress=(row["changes"],cgoal))
+            x,w=slots[2]; card(x,top,w,h,"Prêmio conquistado",money(row.get("earned_award",0)),value_color="#067647")
+            x,w=slots[3]; card(x,top,w,h,"Prêmio projetado",money(row.get("award",0)),value_color="#4C1D95")
+            remain_q=int(row.get("qias_remaining",0) or 0); remain_c=int(row.get("changes_remaining",0) or 0)
+            if row.get("next_award",0):
+                next_value=money(row.get("next_award",0)); remain=f"Faltam {remain_q} QIAs e {remain_c} trocas"
+            else:
+                next_value="Máximo"; remain="Faixa máxima atingida"
+            x,w=slots[4]; card(x,top,w,h,"Próximo prêmio",next_value,note=remain,value_color="#9A3412",fill="#FFF7ED")
+
+    if not rows:
+        draw.text((40,160),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
+    draw.text((28,image.height-34),f"Atualizado em {synced_at:%d/%m/%Y %H:%M}",font=_daily_font(17),fill=muted)
+    output=io.BytesIO(); image.save(output,"PNG"); return output.getvalue()
