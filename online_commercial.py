@@ -71,18 +71,8 @@ def _prepare_online_rows(core, base):
     return incoming, inferred_dates
 
 
-def _is_primary_render_call() -> bool:
-    """Só a leitura feita diretamente pelo render_app deve criar controles visuais."""
-    frame = inspect.currentframe()
-    try:
-        caller = frame.f_back.f_back if frame and frame.f_back else None
-        return bool(caller and caller.f_code.co_name == "load_published_online" and caller.f_back and caller.f_back.f_code.co_name == "render_app")
-    finally:
-        del frame
-
-
 def _render_refresh_control():
-    """Mantém o comercial vivo e permite ignorar o cache sob demanda."""
+    """Atualiza automaticamente e mostra o botão manual só no Comercial > Diário."""
     if not st.session_state.get("dashboard_autenticado", False):
         return
 
@@ -97,13 +87,17 @@ def _render_refresh_control():
             _download_csv.clear()
             st.rerun()
 
+        if st.session_state.get("dashboard_sector", "COMERCIAL") != "COMERCIAL":
+            return
+        if st.session_state.get("area", "VISÃO GERAL") != "DIÁRIO":
+            return
+
         _, refresh = st.columns([5, 1], vertical_alignment="center")
         with refresh:
             if st.button(
                 "↻ Atualizar dados",
                 key="commercial_refresh",
                 help="Consultar novamente a aba VENDAS agora, sem aguardar os 5 minutos",
-                use_container_width=True,
             ):
                 _download_csv.clear()
                 st.session_state.commercial_auto_refresh_tick = now
@@ -119,10 +113,8 @@ def install(core):
     def load_published_online(base):
         rows, cfg, metadata = original_load_published(base)
         metadata = dict(metadata or {})
-        render_controls = False
         caller = inspect.currentframe().f_back
-        if caller is not None:
-            render_controls = caller.f_code.co_name == "render_app"
+        render_controls = bool(caller and caller.f_code.co_name == "render_app")
 
         try:
             incoming, inferred_dates = _prepare_online_rows(core, base)
