@@ -71,8 +71,14 @@ def _prepare_online_rows(core, base):
     return incoming, inferred_dates
 
 
-def _render_refresh_control():
-    """Atualiza automaticamente e mostra o botão manual só no Comercial > Diário."""
+def force_refresh():
+    """Ignora o cache na próxima execução do painel comercial."""
+    _download_csv.clear()
+    st.session_state.commercial_auto_refresh_tick = time.monotonic()
+
+
+def _render_auto_refresh():
+    """Mantém a atualização automática em 5 minutos sem criar controles visuais."""
     if not st.session_state.get("dashboard_autenticado", False):
         return
 
@@ -86,22 +92,6 @@ def _render_refresh_control():
             st.session_state.commercial_auto_refresh_tick = now
             _download_csv.clear()
             st.rerun()
-
-        if st.session_state.get("dashboard_sector", "COMERCIAL") != "COMERCIAL":
-            return
-        if st.session_state.get("area", "VISÃO GERAL") != "DIÁRIO":
-            return
-
-        _, refresh = st.columns([5, 1], vertical_alignment="center")
-        with refresh:
-            if st.button(
-                "↻ Atualizar dados",
-                key="commercial_refresh",
-                help="Consultar novamente a aba VENDAS agora, sem aguardar os 5 minutos",
-            ):
-                _download_csv.clear()
-                st.session_state.commercial_auto_refresh_tick = now
-                st.rerun()
 
     refresh_fragment()
 
@@ -144,7 +134,7 @@ def install(core):
                 metadata["atualizado_em"] = now.isoformat(timespec="seconds")
 
             if render_controls:
-                _render_refresh_control()
+                _render_auto_refresh()
             return merged, cfg, metadata
         except Exception as exc:
             metadata["fonte_online"] = "Google Sheets · VENDAS"
@@ -152,7 +142,7 @@ def install(core):
             metadata["fonte_online_erro"] = str(exc)
             metadata["fonte_online_intervalo_segundos"] = REFRESH_SECONDS
             if render_controls:
-                _render_refresh_control()
+                _render_auto_refresh()
             return rows, cfg, metadata
 
     core.load_published = load_published_online
