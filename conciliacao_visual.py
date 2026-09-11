@@ -20,24 +20,38 @@ def _project_value(row,key,total_key="qias"):
 
 def _pct(value,goal):
     try:return max(0,min(100,float(Decimal(value)*100/Decimal(goal)))) if goal else 0
-    except:return 0
+    except Exception:return 0
 
-def _progress(value,goal,extra=""):
+def _progress(value,goal):
     p=_pct(value,goal)
-    return f'<div class="conc-progress"><i style="width:{p:.1f}%"></i></div><b class="conc-progress-pct">{p:.0f}%</b>{extra}'
+    return f'<div class="conc-progress"><i style="width:{p:.1f}%"></i></div><b class="conc-progress-pct">{p:.0f}%</b>'
 
-def _metric_card(label,value,projection=None,progress=None,accent="",cls=""):
+def _metric_card(label,value,projection=None,progress=None,accent="",cls="",note=None):
     sub=f'<span>Projeção: <b>{html.escape(str(projection))}</b></span>' if projection is not None else ''
+    note_html=f'<em>{html.escape(str(note))}</em>' if note else ''
     bar=_progress(*progress) if progress else ''
-    return f'<div class="conc-kpi {cls} {accent}"><small>{html.escape(label)}</small><strong>{html.escape(str(value))}</strong>{sub}{bar}</div>'
+    return f'<div class="conc-kpi {cls} {accent}"><small>{html.escape(label)}</small><strong>{html.escape(str(value))}</strong>{sub}{note_html}{bar}</div>'
+
+def _hero(pos,row,label,goal,value=None):
+    value=row.get("qias",0) if value is None else value
+    return (f'<div class="conc-hero"><div class="conc-rank-badge">{pos}º</div><div class="conc-name">{html.escape(row["name"])}</div>'
+            f'<div class="conc-goal-label">{html.escape(label)}: <b>{integer(goal)} QIAs</b></div><div class="conc-goalbar">{_progress(value,goal)}</div>'
+            f'<div class="conc-goal-value">{integer(value)} / {integer(goal)} ({_pct(value,goal):.0f}%)</div></div>')
+
+def _regimes_card(row, projections=False):
+    items=[]
+    for label,accent in (("NR","nr"),("1 a 3","r13"),("4 a 6","r46")):
+        key="1 A 3" if label=="1 a 3" else "4 A 6" if label=="4 a 6" else label
+        proj=f'<span>Proj.: {integer(_project_value(row,key,"qias"))}</span>' if projections else ''
+        items.append(f'<div class="conc-reg-mini {accent}"><small>{label}</small><strong>{integer(row.get(key,0))}</strong>{proj}<em>TM: <b>{money(row.get("regime_tickets",{}).get(key,0))}</b></em></div>')
+    return '<div class="conc-kpi regimes"><small>QIAs por régua</small><div class="conc-reg-grid">'+''.join(items)+'</div></div>'
 
 def row_metrics(row,view):
-    if view=="VISÃO GERAL":
-        return [("QIAs",integer(row["qias"])),("PROJEÇÃO QIAs",integer(row["qias_projection"])),("TROCAS",integer(row["changes"])),("PROJEÇÃO TROCAS",integer(row["changes_projection"])),("CRÉDITO",integer(row["credit"])),("NEOENERGIA",integer(row["neo"])),("TICKET MÉDIO",money(row["ticket"])),("MENSAL PROJETADA",money(row["projected_award"]))]
-    m=[("QIAs",integer(row["qias"])),("TROCAS",integer(row["changes"])),("CRÉDITO",integer(row["credit"])),("NEOENERGIA",integer(row["neo"])),("TICKET MÉDIO",money(row["ticket"])),("CAIXA",money(row["cash"]))]
-    if view=="DIÁRIO":m += [("QIAs NA SEMANA",integer(row.get("week_qias",0))),("QIAs NO MÊS",integer(row.get("month_qias",0)))]
-    else:m += [("PROJEÇÃO QIAs",integer(row["qias_projection"])),("PROJEÇÃO TROCAS",integer(row["changes_projection"])),("PRÊMIO CONQUISTADO",money(row.get("closed_award",0))),("PRÊMIO PROJETADO",money(row["award"])),("FAIXA ATUAL",str(row["tier"])+"ª" if row["tier"] else "—"),("FAIXA PROJETADA",str(row["projected_tier"])+"ª" if row["projected_tier"] else "—")]
-    return m
+    if view=="DIÁRIO":
+        return [("QIAs HOJE",integer(row["qias"])),("TROCAS HOJE",integer(row["changes"])),("CRÉDITO",integer(row["credit"])),("NEOENERGIA",integer(row["neo"])),("TICKET MÉDIO",money(row["ticket"])),("QIAs NA SEMANA",integer(row.get("week_qias",0))),("QIAs NO MÊS",integer(row.get("month_qias",0)))]
+    if view=="SEMANAL":
+        return [("QIAs",integer(row["qias"])),("PROJEÇÃO QIAs",integer(row["qias_projection"])),("TROCAS",integer(row["changes"])),("PROJEÇÃO TROCAS",integer(row["changes_projection"])),("PRÊMIO CONQUISTADO",money(row.get("earned_award",0))),("PRÊMIO PROJETADO",money(row.get("award",0))),("PRÓXIMO PRÊMIO",money(row.get("next_award",0)))]
+    return [("QIAs",integer(row["qias"])),("PROJEÇÃO QIAs",integer(row["qias_projection"])),("TROCAS",integer(row["changes"])),("PROJEÇÃO TROCAS",integer(row["changes_projection"])),("CRÉDITO",integer(row["credit"])),("NEOENERGIA",integer(row["neo"])),("TICKET MÉDIO",money(row["ticket"])),("MENSAL PROJETADA",money(row["projected_award"]))]
 
 def ranking_html(rows,view):
     out=[]
@@ -45,28 +59,47 @@ def ranking_html(rows,view):
         _,color,ink=PALETTE[row["color"]]
         if view=="VISÃO GERAL":
             qgoal=row.get("qias_goal",0); cgoal=row.get("changes_goal",0)
-            credit_proj=integer(_project_value(row,"credit","changes")); neo_proj=integer(_project_value(row,"neo","changes"))
-            qproj=integer(row["qias_projection"])
-            head=(f'<div class="conc-hero"><div class="conc-rank-badge">{pos}º</div><div class="conc-name">{html.escape(row["name"])}</div>'
-                  f'<div class="conc-goal-label">Meta individual: <b>{integer(qgoal)} QIAs</b></div><div class="conc-goalbar">{_progress(row["qias"],qgoal)}</div>'
-                  f'<div class="conc-goal-value">{integer(row["qias"])} / {integer(qgoal)} ({_pct(row["qias"],qgoal):.0f}%)</div></div>')
+            head=_hero(pos,row,"Meta individual",qgoal)
             cards=[
-                _metric_card("QIAs",integer(row["qias"]),qproj,(row["qias"],qgoal),cls="qias"),
-                _metric_card("Trocas Crédito",integer(row["credit"]),credit_proj,(row["credit"],cgoal),cls="credit"),
-                _metric_card("Trocas Neoenergia",integer(row["neo"]),neo_proj,(row["neo"],cgoal),cls="neo"),
+                _metric_card("QIAs",integer(row["qias"]),integer(row["qias_projection"]),(row["qias"],qgoal),cls="qias"),
+                _metric_card("Trocas Crédito",integer(row["credit"]),integer(_project_value(row,"credit","changes")),(row["credit"],cgoal),cls="credit"),
+                _metric_card("Trocas Neoenergia",integer(row["neo"]),integer(_project_value(row,"neo","changes")),(row["neo"],cgoal),cls="neo"),
                 _metric_card("Ticket Médio Geral",money(row["ticket"]),cls="ticket"),
+                _regimes_card(row,True),
+                _metric_card("Prêmio Semanal",money(row.get("weekly_award",0)),money(row.get("weekly_projection",row.get("weekly_award",0))),accent="award",cls="weekly"),
+                _metric_card("Premiação Mensal",money(row.get("projected_award",0)),accent="monthly",cls="monthly",note="projetado"),
             ]
-            regimes=[]
-            for label,accent in (("NR","nr"),("1 a 3","r13"),("4 a 6","r46")):
-                key="1 A 3" if label=="1 a 3" else "4 A 6" if label=="4 a 6" else label
-                regimes.append(f'<div class="conc-reg-mini {accent}"><small>{label}</small><strong>{integer(row[key])}</strong><span>Proj.: {integer(_project_value(row,key,"qias"))}</span><em>TM: <b>{money(row.get("regime_tickets",{}).get(key,0))}</b></em></div>')
-            cards.append('<div class="conc-kpi regimes"><small>QIAs por régua</small><div class="conc-reg-grid">'+''.join(regimes)+'</div></div>')
-            weekly=row.get("weekly_award",0); weekly_proj=row.get("weekly_projection",weekly)
-            cards.append(_metric_card("Prêmio Semanal",money(weekly),money(weekly_proj),(weekly,weekly_proj or 1),accent="award",cls="weekly"))
-            cards.append(_metric_card("Premiação Mensal",money(row.get("projected_award",0)),"(projetado)",accent="monthly",cls="monthly"))
             body=head+'<div class="conc-kpi-grid">'+''.join(cards)+'</div>'
+        elif view=="DIÁRIO":
+            head=_hero(pos,row,"Referência diária",30)
+            qnote=f'{integer(row.get("week_qias",0))} na semana · {integer(row.get("month_qias",0))} no mês'
+            cards=[
+                _metric_card("QIAs hoje",integer(row["qias"]),progress=(row["qias"],30),cls="qias",note=qnote),
+                _metric_card("Trocas hoje",integer(row["changes"]),cls="changes"),
+                _metric_card("Trocas Crédito",integer(row["credit"]),cls="credit"),
+                _metric_card("Trocas Neoenergia",integer(row["neo"]),cls="neo"),
+                _metric_card("Ticket Médio",money(row["ticket"]),cls="ticket"),
+                _regimes_card(row,False),
+            ]
+            body=head+'<div class="conc-kpi-grid conc-daily-grid">'+''.join(cards)+'</div>'
         else:
-            body=f'<div class="conc-simple-head"><b>{pos}º · {html.escape(row["name"])}</b></div><div class="conc-indicators">'+''.join(f'<span><strong>{html.escape(v)}</strong><small>{html.escape(l)}</small></span>' for l,v in row_metrics(row,view))+'</div>'
+            qgoal=row.get("weekly_qias_goal",0)
+            head=_hero(pos,row,"Meta inicial da semana",qgoal)
+            remain_q=int(row.get("qias_remaining",0) or 0); remain_c=int(row.get("changes_remaining",0) or 0)
+            if row.get("next_award",0):
+                remain=f'Faltam {remain_q} QIAs e {remain_c} trocas'
+                next_value=money(row.get("next_award",0))
+            else:
+                remain="Faixa máxima atingida"
+                next_value="Máximo"
+            cards=[
+                _metric_card("QIAs",integer(row["qias"]),integer(row["qias_projection"]),(row["qias"],qgoal),cls="qias"),
+                _metric_card("Trocas",integer(row["changes"]),integer(row["changes_projection"]),(row["changes"],row.get("weekly_changes_goal",0)),cls="changes"),
+                _metric_card("Prêmio conquistado",money(row.get("earned_award",0)),accent="award",cls="weekly"),
+                _metric_card("Prêmio projetado",money(row.get("award",0)),accent="monthly",cls="monthly"),
+                _metric_card("Próximo prêmio",next_value,accent="next-award",cls="next",note=remain),
+            ]
+            body=head+'<div class="conc-kpi-grid conc-weekly-grid">'+''.join(cards)+'</div>'
         warning=' · Caixa e ticket parciais' if row.get("cash_invalid") else ''
         out.append(f'<article class="conc-rank-row" style="--tone:{color};--ink:{ink}">{body}<div class="conc-warning">{warning}</div></article>')
     return '<div class="conc-ranking" translate="no">'+''.join(out)+'</div>'
@@ -87,10 +120,10 @@ def regimes_html(totals):
 
 STYLE="""<style>
 .conc-summary.exec-compact-grid{display:grid;grid-template-columns:2.4fr 1fr!important;gap:9px!important;margin:6px 0 10px!important}.conc-summary .exec-compact-card{min-height:0!important;padding:10px 12px!important;border-radius:12px!important}.conc-summary .conc-performance-values{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px 12px!important}.conc-summary .conc-performance-values>div:last-child{grid-column:1/-1}.conc-summary small{font-size:.52rem!important}.conc-summary strong{display:block;font-size:1.3rem!important;margin-top:4px}.conc-summary-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.conc-rank-row{border-radius:16px;background:var(--tone);color:var(--ink);padding:10px 12px 12px;margin:10px 0;box-shadow:0 5px 14px #0f172a20;overflow:hidden}.conc-hero{display:grid;grid-template-columns:auto minmax(260px,1fr) auto minmax(250px,520px) auto;align-items:center;gap:12px;margin-bottom:9px}.conc-rank-badge{width:42px;height:42px;border-radius:50%;background:#0004;display:grid;place-items:center;font-size:1.25rem;font-weight:950}.conc-name{font-size:1.55rem;font-weight:950;letter-spacing:.01em}.conc-goal-label{font-size:.68rem;white-space:nowrap}.conc-goalbar{min-width:0}.conc-goalbar .conc-progress{margin:0}.conc-goalbar .conc-progress-pct{display:none}.conc-goal-value{font-size:.83rem;font-weight:900;white-space:nowrap}
-.conc-kpi-grid{display:grid;grid-template-columns:1.05fr 1.05fr 1.05fr 1fr 1.75fr 1.15fr 1.15fr;gap:6px}.conc-kpi{background:#fffffff0;color:#0f2b63;border:1px solid #ffffffcc;border-radius:10px;padding:8px 10px;min-width:0;min-height:105px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}.conc-kpi small{font-size:.62rem!important;font-weight:900;color:#102c64!important;line-height:1.15}.conc-kpi>strong{font-size:1.72rem!important;line-height:1.02;margin:8px 0 3px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.conc-kpi>span{font-size:.67rem}.conc-kpi>span b{font-size:.74rem}.conc-progress{height:9px;background:#cfe4f8;border-radius:999px;overflow:hidden;margin-top:auto}.conc-progress i{display:block;height:100%;border-radius:999px;background:#0ea5e9}.conc-progress-pct{font-size:.62rem!important;margin-top:2px;text-align:right}.conc-kpi.ticket>strong{font-size:1.7rem!important;color:#174bd6}.conc-kpi.award>strong{color:#067647}.conc-kpi.monthly>strong{color:#4c1d95}.conc-kpi.monthly{text-align:center}.conc-kpi.monthly>span{margin-top:4px}.conc-kpi.regimes{padding:7px}.conc-reg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.conc-reg-mini{border-radius:7px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;gap:2px}.conc-reg-mini.nr{background:#fee2e2;color:#991b1b}.conc-reg-mini.r13{background:#dbeafe;color:#1d4ed8}.conc-reg-mini.r46{background:#dcfce7;color:#166534}.conc-reg-mini small{color:inherit!important;font-size:.55rem!important}.conc-reg-mini strong{font-size:1rem!important}.conc-reg-mini span,.conc-reg-mini em{font-size:.52rem!important;font-style:normal}.conc-warning{font-size:.52rem;margin-top:2px}.conc-simple-head{font-size:.85rem;font-weight:900;margin-bottom:6px}.conc-indicators{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.conc-indicators span{text-align:center;border-left:1px solid currentColor;padding:4px}.conc-indicators strong{display:block;font-size:.86rem}.conc-indicators small{font-size:.52rem}.conc-regimes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0}.conc-regimes>div{background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:6px 9px}.conc-regimes small,.conc-regimes span,.conc-regimes em{font-size:.62rem}.st-key-conc_refresh button{background:transparent!important;color:#64748b!important;border:0!important;min-height:26px!important;padding:0 5px!important}
-@media(max-width:1100px){.conc-hero{grid-template-columns:auto 1fr auto}.conc-goal-label{grid-column:1/2}.conc-goalbar{grid-column:2/3}.conc-goal-value{grid-column:3/4}.conc-kpi-grid{grid-template-columns:repeat(4,1fr)}.conc-kpi.regimes{grid-column:span 2}}
-@media(max-width:700px){.conc-summary.exec-compact-grid{grid-template-columns:1fr!important}.conc-hero{grid-template-columns:auto 1fr auto;gap:7px}.conc-rank-badge{width:36px;height:36px;font-size:1rem}.conc-name{font-size:1.05rem}.conc-goal-label{font-size:.55rem}.conc-goal-value{font-size:.62rem}.conc-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.conc-kpi{min-height:90px;padding:7px}.conc-kpi>strong{font-size:1.35rem!important}.conc-kpi.regimes{grid-column:1/-1}.conc-kpi.weekly,.conc-kpi.monthly{grid-column:span 1}.conc-indicators{grid-template-columns:repeat(2,1fr)}}
+.conc-rank-row{border-radius:16px;background:var(--tone);color:var(--ink);padding:10px 12px 12px;margin:10px 0;box-shadow:0 5px 14px #0f172a20;overflow:hidden}.conc-hero{display:grid;grid-template-columns:auto minmax(220px,1fr) auto minmax(220px,520px) auto;align-items:center;gap:12px;margin-bottom:9px}.conc-rank-badge{width:42px;height:42px;border-radius:50%;background:#0004;display:grid;place-items:center;font-size:1.25rem;font-weight:950}.conc-name{font-size:1.55rem;font-weight:950;letter-spacing:.01em}.conc-goal-label{font-size:.68rem;white-space:nowrap}.conc-goalbar{min-width:0}.conc-goalbar .conc-progress{margin:0}.conc-goalbar .conc-progress-pct{display:none}.conc-goal-value{font-size:.83rem;font-weight:900;white-space:nowrap}
+.conc-kpi-grid{display:grid;grid-template-columns:1.05fr 1.05fr 1.05fr 1fr 1.75fr 1.15fr 1.15fr;gap:6px}.conc-daily-grid{grid-template-columns:1.15fr 1fr 1fr 1fr 1.1fr 1.9fr}.conc-weekly-grid{grid-template-columns:1.1fr 1.1fr 1.05fr 1.05fr 1.7fr}.conc-kpi{background:#fffffff0;color:#0f2b63;border:1px solid #ffffffcc;border-radius:10px;padding:8px 10px;min-width:0;min-height:105px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}.conc-kpi small{font-size:.62rem!important;font-weight:900;color:#102c64!important;line-height:1.15}.conc-kpi>strong{font-size:1.72rem!important;line-height:1.02;margin:8px 0 3px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.conc-kpi>span{font-size:.67rem}.conc-kpi>span b{font-size:.74rem}.conc-kpi>em{font-size:.58rem;font-style:normal;margin-top:5px;color:#52657e;line-height:1.25}.conc-progress{height:9px;background:#cfe4f8;border-radius:999px;overflow:hidden;margin-top:auto}.conc-progress i{display:block;height:100%;border-radius:999px;background:#0ea5e9}.conc-progress-pct{font-size:.62rem!important;margin-top:2px;text-align:right}.conc-kpi.ticket>strong{font-size:1.7rem!important;color:#174bd6}.conc-kpi.award>strong{color:#067647}.conc-kpi.monthly>strong{color:#4c1d95}.conc-kpi.next-award{background:#fff7ed;color:#9a3412}.conc-kpi.next-award small{color:#9a3412!important}.conc-kpi.next-award>strong{color:#9a3412}.conc-kpi.regimes{padding:7px}.conc-reg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.conc-reg-mini{border-radius:7px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;gap:2px}.conc-reg-mini.nr{background:#fee2e2;color:#991b1b}.conc-reg-mini.r13{background:#dbeafe;color:#1d4ed8}.conc-reg-mini.r46{background:#dcfce7;color:#166534}.conc-reg-mini small{color:inherit!important;font-size:.55rem!important}.conc-reg-mini strong{font-size:1rem!important}.conc-reg-mini span,.conc-reg-mini em{font-size:.52rem!important;font-style:normal}.conc-warning{font-size:.52rem;margin-top:2px}.conc-regimes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0}.conc-regimes>div{background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:6px 9px}.conc-regimes small,.conc-regimes span,.conc-regimes em{font-size:.62rem}.st-key-conc_refresh button{background:transparent!important;color:#64748b!important;border:0!important;min-height:26px!important;padding:0 5px!important}
+@media(max-width:1100px){.conc-hero{grid-template-columns:auto 1fr auto}.conc-goal-label{grid-column:1/2}.conc-goalbar{grid-column:2/3}.conc-goal-value{grid-column:3/4}.conc-kpi-grid,.conc-daily-grid,.conc-weekly-grid{grid-template-columns:repeat(3,1fr)}.conc-kpi.regimes,.conc-kpi.next{grid-column:span 2}}
+@media(max-width:700px){.conc-summary.exec-compact-grid{grid-template-columns:1fr!important}.conc-hero{grid-template-columns:auto 1fr auto;gap:7px}.conc-rank-badge{width:36px;height:36px;font-size:1rem}.conc-name{font-size:1.05rem}.conc-goal-label{font-size:.55rem}.conc-goal-value{font-size:.62rem}.conc-kpi-grid,.conc-daily-grid,.conc-weekly-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.conc-kpi{min-height:90px;padding:7px}.conc-kpi>strong{font-size:1.35rem!important}.conc-kpi.regimes,.conc-kpi.next{grid-column:1/-1}}
 </style>"""
 
 def _fit_image_text(draw,text,font,width):
@@ -107,31 +140,26 @@ def _daily_font(size,bold=False):
         except OSError:pass
     return ImageFont.load_default()
 
-def _draw_daily_ordinal(draw,x,y,position,ink):draw.text((x,y),f"{position}º",font=_daily_font(24,True),fill=ink,anchor="mm")
-def _draw_daily_status_icon(draw,x,y,label):
-    colors={"Azul":"#2563EB","Verde":"#16A34A","Amarelo":"#EAB308","Laranja":"#EA580C","Vermelho":"#DC2626"};draw.ellipse((x-12,y-12,x+12,y+12),fill=colors.get(label,"#64748B"))
-
 def ranking_png(rows,view,period,totals,goals,synced_at):
     from PIL import Image,ImageDraw
-    team_height=180; row_height=430 if view=="VISÃO GERAL" else 360
-    image=Image.new("RGB",(1080,225+team_height+max(1,len(rows))*(row_height+14)),"white");draw=ImageDraw.Draw(image)
+    row_height=300 if view=="SEMANAL" else 365 if view=="DIÁRIO" else 430
+    image=Image.new("RGB",(1080,300+max(1,len(rows))*(row_height+14)),"white");draw=ImageDraw.Draw(image)
     draw.text((24,22),"PAINEL DE RESULTADOS · CONCILIAÇÃO",font=_daily_font(34,True),fill="#0F172A");draw.text((24,68),period,font=_daily_font(24),fill="#475569")
-    team=[("QIAs",integer(totals["qias"])),("TROCAS",integer(totals["changes"]))]
-    for key,label in (("qias","QIAs"),("changes","TROCAS")):
-        goal=goals.get(key,0);team.append((f"% META {label}",percentage(Decimal(totals[key])*100/goal) if goal else "—"))
+    team=[("QIAs",integer(totals["qias"])),("TROCAS",integer(totals["changes"])),("CRÉDITO",integer(totals["credit"])),("NEO",integer(totals["neo"]))]
     for j,(label,value) in enumerate(team):
-        x,y=38+(j%4)*254,112+(j//4)*65;draw.text((x,y),_fit_image_text(draw,value,_daily_font(27,True),240),font=_daily_font(27,True),fill="#0F172A");draw.text((x,y+33),label,font=_daily_font(16),fill="#64748B")
+        x=38+j*254;draw.text((x,118),value,font=_daily_font(27,True),fill="#0F172A");draw.text((x,151),label,font=_daily_font(16),fill="#64748B")
     for i,row in enumerate(rows):
-        y=167+team_height+i*(row_height+14);_,color,ink=PALETTE[row.get("color",daily_color(row["qias"]))];draw.rounded_rectangle((16,y,1064,y+row_height),radius=24,fill=color)
-        _draw_daily_ordinal(draw,48,y+34,i+1,ink);draw.text((82,y+15),_fit_image_text(draw,row["name"],_daily_font(31,True),620),font=_daily_font(31,True),fill=ink)
-        if view=="VISÃO GERAL":
-            qgoal=row.get("qias_goal",0);draw.text((720,y+20),f'Meta: {integer(qgoal)} QIAs · {integer(row["qias"])} / {integer(qgoal)} ({_pct(row["qias"],qgoal):.0f}%)',font=_daily_font(17,True),fill=ink)
-            items=[("QIAs",integer(row["qias"]),integer(row["qias_projection"])),("TROCAS CRÉDITO",integer(row["credit"]),integer(_project_value(row,"credit","changes"))),("TROCAS NEO",integer(row["neo"]),integer(_project_value(row,"neo","changes"))),("TICKET MÉDIO",money(row["ticket"]),None),("NR",integer(row["NR"]),integer(_project_value(row,"NR","qias"))),("1 A 3",integer(row["1 A 3"]),integer(_project_value(row,"1 A 3","qias"))),("4 A 6",integer(row["4 A 6"]),integer(_project_value(row,"4 A 6","qias"))),("PRÊMIO SEMANAL",money(row.get("weekly_award",0)),money(row.get("weekly_projection",row.get("weekly_award",0)))),("PREMIAÇÃO MENSAL",money(row.get("projected_award",0)),None)]
-            for j,(label,val,proj) in enumerate(items):
-                col,line=j%3,j//3;x,top=38+col*336,y+70+line*112;draw.rounded_rectangle((x,top,x+322,top+98),radius=12,fill="#FFFFFFE8" if False else None,outline=ink,width=1);draw.text((x+10,top+8),label,font=_daily_font(14,True),fill=ink);draw.text((x+10,top+30),_fit_image_text(draw,val,_daily_font(26,True),300),font=_daily_font(26,True),fill=ink)
-                if proj is not None:draw.text((x+10,top+65),"Projeção: "+str(proj),font=_daily_font(14),fill=ink)
-        else:
-            for j,(label,value) in enumerate(row_metrics(row,view)):
-                x,top=38+(j%4)*254,y+64+(j//4)*82;draw.text((x,top),_fit_image_text(draw,value,_daily_font(27,True),232),font=_daily_font(27,True),fill=ink);draw.text((x,top+40),label,font=_daily_font(15),fill=ink)
-    if not rows:draw.text((40,205+team_height),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
-    footer=f"Atualizado em {synced_at:%d/%m/%Y %H:%M}";draw.text((26,image.height-34),footer,font=_daily_font(20),fill="#475569");output=io.BytesIO();image.save(output,"PNG");return output.getvalue()
+        y=205+i*(row_height+14);_,color,ink=PALETTE[row.get("color",daily_color(row["qias"]))];draw.rounded_rectangle((16,y,1064,y+row_height),radius=24,fill=color)
+        draw.text((38,y+18),f'{i+1}º',font=_daily_font(26,True),fill=ink);draw.text((90,y+16),_fit_image_text(draw,row["name"],_daily_font(29,True),560),font=_daily_font(29,True),fill=ink)
+        metrics=row_metrics(row,view)
+        cols=5 if view=="SEMANAL" else 4
+        card_w=190 if cols==5 else 238
+        for j,(label,value) in enumerate(metrics):
+            col,line=j%cols,j//cols;x=38+col*(card_w+12);top=y+68+line*92
+            draw.rounded_rectangle((x,top,x+card_w,top+80),radius=10,outline=ink,width=1);draw.text((x+9,top+8),label,font=_daily_font(12,True),fill=ink);draw.text((x+9,top+31),_fit_image_text(draw,value,_daily_font(22,True),card_w-18),font=_daily_font(22,True),fill=ink)
+        if view=="SEMANAL":
+            remain=f'Faltam {int(row.get("qias_remaining",0) or 0)} QIAs e {int(row.get("changes_remaining",0) or 0)} trocas' if row.get("next_award",0) else 'Faixa máxima atingida'
+            draw.text((38,y+row_height-34),remain,font=_daily_font(15,True),fill=ink)
+    if not rows:draw.text((40,230),"Nenhum conciliador habilitado.",font=_daily_font(28),fill="#475569")
+    draw.text((26,image.height-34),f"Atualizado em {synced_at:%d/%m/%Y %H:%M}",font=_daily_font(18),fill="#475569")
+    output=io.BytesIO();image.save(output,"PNG");return output.getvalue()
