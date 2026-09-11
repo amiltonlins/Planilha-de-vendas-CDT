@@ -73,13 +73,34 @@ def _install_refresh_button():
         if not matches:
             return original_columns(spec, *args, **kwargs)
 
-        # Ordem visual: navegação | Atualizado... | botão | competência | espaço.
         cols = original_columns([2.15, 2.05, 1.25, 1.15, 3.40], *args, **kwargs)
         with cols[2]:
             st.markdown("""<style>
-.st-key-commercial_refresh{margin:0!important;padding:0!important}
-.st-key-commercial_refresh button{background:transparent!important;color:#64748B!important;border:0!important;border-radius:6px!important;min-height:27px!important;height:27px!important;padding:0 7px!important;box-shadow:none!important;font-size:.57rem!important;font-weight:800!important;white-space:nowrap!important}
-.st-key-commercial_refresh button:hover{background:#F8FAFC!important;color:#075B35!important;border:0!important}
+/* Escopo estrutural: funciona mesmo quando a versão do Streamlit não expõe .st-key-* */
+.st-key-dashboard_view_controls div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] button,
+.st-key-dashboard_view_controls div[data-testid="column"]:nth-child(3) button[data-testid^="stBaseButton"],
+div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) .st-key-commercial_refresh button{
+  background:transparent!important;
+  border:none!important;
+  outline:none!important;
+  box-shadow:none!important;
+  color:#64748B!important;
+  min-height:27px!important;
+  height:27px!important;
+  padding:0 7px!important;
+  font-size:.57rem!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+}
+.st-key-dashboard_view_controls div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] button:hover,
+.st-key-dashboard_view_controls div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] button:focus,
+.st-key-dashboard_view_controls div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] button:active{
+  background:transparent!important;
+  border:none!important;
+  outline:none!important;
+  box-shadow:none!important;
+  color:#075B35!important;
+}
 @media(max-width:700px){
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"],.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important}
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1),.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1){grid-column:1/-1!important;grid-row:1!important}
@@ -87,13 +108,12 @@ def _install_refresh_button():
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3),.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3){grid-column:2!important;grid-row:2!important;display:block!important;width:auto!important;max-width:none!important}
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4),.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4){grid-column:3!important;grid-row:2!important;display:block!important}
  .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(5),.st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(5){display:none!important}
- .st-key-commercial_refresh button{height:25px!important;min-height:25px!important;font-size:.52rem!important;padding:0 6px!important}
+ .st-key-dashboard_view_controls div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] button{height:25px!important;min-height:25px!important;font-size:.52rem!important;padding:0 6px!important}
 }
 </style>""", unsafe_allow_html=True)
             if st.button("↻ Atualizar dados", key="commercial_refresh", help="Consultar novamente os resultados da planilha"):
                 st.session_state["commercial_force_refresh"] = True
                 st.rerun()
-        # app_core continua recebendo exatamente quatro colunas na ordem esperada.
         return cols[0], cols[1], cols[3], cols[4]
 
     st.columns = commercial_columns
