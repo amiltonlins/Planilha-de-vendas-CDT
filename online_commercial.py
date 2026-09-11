@@ -93,9 +93,24 @@ def install(core):
             merged, imported_days = core.merge_daily_history(rows, incoming)
             after = _signature(merged, imported_days)
 
+            previous_competence = (
+                int(cfg.get("ano", 0) or 0),
+                int(cfg.get("mes", 0) or 0),
+                int(cfg.get("dia_referencia", 0) or 0),
+            )
+
             if imported_days:
                 latest = max(imported_days)
                 cfg = core.prepare_config(core.merge_registry(base, cfg), merged, latest.month, latest.year)
+                # O Diário usa dia_referencia como corte oficial. Com a fonte online,
+                # esse corte precisa acompanhar automaticamente o último dia recebido.
+                cfg["dia_referencia"] = latest.day
+
+            current_competence = (
+                int(cfg.get("ano", 0) or 0),
+                int(cfg.get("mes", 0) or 0),
+                int(cfg.get("dia_referencia", 0) or 0),
+            )
 
             now = core.datetime.now(core.RECIFE_TZ)
             metadata.update(
@@ -108,7 +123,7 @@ def install(core):
                 }
             )
 
-            if before != after:
+            if before != after or previous_competence != current_competence:
                 history = metadata.get("historico_importacoes", [])
                 core.save_published(merged, cfg, SOURCE_NAME, history, updated_at=now)
                 metadata["atualizado_em"] = now.isoformat(timespec="seconds")
