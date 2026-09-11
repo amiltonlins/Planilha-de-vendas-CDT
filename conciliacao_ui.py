@@ -79,7 +79,7 @@ def analytical_xlsx(records, summary, tiers):
         for row in sheet:
             for cell in row:
                 if isinstance(cell.value, str):
-                    cell.data_type = "s"
+                    cell.data_type = "s"  # Untrusted names must never become formulas.
                 if isinstance(cell.value, date):
                     cell.number_format = "dd/mm/yyyy"
         for cell in sheet[1]:
@@ -99,7 +99,6 @@ def period_ranking(records, names, start, end, today):
 def weekly_ranking(records, names, start, end, today, tiers):
     rows = period_ranking(records, names, start, end, today)
     elapsed, total = useful_days(start, min(today, end)), useful_days(start, end)
-    first = tiers[0] if tiers else {"qias": 0, "changes": 0, "award": Decimal(0)}
     for row in rows:
         row["tier"], row["earned_award"] = award_for(row["qias"], row["changes"], tiers)
         for metric in ("qias", "changes", "cash"):
@@ -107,12 +106,6 @@ def weekly_ranking(records, names, start, end, today, tiers):
         row["projected_tier"], projected = award_for(row["qias_projection"], row["changes_projection"], tiers)
         row["award"] = row["earned_award"] if end < today else projected
         row["closed_award"] = row["earned_award"] if end < today else Decimal(0)
-        row["weekly_qias_goal"] = first["qias"]
-        row["weekly_changes_goal"] = first["changes"]
-        next_tier = tiers[row["tier"]] if row["tier"] < len(tiers) else None
-        row["next_award"] = next_tier["award"] if next_tier else Decimal(0)
-        row["qias_remaining"] = max(0, next_tier["qias"] - row["qias"]) if next_tier else 0
-        row["changes_remaining"] = max(0, next_tier["changes"] - row["changes"]) if next_tier else 0
     return rows
 
 
@@ -288,10 +281,16 @@ def render_conciliacao(st, registry, save_registry, manager_password, goals=None
         st.markdown(regimes_html(totals),unsafe_allow_html=True)
         if view=="DIÁRIO":
             st.caption("🔴 0–14 · 🟠 15–19 · 🟡 20–24 · 🟢 25–29 · 🔵 30 ou mais QIAs")
-        st.markdown(ranking_html(ranked,view),unsafe_allow_html=True)
-        png=ranking_png(ranked,view,period,totals,goals,payload["synced_at"])
+            png=ranking_png(ranked,"RANKING DIÁRIO · CONCILIAÇÃO",period,payload["synced_at"],view,totals,goals)
+            st.image(png,use_container_width=True)
+        else:
+            st.markdown(ranking_html(ranked,view),unsafe_allow_html=True)
+            png=None
         if view=="SEMANAL" and index:
             previous=aggregate([r for r in month_rows if periods[index-1][0]<=r["date"]<=periods[index-1][1]])
             st.caption(f"Variação para S{index}: {totals['qias']-previous['qias']:+d} QIAs · {totals['changes']-previous['changes']:+d} trocas")
-        st.download_button("BAIXAR RANKING PNG",png,file_name=f"ranking-conciliacao-{view.lower()}-{start.isoformat()}.png",mime="image/png",key="conc_download")
+        if view in ("VISÃO GERAL","DIÁRIO","SEMANAL"):
+            if png is None:
+                png=ranking_png(ranked,"RANKING GERAL · CONCILIAÇÃO" if view=="VISÃO GERAL" else "RANKING SEMANAL · CONCILIAÇÃO",period,payload["synced_at"],view,totals,goals)
+            st.download_button("BAIXAR RANKING PNG",png,file_name=f"ranking-conciliacao-{view.lower()}-{start.isoformat()}.png",mime="image/png",key="conc_download")
     body()
