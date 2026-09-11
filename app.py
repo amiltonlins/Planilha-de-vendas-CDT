@@ -11,6 +11,7 @@ import app_core as _core
 import conciliacao as _conciliacao_data
 import conciliacao_visual as _conciliacao_visual
 import conciliacao_ui as _conciliacao_ui
+import online_commercial as _online_commercial
 
 _original_team_card_html = _core.team_performance_card_html
 _original_render_management = _core.render_management
@@ -210,6 +211,7 @@ _core.prepare_config = _prepare_config_preserving_sellers
 # Relatório Geral e tabela detalhada de Premiações usam a renderização nativa do núcleo.
 _core.render_management = _render_management_full_tables
 _core.team_performance_card_html = _clickable_team_card
+_online_commercial.install(_core)
 
 if __name__ == "__main__":
     _core.render_app()
