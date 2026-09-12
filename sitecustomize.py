@@ -1,9 +1,7 @@
 """Project startup hooks.
 
-Keep the on-screen Conciliação layout untouched and replace only its PNG export
-with the approved mobile reference renderer before conciliacao_ui imports it.
-Also inject the Commercial manual refresh control into the existing dashboard
-control row without changing app_core's business logic.
+Mantém os ajustes de inicialização do painel e padroniza o seletor semanal
+entre Comercial e Conciliação.
 """
 try:
     import conciliacao_visual as _conciliacao_visual
@@ -11,17 +9,11 @@ try:
 
     _conciliacao_visual.ranking_png = _reference_ranking_png
 except Exception:
-    # Never block application startup because of an optional presentation hook.
     pass
 
 
 def _install_cross_month_commercial_weeks():
-    """No SEMANAL Comercial, conta a semana completa mesmo quando cruza dois meses.
-
-    Os cálculos mensais permanecem exatamente como estão. Somente as listas
-    ``semanas`` e ``premios`` usadas pela aba SEMANAL passam a considerar o bloco
-    real de segunda a domingo, inclusive dias da competência anterior/seguinte.
-    """
+    """No SEMANAL Comercial, conta a semana completa mesmo quando cruza dois meses."""
     try:
         from datetime import timedelta
         import app_core as core
@@ -69,10 +61,7 @@ def _install_cross_month_commercial_weeks():
                     weekly_award(qty) if item.get("elegivel_individual", False) else 0
                     for qty in weekly_sales
                 ]
-                # Não recalcular premio_total/total_variavel: a alteração é exclusiva
-                # da aba SEMANAL e não muda fechamento, comissão ou visão mensal.
         except Exception:
-            # Em qualquer cenário inesperado, preserva o resumo mensal original.
             pass
 
         return result, calendar_days, elapsed_days, official
@@ -106,10 +95,11 @@ _install_shared_week_ranges()
 
 
 def _install_week_selector_standard():
-    """Padroniza nome, período e visual do seletor semanal nos dois painéis."""
+    """Instala UM único seletor semanal, idêntico no Comercial e na Conciliação."""
     try:
         import inspect
         import re
+        from datetime import timedelta
         import streamlit as st
         from streamlit.delta_generator import DeltaGenerator
         import app_core as core
@@ -123,90 +113,110 @@ def _install_week_selector_standard():
     original_dg_button = DeltaGenerator.button
 
     WEEK_STYLE = """<style>
-.st-key-dashboard_view_controls .st-key-week_nav_buttons,
-.st-key-week_nav_buttons{
-  width:100%!important;max-width:100%!important;min-width:0!important;
-  margin:6px 0 2px!important;padding:0!important;overflow:visible!important;
+/* SELETOR SEMANAL ÚNICO — COMERCIAL + CONCILIAÇÃO */
+.st-key-week_nav_buttons,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons{
+  width:auto!important;max-width:100%!important;min-width:0!important;
+  margin:2px 0 0!important;padding:0!important;overflow:visible!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"],
-.st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
+.st-key-week_nav_buttons [data-testid="stHorizontalBlock"],
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
   display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
-  width:100%!important;min-width:0!important;max-width:100%!important;
-  gap:7px!important;align-items:flex-start!important;overflow:visible!important;
+  justify-content:flex-start!important;align-items:flex-start!important;
+  width:auto!important;max-width:100%!important;min-width:0!important;
+  gap:2px!important;overflow:visible!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"],
-.st-key-week_nav_buttons [data-testid="column"]{
-  flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;
+.st-key-week_nav_buttons [data-testid="column"],
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
+  flex:0 0 76px!important;width:76px!important;min-width:76px!important;max-width:76px!important;
   margin:0!important;padding:0!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
 .st-key-week_nav_buttons .stButton,
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div,
-.st-key-week_nav_buttons .stButton>div{
-  width:100%!important;min-width:0!important;max-width:100%!important;margin:0!important;padding:0!important;
+.st-key-week_nav_buttons .stButton>div,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div{
+  width:76px!important;min-width:76px!important;max-width:76px!important;
+  margin:0!important;padding:0!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button,
-.st-key-week_nav_buttons .stButton button{
-  width:100%!important;min-width:0!important;max-width:100%!important;
-  height:38px!important;min-height:38px!important;max-height:38px!important;
-  margin:0!important;padding:0 8px!important;border-radius:8px!important;
-  background:#FFFFFF!important;color:#475569!important;border:1px solid #D8E3EE!important;
-  box-shadow:none!important;font-size:.72rem!important;font-weight:900!important;
-  letter-spacing:.01em!important;line-height:1!important;white-space:nowrap!important;
+.st-key-week_nav_buttons .stButton button,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+  width:76px!important;min-width:76px!important;max-width:76px!important;
+  height:27px!important;min-height:27px!important;max-height:27px!important;
+  margin:0!important;padding:0 5px!important;border-radius:5px!important;
+  background:transparent!important;color:#64748B!important;border:1px solid #D7E0E8!important;
+  box-shadow:none!important;font-size:.60rem!important;font-weight:850!important;
+  letter-spacing:0!important;line-height:1!important;white-space:nowrap!important;
   overflow:hidden!important;text-overflow:clip!important;justify-content:center!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button:hover,
-.st-key-week_nav_buttons .stButton button:hover{
-  background:#F8FAFC!important;color:#0F172A!important;border-color:#B8C7D6!important;
+.st-key-week_nav_buttons .stButton button:hover,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button:hover{
+  background:#F8FAFC!important;color:#0F172A!important;border-color:#B8C5D1!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button[kind="primary"],
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stBaseButton-primary"],
 .st-key-week_nav_buttons .stButton button[kind="primary"],
-.st-key-week_nav_buttons [data-testid="stBaseButton-primary"]{
+.st-key-week_nav_buttons [data-testid="stBaseButton-primary"],
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button[kind="primary"],
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stBaseButton-primary"]{
   background:#075B35!important;color:#FFFFFF!important;border-color:#075B35!important;
   box-shadow:none!important;font-weight:950!important;
 }
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button p,
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button span,
 .st-key-week_nav_buttons .stButton button p,
-.st-key-week_nav_buttons .stButton button span{
+.st-key-week_nav_buttons .stButton button span,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button p,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button span{
   margin:0!important;padding:0!important;font:inherit!important;line-height:1!important;
   white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
 }
 .week-period-caption{
-  margin:4px 0 0!important;padding:0!important;text-align:center!important;
-  color:#94A3B8!important;font-size:.54rem!important;font-weight:650!important;
-  line-height:1.05!important;white-space:nowrap!important;
+  display:none!important;margin:2px 0 0!important;padding:0!important;text-align:center!important;
+  color:#94A3B8!important;font-size:.47rem!important;font-weight:650!important;
+  line-height:1!important;white-space:nowrap!important;height:9px!important;
+}
+/* A data aparece SOMENTE sob o botão atualmente selecionado. */
+.st-key-week_nav_buttons [data-testid="column"]:has([data-testid="stBaseButton-primary"]) .week-period-caption,
+.st-key-week_nav_buttons [data-testid="column"]:has(button[kind="primary"]) .week-period-caption,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]:has([data-testid="stBaseButton-primary"]) .week-period-caption,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]:has(button[kind="primary"]) .week-period-caption{
+  display:block!important;
 }
 @media(max-width:700px){
-  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"],
-  .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{gap:3px!important;}
-  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"],
-  .st-key-week_nav_buttons [data-testid="column"]{
-    flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;
+  .st-key-week_nav_buttons [data-testid="stHorizontalBlock"],
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{gap:2px!important;}
+  .st-key-week_nav_buttons [data-testid="column"],
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
+    flex:0 0 68px!important;width:68px!important;min-width:68px!important;max-width:68px!important;
   }
-  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
   .st-key-week_nav_buttons .stButton,
+  .st-key-week_nav_buttons .stButton>div,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
   .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div,
-  .st-key-week_nav_buttons .stButton>div{
-    width:100%!important;min-width:0!important;max-width:100%!important;
+  .st-key-week_nav_buttons .stButton button,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+    width:68px!important;min-width:68px!important;max-width:68px!important;
   }
-  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button,
-  .st-key-week_nav_buttons .stButton button{
-    width:100%!important;min-width:0!important;max-width:100%!important;
-    height:34px!important;min-height:34px!important;max-height:34px!important;
-    padding:0 3px!important;border-radius:7px!important;font-size:clamp(.56rem,2.1vw,.66rem)!important;
+  .st-key-week_nav_buttons .stButton button,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+    height:26px!important;min-height:26px!important;max-height:26px!important;
+    padding:0 3px!important;border-radius:5px!important;font-size:.56rem!important;
   }
-  .week-period-caption{font-size:clamp(.43rem,1.8vw,.51rem)!important;margin-top:3px!important;}
+  .week-period-caption{font-size:.43rem!important;margin-top:2px!important;}
 }
 </style>"""
 
-    def render_period(target, start, end):
+    def full_period(period):
+        if not period:
+            return None
+        start = period[0]
+        monday = start - timedelta(days=start.weekday())
+        return monday, monday + timedelta(days=6)
+
+    def render_period(target, period):
         target.markdown(WEEK_STYLE, unsafe_allow_html=True)
-        target.markdown(
-            f'<div class="week-period-caption">{start:%d/%m} a {end:%d/%m}</div>',
-            unsafe_allow_html=True,
-        )
+        period = full_period(period)
+        if period:
+            target.markdown(
+                f'<div class="week-period-caption">{period[0]:%d/%m} a {period[1]:%d/%m}</div>',
+                unsafe_allow_html=True,
+            )
 
     def commercial_week_period(index, frame):
         cfg = frame.f_locals.get("cfg") if frame is not None else None
@@ -228,8 +238,7 @@ def _install_week_selector_standard():
         caller = inspect.currentframe().f_back
         period = commercial_week_period(index, caller)
         result = original_st_button(f"S - {index + 1}", *args, **kwargs)
-        if period:
-            render_period(st, period[0], period[1])
+        render_period(st, period)
         return result
 
     def standardized_dg_button(self, label, *args, **kwargs):
@@ -245,20 +254,21 @@ def _install_week_selector_standard():
         except Exception:
             period = None
         result = original_dg_button(self, f"S - {index + 1}", *args, **kwargs)
-        if period:
-            render_period(self, period[0], period[1])
+        render_period(self, period)
         return result
 
     st.button = standardized_st_button
     DeltaGenerator.button = standardized_dg_button
     st._cdt_week_selector_standard_installed = True
+    # Impede o módulo Comercial de instalar um segundo wrapper sobre o mesmo seletor.
+    st._weekly_commercial_selector_runtime_installed = True
 
 
 _install_week_selector_standard()
 
 
 def _install_commercial_refresh_control():
-    """Reuse the Conciliação refresh pattern in the Commercial control row."""
+    """Mantém o botão de atualização manual do Comercial no bloco de controles."""
     try:
         import inspect
         import streamlit as st
@@ -288,23 +298,14 @@ def _install_commercial_refresh_control():
             st.markdown(
                 """<style>
 .st-key-commercial_refresh button{
-  background:transparent!important;
-  color:#64748b!important;
-  border:0!important;
-  min-height:26px!important;
-  padding:0 5px!important;
-  box-shadow:none!important;
+  background:transparent!important;color:#64748b!important;border:0!important;
+  min-height:26px!important;padding:0 5px!important;box-shadow:none!important;
 }
 @media(max-width:700px){
   .st-key-dashboard_view_controls > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(5),
   .st-key-dashboard_view_controls > [data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(5){
-    grid-column:1/-1!important;
-    grid-row:3!important;
-    display:flex!important;
-    justify-content:flex-end!important;
-    width:100%!important;
-    max-width:none!important;
-    min-width:0!important;
+    grid-column:1/-1!important;grid-row:3!important;display:flex!important;justify-content:flex-end!important;
+    width:100%!important;max-width:none!important;min-width:0!important;
   }
   .st-key-commercial_refresh{margin-left:auto!important;width:auto!important;}
 }
