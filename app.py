@@ -3,6 +3,7 @@
 # Redeploy marker: versão estável sem interceptação global de st.markdown.
 import copy
 import html
+import inspect
 import math
 from urllib.parse import quote
 import app_core as _core
@@ -216,6 +217,86 @@ def _open_team_dialog_if_requested():
     _dialog()
 
 
+def _install_login_viewport_fix():
+    """Centraliza a tela de acesso em 100dvh e elimina overflow artificial."""
+    original_render_login = _core.render_login
+
+    def render_login_without_scroll(st, cfg):
+        original_render_login(st, cfg)
+        st.markdown("""<style>
+html,body{height:100%!important;overflow:hidden!important}
+[data-testid="stHeader"]{display:none!important}
+[data-testid="stAppViewContainer"],[data-testid="stMain"],.stMain{height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;overflow:hidden!important}
+[data-testid="stMainBlockContainer"],.main .block-container,.block-container{box-sizing:border-box!important;width:100%!important;max-width:100%!important;height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important}
+.results-login-wrap{box-sizing:border-box!important;width:100%!important;min-height:0!important;height:auto!important;margin:0 0 12px!important;padding:0 14px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important}
+.results-login-logo{margin:0 auto 14px!important;max-width:min(220px,52vw)!important;max-height:82px!important}
+.results-login-spacer{height:6px!important}
+.st-key-results_access_form{box-sizing:border-box!important;width:min(360px,92vw)!important;margin:0 auto!important;padding:0!important}
+.results-access-error{margin:7px auto 0!important}
+[data-testid="stMainBlockContainer"] iframe{display:block!important;max-height:0!important;margin:0!important;padding:0!important}
+@media(max-width:700px){
+ [data-testid="stMainBlockContainer"],.main .block-container,.block-container{height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;padding:0!important;justify-content:center!important}
+ .results-login-wrap{min-height:0!important;height:auto!important;margin:0 0 10px!important;padding:0 12px!important;justify-content:center!important}
+ .results-login-logo{width:min(185px,54vw)!important;max-height:70px!important;margin-bottom:12px!important}
+ .results-login-title{font-size:1.08rem!important}
+ .results-login-subtitle{margin-top:4px!important}
+ .st-key-results_access_form{width:min(340px,90vw)!important}
+}
+</style>""", unsafe_allow_html=True)
+
+    _core.render_login = render_login_without_scroll
+
+
+def _install_commercial_refresh_reference():
+    """Recria o Atualizar Dados do Comercial como o mesmo botão nativo da Conciliação."""
+    import streamlit as st
+
+    current_columns = st.columns
+    try:
+        nonlocals = inspect.getclosurevars(current_columns).nonlocals
+        original_columns = nonlocals.get("original_columns", current_columns)
+    except Exception:
+        original_columns = current_columns
+
+    target = [2.15, 2.05, 1.15, 4.65]
+
+    def commercial_columns(spec, *args, **kwargs):
+        caller = inspect.currentframe().f_back
+        matches = (
+            isinstance(spec, (list, tuple)) and list(spec) == target
+            and caller is not None and caller.f_code.co_name == "render_app"
+            and str(caller.f_code.co_filename).endswith("app_core.py")
+        )
+        if not matches:
+            return original_columns(spec, *args, **kwargs)
+
+        cols = original_columns([2.15, 2.05, 1.25, 1.15, 3.40], *args, **kwargs)
+        with cols[2]:
+            if st.button("↻ Atualizar dados", key="commercial_refresh", help="Consultar novamente os resultados da planilha"):
+                st.session_state["commercial_force_refresh"] = True
+                st.rerun()
+        return cols[0], cols[1], cols[3], cols[4]
+
+    st.columns = commercial_columns
+
+
+def _install_management_menu_labels():
+    """Padroniza apenas a nomenclatura dos dois menus gerenciais."""
+    import streamlit as st
+
+    original_button = st.button
+
+    def labeled_button(label, *args, **kwargs):
+        key = str(kwargs.get("key") or "")
+        if key == "cdt_menu_management":
+            label = "Gestão Comercial"
+        elif key == "cdt_menu_conc_management":
+            label = "Gestão Conciliação"
+        return original_button(label, *args, **kwargs)
+
+    st.button = labeled_button
+
+
 _core.merge_registry = _merge_registry_preserving_sellers
 _core.prepare_config = _prepare_config_preserving_sellers
 
@@ -223,6 +304,11 @@ _core.prepare_config = _prepare_config_preserving_sellers
 _core.render_management = _render_management_full_tables
 _core.team_performance_card_html = _clickable_team_card
 _online_commercial.install(_core)
+
+# Ajustes visuais finais após os hooks do Comercial: não mudam regras, permissões ou cálculos.
+_install_login_viewport_fix()
+_install_commercial_refresh_reference()
+_install_management_menu_labels()
 
 if __name__ == "__main__":
     _core.render_app()
