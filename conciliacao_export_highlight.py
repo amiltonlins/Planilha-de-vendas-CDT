@@ -59,13 +59,22 @@ def _daily_ranking_png(rows, period, totals, synced_at):
     columns = (
         (56, "POS.", "la"),
         (128, "CONCILIADOR", "la"),
-        (585, "QIAs HOJE", "ma"),
-        (715, "PROJEÇÃO", "ma"),
-        (855, "TROCAS HOJE", "ma"),
-        (985, "PROJEÇÃO", "ma"),
+        (500, "STATUS", "ma"),
+        (610, "QIAs HOJE", "ma"),
+        (720, "PROJEÇÃO", "ma"),
+        (840, "TROCAS HOJE", "ma"),
+        (970, "PROJEÇÃO", "ma"),
     )
     for x, label, anchor in columns:
-        draw.text((x, columns_top + 17), label, font=_daily_font(16, True), fill="#536176", anchor=anchor)
+        draw.text((x, columns_top + 17), label, font=_daily_font(15, True), fill="#536176", anchor=anchor)
+
+    status_emoji = {
+        "Azul": "🔵",
+        "Verde": "🟢",
+        "Amarelo": "🟡",
+        "Laranja": "🟠",
+        "Vermelho": "🔴",
+    }
 
     y = columns_top + columns_h
     for pos, item in enumerate(rows, 1):
@@ -75,8 +84,8 @@ def _daily_ranking_png(rows, period, totals, synced_at):
 
         draw.rounded_rectangle((32, y + 4, width - 32, y + row_h - 7), radius=16, fill=fill)
         _draw_daily_ordinal(draw, 72, y + 44, pos, text_fill)
-        name_font = _daily_font(24, True)
-        name = _fit_image_text(draw, item.get("name", ""), name_font, 390)
+        name_font = _daily_font(23, True)
+        name = _fit_image_text(draw, item.get("name", ""), name_font, 325)
         draw.text((128, y + 29), name, font=name_font, fill=text_fill)
 
         qias = item.get("qias", 0)
@@ -84,10 +93,11 @@ def _daily_ranking_png(rows, period, totals, synced_at):
         qias_projection = _daily_projection(qias, period, synced_at)
         changes_projection = _daily_projection(changes, period, synced_at)
 
-        draw.text((585, y + 28), _integer(qias), font=_daily_font(31, True), fill=text_fill, anchor="ma")
-        draw.text((715, y + 28), _integer(qias_projection), font=_daily_font(31, True), fill=projection_fill, anchor="ma")
-        draw.text((855, y + 28), _integer(changes), font=_daily_font(31, True), fill=text_fill, anchor="ma")
-        draw.text((985, y + 28), _integer(changes_projection), font=_daily_font(31, True), fill=projection_fill, anchor="ma")
+        draw.text((500, y + 26), status_emoji.get(classification, "⚪"), font=_daily_font(27, True), fill=text_fill, anchor="ma")
+        draw.text((610, y + 28), _integer(qias), font=_daily_font(30, True), fill=text_fill, anchor="ma")
+        draw.text((720, y + 28), _integer(qias_projection), font=_daily_font(30, True), fill=projection_fill, anchor="ma")
+        draw.text((840, y + 28), _integer(changes), font=_daily_font(30, True), fill=text_fill, anchor="ma")
+        draw.text((970, y + 28), _integer(changes_projection), font=_daily_font(30, True), fill=projection_fill, anchor="ma")
         y += row_h
 
     if not rows:
