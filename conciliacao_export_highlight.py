@@ -6,8 +6,43 @@ from conciliacao_export_reference import (
     ranking_png as _base_ranking_png,
     _daily_projection,
     _integer,
-    _classification,
 )
+
+
+def _daily_status(qias, period):
+    """Classifica o resultado diário respeitando a jornada do dia.
+
+    Seg-sex: 09h-18h (9h) com referência ideal de 30 QIAs.
+    Sábado: 09h-13h (4h), usando 4/9 das faixas e arredondando o
+    início de cada faixa para cima: 7 / 9 / 12 / 14.
+    """
+    try:
+        target_day = datetime.strptime(period, "%d/%m/%Y").date()
+        saturday = target_day.weekday() == 5
+    except Exception:
+        saturday = False
+
+    value = float(qias or 0)
+    if saturday:
+        if value >= 14:
+            return "Azul", "#0891B2"
+        if value >= 12:
+            return "Verde", "#16A34A"
+        if value >= 9:
+            return "Amarelo", "#F59E0B"
+        if value >= 7:
+            return "Laranja", "#EA580C"
+        return "Vermelho", "#DC2626"
+
+    if value >= 30:
+        return "Azul", "#0891B2"
+    if value >= 25:
+        return "Verde", "#16A34A"
+    if value >= 20:
+        return "Amarelo", "#F59E0B"
+    if value >= 15:
+        return "Laranja", "#EA580C"
+    return "Vermelho", "#DC2626"
 
 
 def _daily_ranking_png(rows, period, totals, synced_at):
@@ -76,7 +111,9 @@ def _daily_ranking_png(rows, period, totals, synced_at):
 
     y = columns_top + columns_h
     for pos, item in enumerate(rows, 1):
-        classification, fill = _classification(item)
+        qias = item.get("qias", 0)
+        changes = item.get("changes", 0)
+        classification, fill = _daily_status(qias, period)
         text_fill = "#172033" if classification == "Amarelo" else "#FFFFFF"
         projection_fill = "#7A4600" if classification == "Amarelo" else "#FFFFFF"
 
@@ -86,8 +123,6 @@ def _daily_ranking_png(rows, period, totals, synced_at):
         name = _fit_image_text(draw, item.get("name", ""), name_font, 325)
         draw.text((128, y + 29), name, font=name_font, fill=text_fill)
 
-        qias = item.get("qias", 0)
-        changes = item.get("changes", 0)
         qias_projection = _daily_projection(qias, period, synced_at)
         changes_projection = _daily_projection(changes, period, synced_at)
 
@@ -103,10 +138,13 @@ def _daily_ranking_png(rows, period, totals, synced_at):
 
     try:
         target_day = datetime.strptime(period, "%d/%m/%Y").date()
-        schedule = "09H–13H" if target_day.weekday() == 5 else "09H–18H"
+        saturday = target_day.weekday() == 5
+        schedule = "09H–13H" if saturday else "09H–18H"
+        reference = 14 if saturday else 30
     except Exception:
         schedule = "09H–18H"
-    draw.text((width // 2, height - 31), f"PROJEÇÃO DO DIA · JORNADA {schedule}", font=_daily_font(16, True), fill="#758397", anchor="ma")
+        reference = 30
+    draw.text((width // 2, height - 31), f"PROJEÇÃO DO DIA · JORNADA {schedule} · REFERÊNCIA {reference} QIAs", font=_daily_font(16, True), fill="#758397", anchor="ma")
     output = io.BytesIO()
     image.save(output, format="PNG", optimize=True)
     return output.getvalue()
