@@ -119,7 +119,7 @@ def _open_team_dialog_if_requested():
     @st.dialog(team_name, width="large")
     def _dialog():
         st.markdown(_popup_css(), unsafe_allow_html=True)
-        st.markdown('<div class="team-dialog-shell"><div class="team-goal-hero"><small>META DA EQUIPE</small>'+f'<strong>{goal}</strong><span>{html.escape(team_name)} · referência: 40 vendas/vendedor/mês</span></div><div class="team-dialog-kpis">'+f'<div class="team-dialog-kpi"><small>VENDAS REALIZADAS</small><strong>{metrics["sales"]}</strong></div><div class="team-dialog-kpi"><small>% DA META</small><strong>{_core.pct(metrics["attainment"])}</strong></div><div class="team-dialog-kpi"><small>FALTAM PARA META</small><strong>{metrics["missing"]}</strong></div><div class="team-dialog-kpi needed"><small>PRECISA FAZER / DIA</small><strong>{metrics["needed"]:.1f}</strong></div><div class="team-dialog-kpi"><small>PROJEÇÃO</small><strong>{metrics["projection"]}</strong></div><div class="team-dialog-kpi"><small>MÉDIA / DIA</small><strong>{metrics["average"]:.1f}</strong></div><div class="team-dialog-kpi"><small>DIAS TRABALHADOS</small><strong>{metrics["elapsed"]}</strong></div><div class="team-dialog-kpi"><small>DIAS RESTANTES</small><strong>{metrics["remaining"]}</strong></div></div><div class="team-capacity"><div class="team-capacity-title">CAPACIDADE DA EQUIPE</div><div class="team-capacity-grid"><div><small>HEADCOUNT IDEAL</small><strong>{headcount_ideal}</strong></div><div><small>ATIVOS</small><strong>{active_count}</strong></div><div><small>NECESSÁRIO CONTRATAR</small><strong>{hires_needed}</strong></div></div><div class="team-capacity-note">Para uma meta de {goal} vendas, considerando 40 vendas por vendedor/mês, a equipe precisa de aproximadamente {headcount_ideal} vendedores ativos.</div></div><div class="team-perf-popup"><small>PERFORMANCE DA EQUIPE</small><span>🔵 {distribution.get("Azul",0)}</span><span>🟢 {distribution.get("Verde",0)}</span><span>🟡 {distribution.get("Amarelo",0)}</span><span>🔴 {distribution.get("Vermelho",0)}</span></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="team-dialog-shell"><div class="team-goal-hero"><small>META DA EQUIPE</small>'+f'<strong>{goal}</strong><span>{html.escape(team_name)} · referência: 40 vendas/vendedor/mês</span></div><div class="team-dialog-kpis">'+f'<div class="team-dialog-kpi"><small>VENDAS REALIZADAS</small><strong>{metrics["sales"]}</strong></div><div class="team-dialog-kpi"><small>% DA META</small><strong>{_core.pct(metrics["attainment"])}</strong></div><div class="team-dialog-kpi"><small>FALTAM PARA META</small><strong>{metrics["missing"]}</strong></div><div class="team-dialog-kpi needed"><small>PRECISA FAZER / DIA</small><strong>{metrics["needed"]:.1f}</strong></div><div class="team-dialog-kpi"><small>PROJEÇÃO</small><strong>{metrics["projection"]}</strong></div><div class="team-dialog-kpi"><small>MÉDIA/dia</small><strong>{metrics["average"]:.1f}</strong></div><div class="team-dialog-kpi"><small>DIAS TRABALHADOS</small><strong>{metrics["elapsed"]}</strong></div><div class="team-dialog-kpi"><small>DIAS RESTANTES</small><strong>{metrics["remaining"]}</strong></div></div><div class="team-capacity"><div class="team-capacity-title">CAPACIDADE DA EQUIPE</div><div class="team-capacity-grid"><div><small>HEADCOUNT IDEAL</small><strong>{headcount_ideal}</strong></div><div><small>ATIVOS</small><strong>{active_count}</strong></div><div><small>NECESSÁRIO CONTRATAR</small><strong>{hires_needed}</strong></div></div><div class="team-capacity-note">Para uma meta de {goal} vendas, considerando 40 vendas por vendedor/mês, a equipe precisa de aproximadamente {headcount_ideal} vendedores ativos.</div></div><div class="team-perf-popup"><small>PERFORMANCE DA EQUIPE</small><span>🔵 {distribution.get("Azul",0)}</span><span>🟢 {distribution.get("Verde",0)}</span><span>🟡 {distribution.get("Amarelo",0)}</span><span>🔴 {distribution.get("Vermelho",0)}</span></div></div>', unsafe_allow_html=True)
         st.markdown("##### RESULTADO POR VENDEDOR")
         seller_rows=[]
         for item in sellers:
@@ -145,7 +145,7 @@ html,body{height:100%!important;overflow:hidden!important}[data-testid="stHeader
 
 
 def _install_commercial_refresh_reference():
-    """Mantém a ação nativa, mas apresenta Atualizar dados como texto sutil e sem balão."""
+    """Agrupa a navegação e Atualizar dados do Comercial no mesmo bloco compacto."""
     import streamlit as st
     current_columns=st.columns
     try:
@@ -157,8 +157,7 @@ def _install_commercial_refresh_reference():
         matches=isinstance(spec,(list,tuple)) and list(spec)==target and caller is not None and caller.f_code.co_name=="render_app" and str(caller.f_code.co_filename).endswith("app_core.py")
         if not matches: return original_columns(spec,*args,**kwargs)
         outer_kwargs=dict(kwargs); outer_kwargs["vertical_alignment"]="center"
-        content_col,refresh_col=original_columns([5,1],*args,**outer_kwargs)
-        with content_col: inner_cols=original_columns(target,*args,**kwargs)
+        nav_col,refresh_col,update_col,month_col,spacer_col=original_columns([2.15,1.15,1.55,1.20,3.95],*args,**outer_kwargs)
         with refresh_col:
             st.markdown("""<style>
 .st-key-commercial_refresh button,
@@ -184,7 +183,7 @@ def _install_commercial_refresh_reference():
 </style>""",unsafe_allow_html=True)
             if st.button("↻ Atualizar dados",key="commercial_refresh",help="Consultar novamente os resultados da planilha"):
                 st.session_state["commercial_force_refresh"]=True; st.rerun()
-        return tuple(inner_cols)
+        return nav_col,update_col,month_col,spacer_col
     st.columns=commercial_columns
 
 
@@ -195,6 +194,7 @@ def _install_management_menu_labels():
         key=str(kwargs.get("key") or "")
         if key=="cdt_menu_management": label="Gestão Comercial"
         elif key=="cdt_menu_conc_management": label="Gestão Conciliação"
+        elif key=="nav_visao_btn": label="GERAL"
         return original_button(label,*args,**kwargs)
     st.button=labeled_button
 
