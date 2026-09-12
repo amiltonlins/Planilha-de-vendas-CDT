@@ -4,7 +4,12 @@ Mantém o popover e suas ações, mas exibe apenas o texto clicável.
 """
 
 
-def install(st):
+def install(st=None):
+    # Compatibilidade com o bootstrap atual do app.py, que chama install()
+    # sem passar o módulo Streamlit explicitamente.
+    if st is None:
+        import streamlit as st
+
     original_popover = st.popover
 
     def plain_account_popover(label, *args, **kwargs):
