@@ -1,7 +1,7 @@
 """Project startup hooks.
 
-Mantém os ajustes de inicialização do painel e padroniza o seletor semanal
-entre Comercial e Conciliação.
+Mantém os ajustes de inicialização do painel e usa um único seletor semanal
+reutilizável no Comercial e na Conciliação.
 """
 try:
     import conciliacao_visual as _conciliacao_visual
@@ -74,7 +74,7 @@ _install_cross_month_commercial_weeks()
 
 
 def _install_shared_week_ranges():
-    """Usa no Conciliação os mesmos blocos semanais exibidos no Comercial."""
+    """Usa na Conciliação os mesmos períodos mensais exibidos no Comercial."""
     try:
         import app_core as core
         import conciliacao as conc
@@ -95,11 +95,10 @@ _install_shared_week_ranges()
 
 
 def _install_week_selector_standard():
-    """Instala UM único seletor semanal, idêntico no Comercial e na Conciliação."""
+    """Instala o mesmo seletor de períodos no Comercial e na Conciliação."""
     try:
         import inspect
         import re
-        from datetime import timedelta
         import streamlit as st
         from streamlit.delta_generator import DeltaGenerator
         import app_core as core
@@ -122,31 +121,31 @@ def _install_week_selector_standard():
 .st-key-week_nav_buttons [data-testid="stHorizontalBlock"],
 .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
   display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
-  justify-content:flex-start!important;align-items:flex-start!important;
+  justify-content:flex-start!important;align-items:center!important;
   width:auto!important;max-width:100%!important;min-width:0!important;
-  gap:2px!important;overflow:visible!important;
+  gap:3px!important;overflow:visible!important;
 }
 .st-key-week_nav_buttons [data-testid="column"],
 .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
-  flex:0 0 76px!important;width:76px!important;min-width:76px!important;max-width:76px!important;
+  flex:0 0 58px!important;width:58px!important;min-width:58px!important;max-width:58px!important;
   margin:0!important;padding:0!important;
 }
 .st-key-week_nav_buttons .stButton,
 .st-key-week_nav_buttons .stButton>div,
 .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
 .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div{
-  width:76px!important;min-width:76px!important;max-width:76px!important;
+  width:58px!important;min-width:58px!important;max-width:58px!important;
   margin:0!important;padding:0!important;
 }
 .st-key-week_nav_buttons .stButton button,
 .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
-  width:76px!important;min-width:76px!important;max-width:76px!important;
-  height:27px!important;min-height:27px!important;max-height:27px!important;
-  margin:0!important;padding:0 5px!important;border-radius:5px!important;
-  background:transparent!important;color:#64748B!important;border:1px solid #D7E0E8!important;
-  box-shadow:none!important;font-size:.60rem!important;font-weight:850!important;
+  width:58px!important;min-width:58px!important;max-width:58px!important;
+  height:28px!important;min-height:28px!important;max-height:28px!important;
+  margin:0!important;padding:0 4px!important;border-radius:6px!important;
+  background:#FFFFFF!important;color:#64748B!important;border:1px solid #D7E0E8!important;
+  box-shadow:none!important;font-size:.62rem!important;font-weight:850!important;
   letter-spacing:0!important;line-height:1!important;white-space:nowrap!important;
-  overflow:hidden!important;text-overflow:clip!important;justify-content:center!important;
+  overflow:visible!important;text-overflow:clip!important;justify-content:center!important;
 }
 .st-key-week_nav_buttons .stButton button:hover,
 .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button:hover{
@@ -166,24 +165,16 @@ def _install_week_selector_standard():
   margin:0!important;padding:0!important;font:inherit!important;line-height:1!important;
   white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
 }
-.week-period-caption{
-  display:none!important;margin:2px 0 0!important;padding:0!important;text-align:center!important;
-  color:#94A3B8!important;font-size:.47rem!important;font-weight:650!important;
-  line-height:1!important;white-space:nowrap!important;height:9px!important;
-}
-/* A data aparece SOMENTE sob o botão atualmente selecionado. */
-.st-key-week_nav_buttons [data-testid="column"]:has([data-testid="stBaseButton-primary"]) .week-period-caption,
-.st-key-week_nav_buttons [data-testid="column"]:has(button[kind="primary"]) .week-period-caption,
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]:has([data-testid="stBaseButton-primary"]) .week-period-caption,
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]:has(button[kind="primary"]) .week-period-caption{
-  display:block!important;
-}
+/* Remove definitivamente qualquer legenda antiga abaixo dos botões. */
+.week-period-caption{display:none!important;height:0!important;margin:0!important;padding:0!important;}
 @media(max-width:700px){
   .st-key-week_nav_buttons [data-testid="stHorizontalBlock"],
-  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{gap:2px!important;}
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
+    gap:2px!important;flex-wrap:nowrap!important;
+  }
   .st-key-week_nav_buttons [data-testid="column"],
   .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
-    flex:0 0 68px!important;width:68px!important;min-width:68px!important;max-width:68px!important;
+    flex:0 0 55px!important;width:55px!important;min-width:55px!important;max-width:55px!important;
   }
   .st-key-week_nav_buttons .stButton,
   .st-key-week_nav_buttons .stButton>div,
@@ -191,34 +182,22 @@ def _install_week_selector_standard():
   .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div,
   .st-key-week_nav_buttons .stButton button,
   .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
-    width:68px!important;min-width:68px!important;max-width:68px!important;
+    width:55px!important;min-width:55px!important;max-width:55px!important;
   }
   .st-key-week_nav_buttons .stButton button,
   .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
-    height:26px!important;min-height:26px!important;max-height:26px!important;
-    padding:0 3px!important;border-radius:5px!important;font-size:.56rem!important;
+    height:27px!important;min-height:27px!important;max-height:27px!important;
+    padding:0 3px!important;border-radius:5px!important;font-size:.58rem!important;
   }
-  .week-period-caption{font-size:.43rem!important;margin-top:2px!important;}
 }
 </style>"""
 
-    def full_period(period):
-        if not period:
-            return None
-        start = period[0]
-        monday = start - timedelta(days=start.weekday())
-        return monday, monday + timedelta(days=6)
-
-    def render_period(target, period):
-        target.markdown(WEEK_STYLE, unsafe_allow_html=True)
-        period = full_period(period)
+    def format_period(period, fallback_index):
         if period:
-            target.markdown(
-                f'<div class="week-period-caption">{period[0]:%d/%m} a {period[1]:%d/%m}</div>',
-                unsafe_allow_html=True,
-            )
+            return f"{period[0].day:02d}–{period[1].day:02d}"
+        return f"S{fallback_index + 1}"
 
-    def commercial_week_period(index, frame):
+    def commercial_period(index, frame):
         cfg = frame.f_locals.get("cfg") if frame is not None else None
         if not isinstance(cfg, dict):
             return None
@@ -236,10 +215,9 @@ def _install_week_selector_standard():
 
         index = int(match.group(1))
         caller = inspect.currentframe().f_back
-        period = commercial_week_period(index, caller)
-        result = original_st_button(f"S - {index + 1}", *args, **kwargs)
-        render_period(st, period)
-        return result
+        period = commercial_period(index, caller)
+        st.markdown(WEEK_STYLE, unsafe_allow_html=True)
+        return original_st_button(format_period(period, index), *args, **kwargs)
 
     def standardized_dg_button(self, label, *args, **kwargs):
         key = kwargs.get("key")
@@ -253,14 +231,13 @@ def _install_week_selector_standard():
             period = ranges[index] if 0 <= index < len(ranges) else None
         except Exception:
             period = None
-        result = original_dg_button(self, f"S - {index + 1}", *args, **kwargs)
-        render_period(self, period)
-        return result
+        self.markdown(WEEK_STYLE, unsafe_allow_html=True)
+        return original_dg_button(self, format_period(period, index), *args, **kwargs)
 
     st.button = standardized_st_button
     DeltaGenerator.button = standardized_dg_button
     st._cdt_week_selector_standard_installed = True
-    # Impede o módulo Comercial de instalar um segundo wrapper sobre o mesmo seletor.
+    # Evita um segundo wrapper específico do Comercial sobre o mesmo componente.
     st._weekly_commercial_selector_runtime_installed = True
 
 
