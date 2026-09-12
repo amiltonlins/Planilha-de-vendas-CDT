@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import inspect
 import os
+import re
+from datetime import timedelta
 from urllib.request import Request, urlopen
 
 import streamlit as st
@@ -54,6 +56,101 @@ def _prepare_online_rows(core, base):
                 inferred_dates += 1
     incoming, _ = core.canonicalize(raw_rows, base)
     return incoming, inferred_dates
+
+
+def _install_weekly_commercial_behavior(core):
+    """Garante a regra semanal completa e o seletor visual diretamente no Comercial."""
+    if not getattr(core, "_weekly_complete_runtime_installed", False):
+        original_summarize = core.summarize
+
+        def summarize_with_complete_weeks(rows, cfg):
+            result, calendar_days, elapsed_days, official = original_summarize(rows, cfg)
+            clipped_weeks = core.month_weeks(int(cfg["ano"]), int(cfg["mes"]))
+            full_weeks = []
+            for start, _end in clipped_weeks:
+                monday = start - timedelta(days=start.weekday())
+                full_weeks.append((monday, monday + timedelta(days=6)))
+
+            awards = list(cfg.get("premiacao_semanal", []) or [])
+
+            def weekly_award(qty):
+                eligible = [
+                    float(item.get("premio", 0) or 0)
+                    for item in awards
+                    if qty >= int(item.get("vendas", 0) or 0)
+                ]
+                return eligible[-1] if eligible else 0
+
+            rows_by_seller = {}
+            for row in rows:
+                key = core.normalize_text(row.get("vendedor", ""))
+                if key:
+                    rows_by_seller.setdefault(key, []).append(row)
+
+            for item in result:
+                seller_rows = rows_by_seller.get(core.normalize_text(item.get("vendedor", "")), [])
+                weekly_sales = [
+                    sum(start <= row.get("data_venda") <= end for row in seller_rows)
+                    for start, end in full_weeks
+                ]
+                item["semanas"] = weekly_sales
+                item["premios"] = [
+                    weekly_award(qty) if item.get("elegivel_individual", False) else 0
+                    for qty in weekly_sales
+                ]
+
+            return result, calendar_days, elapsed_days, official
+
+        core.summarize = summarize_with_complete_weeks
+        core._weekly_complete_runtime_installed = True
+
+    if getattr(st, "_weekly_commercial_selector_runtime_installed", False):
+        return
+
+    original_button = st.button
+
+    selector_css = """<style>
+.st-key-dashboard_view_controls .st-key-week_nav_buttons{width:100%!important;max-width:100%!important;margin:6px 0 2px!important;padding:0!important;overflow:visible!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:nowrap!important;width:100%!important;gap:7px!important;align-items:flex-start!important;overflow:visible!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div{width:100%!important;min-width:0!important;margin:0!important;padding:0!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;max-height:38px!important;margin:0!important;padding:0 8px!important;border-radius:8px!important;background:#FFFFFF!important;color:#475569!important;border:1px solid #D8E3EE!important;box-shadow:none!important;font-size:.72rem!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important;justify-content:center!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button:hover{background:#F8FAFC!important;color:#0F172A!important;border-color:#B8C7D6!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button[kind="primary"],.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stBaseButton-primary"]{background:#075B35!important;color:#FFFFFF!important;border-color:#075B35!important;font-weight:950!important}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button p,.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button span{margin:0!important;padding:0!important;font:inherit!important;line-height:1!important;white-space:nowrap!important}
+.week-period-caption{margin:4px 0 0!important;padding:0!important;text-align:center!important;color:#94A3B8!important;font-size:.54rem!important;font-weight:650!important;line-height:1.05!important;white-space:nowrap!important}
+@media(max-width:700px){.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{gap:3px!important}.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{height:34px!important;min-height:34px!important;max-height:34px!important;padding:0 3px!important;border-radius:7px!important;font-size:clamp(.56rem,2.1vw,.66rem)!important}.week-period-caption{font-size:clamp(.43rem,1.8vw,.51rem)!important;margin-top:3px!important}}
+</style>"""
+
+    def standardized_button(label, *args, **kwargs):
+        key = str(kwargs.get("key") or "")
+        match = re.fullmatch(r"week_btn_(\d+)", key)
+        if not match:
+            return original_button(label, *args, **kwargs)
+
+        index = int(match.group(1))
+        caller = inspect.currentframe().f_back
+        cfg = caller.f_locals.get("cfg") if caller is not None else None
+        period = None
+        if isinstance(cfg, dict):
+            try:
+                ranges = core.month_weeks(int(cfg["ano"]), int(cfg["mes"]))
+                if 0 <= index < len(ranges):
+                    period = ranges[index]
+            except Exception:
+                period = None
+
+        result = original_button(f"S - {index + 1}", *args, **kwargs)
+        st.markdown(selector_css, unsafe_allow_html=True)
+        if period:
+            st.markdown(
+                f'<div class="week-period-caption">{period[0]:%d/%m} a {period[1]:%d/%m}</div>',
+                unsafe_allow_html=True,
+            )
+        return result
+
+    st.button = standardized_button
+    st._weekly_commercial_selector_runtime_installed = True
 
 
 def _install_refresh_button():
@@ -123,6 +220,7 @@ div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) .s
 def install(core):
     """Sincroniza a fonte online e instala a atualização manual do Comercial."""
     original_load_published = core.load_published
+    _install_weekly_commercial_behavior(core)
     _install_refresh_button()
 
     def load_published_online(base):
