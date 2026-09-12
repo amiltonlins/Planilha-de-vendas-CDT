@@ -14,6 +14,10 @@ import conciliacao_visual as _conciliacao_visual
 import conciliacao_ui as _conciliacao_ui
 import online_commercial as _online_commercial
 
+# O link share.google é uma página de compartilhamento, não um arquivo PNG direto.
+# Usamos uma URL direta de PNG para garantir que a logo carregue no navegador.
+_online_commercial.ACCESS_LOGO_URL = "https://www.todosbensprotegidos.com.br/Imagens/logo-cartao-todos.png"
+
 # O Streamlit não garante que sitecustomize.py do repositório seja importado
 # automaticamente no boot. Fazemos a carga explícita antes de instalar os hooks
 # do Comercial, garantindo o mesmo seletor semanal no Comercial e Conciliação.
