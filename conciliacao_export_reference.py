@@ -40,7 +40,7 @@ def _award_value(item, view):
 
 
 def _daily_projection(value, period, synced_at):
-    """Projeta o fechamento do dia considerando jornada de 09:00 às 18:00."""
+    """Projeta o fechamento do dia: seg-sex 09:00–18:00 e sábado 09:00–13:00."""
     actual = float(value or 0)
     try:
         target_day = datetime.strptime(period, "%d/%m/%Y").date()
@@ -55,7 +55,7 @@ def _daily_projection(value, period, synced_at):
 
     minutes_now = synced_at.hour * 60 + synced_at.minute + synced_at.second / 60
     work_start = 9 * 60
-    work_end = 18 * 60
+    work_end = (13 if target_day.weekday() == 5 else 18) * 60
     work_minutes = work_end - work_start
 
     if minutes_now <= work_start:
@@ -147,7 +147,12 @@ def _daily_ranking_png(rows, period, totals, synced_at):
     if not rows:
         draw.text((52, columns_top + 86), "Nenhum conciliador habilitado.", font=_daily_font(25, True), fill="#64748B")
 
-    draw.text((width // 2, height - 31), "PROJEÇÃO DO DIA · JORNADA 09H–18H", font=_daily_font(16, True), fill="#758397", anchor="ma")
+    try:
+        target_day = datetime.strptime(period, "%d/%m/%Y").date()
+        schedule = "09H–13H" if target_day.weekday() == 5 else "09H–18H"
+    except Exception:
+        schedule = "09H–18H"
+    draw.text((width // 2, height - 31), f"PROJEÇÃO DO DIA · JORNADA {schedule}", font=_daily_font(16, True), fill="#758397", anchor="ma")
     output = io.BytesIO()
     image.save(output, format="PNG", optimize=True)
     return output.getvalue()
