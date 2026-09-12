@@ -248,7 +248,7 @@ html,body{height:100%!important;overflow:hidden!important}
 
 
 def _install_commercial_refresh_reference():
-    """Recria o Atualizar Dados do Comercial como o mesmo botão nativo da Conciliação."""
+    """Usa no Comercial a mesma estrutura nativa [5,1] do Atualizar dados da Conciliação."""
     import streamlit as st
 
     current_columns = st.columns
@@ -270,12 +270,19 @@ def _install_commercial_refresh_reference():
         if not matches:
             return original_columns(spec, *args, **kwargs)
 
-        cols = original_columns([2.15, 2.05, 1.25, 1.15, 3.40], *args, **kwargs)
-        with cols[2]:
+        # A Conciliação usa exatamente st.columns([5,1], vertical_alignment="center")
+        # e um st.button nativo dentro da segunda coluna. O Comercial passa a usar
+        # a mesma árvore de layout; os quatro controles originais ficam aninhados à esquerda.
+        outer_kwargs = dict(kwargs)
+        outer_kwargs["vertical_alignment"] = "center"
+        content_col, refresh_col = original_columns([5, 1], *args, **outer_kwargs)
+        with content_col:
+            inner_cols = original_columns(target, *args, **kwargs)
+        with refresh_col:
             if st.button("↻ Atualizar dados", key="commercial_refresh", help="Consultar novamente os resultados da planilha"):
                 st.session_state["commercial_force_refresh"] = True
                 st.rerun()
-        return cols[0], cols[1], cols[3], cols[4]
+        return tuple(inner_cols)
 
     st.columns = commercial_columns
 
