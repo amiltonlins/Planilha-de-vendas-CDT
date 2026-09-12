@@ -14,6 +14,12 @@ import conciliacao_visual as _conciliacao_visual
 import conciliacao_ui as _conciliacao_ui
 import online_commercial as _online_commercial
 
+# O Streamlit não garante que sitecustomize.py do repositório seja importado
+# automaticamente no boot. Fazemos a carga explícita antes de instalar os hooks
+# do Comercial, garantindo o mesmo seletor semanal no Comercial e Conciliação.
+import sitecustomize as _sitecustomize
+_sitecustomize._install_week_selector_standard()
+
 _original_team_card_html = _core.team_performance_card_html
 _original_render_management = _core.render_management
 
