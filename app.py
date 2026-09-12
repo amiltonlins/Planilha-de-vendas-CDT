@@ -14,6 +14,7 @@ import conciliacao as _conciliacao_data
 import conciliacao_visual as _conciliacao_visual
 import conciliacao_ui as _conciliacao_ui
 import online_commercial as _online_commercial
+import account_plain_text as _account_plain_text
 
 # O link share.google é uma página de compartilhamento, não um arquivo PNG direto.
 # Usamos uma URL direta de PNG para garantir que a logo carregue no navegador.
@@ -316,6 +317,7 @@ _online_commercial.install(_core)
 _install_login_viewport_fix()
 _install_commercial_refresh_reference()
 _install_management_menu_labels()
+_account_plain_text.install(__import__("streamlit"))
 
 if __name__ == "__main__":
     _core.render_app()
