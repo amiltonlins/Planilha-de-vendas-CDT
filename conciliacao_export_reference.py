@@ -1,4 +1,5 @@
 import io
+from datetime import datetime
 from decimal import Decimal
 
 
@@ -38,8 +39,125 @@ def _award_value(item, view):
     return item.get("weekly_award", item.get("award", 0))
 
 
+def _daily_projection(value, period, synced_at):
+    """Projeta o fechamento do dia considerando jornada de 09:00 às 18:00."""
+    actual = float(value or 0)
+    try:
+        target_day = datetime.strptime(period, "%d/%m/%Y").date()
+        reference_day = synced_at.date()
+    except Exception:
+        return actual
+
+    if target_day < reference_day:
+        return actual
+    if target_day > reference_day:
+        return 0.0
+
+    minutes_now = synced_at.hour * 60 + synced_at.minute + synced_at.second / 60
+    work_start = 9 * 60
+    work_end = 18 * 60
+    work_minutes = work_end - work_start
+
+    if minutes_now <= work_start:
+        return actual
+    if minutes_now >= work_end:
+        return actual
+
+    elapsed = minutes_now - work_start
+    return actual * work_minutes / elapsed if elapsed > 0 else actual
+
+
+def _daily_ranking_png(rows, period, totals, synced_at):
+    """Download diário mínimo: QIAs, trocas e projeções do próprio dia."""
+    from PIL import Image, ImageDraw
+    from app_core import _daily_font, _draw_daily_brand, _draw_daily_ordinal, _fit_image_text
+
+    width = 1080
+    header_h = 190
+    summary_h = 112
+    columns_h = 54
+    row_h = 92
+    footer_h = 58
+    height = header_h + summary_h + columns_h + max(1, len(rows)) * row_h + footer_h
+
+    image = Image.new("RGB", (width, height), "#F4F7FB")
+    draw = ImageDraw.Draw(image)
+
+    draw.rectangle((0, 0, width, header_h), fill="#075B35")
+    _draw_daily_brand(draw, 52, 27)
+    draw.text((52, 77), "RANKING DIÁRIO · CONCILIAÇÃO", font=_daily_font(42, True), fill="#FFFFFF")
+    draw.text((52, 132), period, font=_daily_font(22), fill="#DDF3E8")
+    draw.text((width - 52, 40), synced_at.strftime("%H:%M"), font=_daily_font(22, True), fill="#E7F7EE", anchor="ra")
+
+    total_qias = totals.get("qias", 0)
+    total_changes = totals.get("changes", 0)
+    projected_qias = sum(_daily_projection(r.get("qias", 0), period, synced_at) for r in rows)
+    projected_changes = sum(_daily_projection(r.get("changes", 0), period, synced_at) for r in rows)
+
+    summary_top = header_h + 16
+    cards = (
+        ("QIAs HOJE", _integer(total_qias), f"Projeção {_integer(projected_qias)}"),
+        ("TROCAS HOJE", _integer(total_changes), f"Projeção {_integer(projected_changes)}"),
+    )
+    card_gap = 18
+    card_w = (width - 104 - card_gap) // 2
+    for idx, (label, value, projection) in enumerate(cards):
+        left = 52 + idx * (card_w + card_gap)
+        right = left + card_w
+        draw.rounded_rectangle((left, summary_top, right, summary_top + 78), radius=12, fill="#FFFFFF", outline="#DDE5EE", width=1)
+        draw.text((left + 22, summary_top + 14), label, font=_daily_font(16, True), fill="#64748B")
+        draw.text((left + 22, summary_top + 36), value, font=_daily_font(31, True), fill="#172033")
+        draw.text((right - 22, summary_top + 43), projection, font=_daily_font(17, True), fill="#075B35", anchor="ra")
+
+    columns_top = header_h + summary_h
+    draw.rectangle((32, columns_top, width - 32, columns_top + columns_h), fill="#E9EFF5")
+    columns = (
+        (56, "POS.", "la"),
+        (128, "CONCILIADOR", "la"),
+        (660, "QIAs HOJE", "ma"),
+        (895, "TROCAS HOJE", "ma"),
+    )
+    for x, label, anchor in columns:
+        draw.text((x, columns_top + 17), label, font=_daily_font(17, True), fill="#536176", anchor=anchor)
+
+    y = columns_top + columns_h
+    for pos, item in enumerate(rows, 1):
+        classification, fill = _classification(item)
+        text_fill = "#172033" if classification == "Amarelo" else "#FFFFFF"
+        muted_fill = "#4B5563" if classification == "Amarelo" else "#E8EEF5"
+
+        draw.rounded_rectangle((32, y + 4, width - 32, y + row_h - 7), radius=16, fill=fill)
+        _draw_daily_ordinal(draw, 72, y + 42, pos, text_fill)
+
+        name_font = _daily_font(24, True)
+        name = _fit_image_text(draw, item.get("name", ""), name_font, 420)
+        draw.text((128, y + 27), name, font=name_font, fill=text_fill)
+
+        qias = item.get("qias", 0)
+        changes = item.get("changes", 0)
+        qias_projection = _daily_projection(qias, period, synced_at)
+        changes_projection = _daily_projection(changes, period, synced_at)
+
+        draw.text((660, y + 13), _integer(qias), font=_daily_font(31, True), fill=text_fill, anchor="ma")
+        draw.text((660, y + 51), f"Proj. {_integer(qias_projection)}", font=_daily_font(15, True), fill=muted_fill, anchor="ma")
+        draw.text((895, y + 13), _integer(changes), font=_daily_font(31, True), fill=text_fill, anchor="ma")
+        draw.text((895, y + 51), f"Proj. {_integer(changes_projection)}", font=_daily_font(15, True), fill=muted_fill, anchor="ma")
+        y += row_h
+
+    if not rows:
+        draw.text((52, columns_top + 86), "Nenhum conciliador habilitado.", font=_daily_font(25, True), fill="#64748B")
+
+    draw.text((width // 2, height - 31), "PROJEÇÃO DO DIA · JORNADA 09H–18H", font=_daily_font(16, True), fill="#758397", anchor="ma")
+    output = io.BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
+
+
 def ranking_png(rows, view, period, totals, goals, synced_at):
     """Gera um PNG compacto da Conciliação, focado apenas nos indicadores essenciais."""
+    if view == "DIÁRIO":
+        return _daily_ranking_png(rows, period, totals, synced_at)
+
     from PIL import Image, ImageDraw
     from app_core import (
         _daily_font,
@@ -61,19 +179,16 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
     image = Image.new("RGB", (width, height), "#F4F7FB")
     draw = ImageDraw.Draw(image)
 
-    # Cabeçalho compacto.
     draw.rectangle((0, 0, width, header_h), fill="#075B35")
     _draw_daily_brand(draw, 52, 28)
     titles = {
         "VISÃO GERAL": "RANKING CONCILIAÇÃO · GERAL",
-        "DIÁRIO": "RANKING CONCILIAÇÃO · HOJE",
         "SEMANAL": "RANKING CONCILIAÇÃO · SEMANA",
     }
     draw.text((52, 78), titles.get(view, "RANKING CONCILIAÇÃO"), font=_daily_font(42, True), fill="#FFFFFF")
     draw.text((52, 132), period, font=_daily_font(22), fill="#DDF3E8")
     draw.text((width - 52, 38), synced_at.strftime("%d/%m/%Y %H:%M"), font=_daily_font(22, True), fill="#E7F7EE", anchor="ra")
 
-    # Resumo da equipe: somente quatro indicadores essenciais.
     summary_top = header_h + 16
     card_gap = 14
     card_w = (width - 104 - card_gap * 3) // 4
@@ -91,7 +206,6 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
         size = 27 if str(value).startswith("R$") else 31
         draw.text(((left + right) // 2, summary_top + 41), str(value), font=_daily_font(size, True), fill="#172033", anchor="ma")
 
-    # Cabeçalho das colunas simplificado.
     columns_top = header_h + summary_h
     draw.rectangle((32, columns_top, width - 32, columns_top + columns_h), fill="#E9EFF5")
     columns = (
@@ -104,7 +218,6 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
     for x, label, anchor in columns:
         draw.text((x, columns_top + 17), label, font=_daily_font(17, True), fill="#536176", anchor=anchor)
 
-    # Ranking: posição, nome, realizado/projeção e prêmio. Na visão geral, réguas em linha discreta.
     y = columns_top + columns_h
     for pos, item in enumerate(rows, 1):
         classification, fill = _classification(item)
