@@ -15,6 +15,75 @@ except Exception:
     pass
 
 
+def _install_cross_month_commercial_weeks():
+    """No SEMANAL Comercial, conta a semana completa mesmo quando cruza dois meses.
+
+    Os cálculos mensais permanecem exatamente como estão. Somente as listas
+    ``semanas`` e ``premios`` usadas pela aba SEMANAL passam a considerar o bloco
+    real de segunda a domingo, inclusive dias da competência anterior/seguinte.
+    """
+    try:
+        from datetime import timedelta
+        import app_core as core
+    except Exception:
+        return
+
+    if getattr(core, "_cross_month_commercial_weeks_installed", False):
+        return
+
+    original_summarize = core.summarize
+
+    def summarize_with_cross_month_weeks(rows, cfg):
+        result, calendar_days, elapsed_days, official = original_summarize(rows, cfg)
+        try:
+            clipped_weeks = core.month_weeks(int(cfg["ano"]), int(cfg["mes"]))
+            full_weeks = []
+            for start, _end in clipped_weeks:
+                full_start = start - timedelta(days=start.weekday())
+                full_weeks.append((full_start, full_start + timedelta(days=6)))
+
+            awards = list(cfg.get("premiacao_semanal", []) or [])
+
+            def weekly_award(qty):
+                eligible = [
+                    float(item.get("premio", 0) or 0)
+                    for item in awards
+                    if qty >= int(item.get("vendas", 0) or 0)
+                ]
+                return eligible[-1] if eligible else 0
+
+            rows_by_seller = {}
+            for row in rows:
+                key = core.normalize_text(row.get("vendedor", ""))
+                if key:
+                    rows_by_seller.setdefault(key, []).append(row)
+
+            for item in result:
+                seller_rows = rows_by_seller.get(core.normalize_text(item.get("vendedor", "")), [])
+                weekly_sales = [
+                    sum(start <= row.get("data_venda") <= end for row in seller_rows)
+                    for start, end in full_weeks
+                ]
+                item["semanas"] = weekly_sales
+                item["premios"] = [
+                    weekly_award(qty) if item.get("elegivel_individual", False) else 0
+                    for qty in weekly_sales
+                ]
+                # Não recalcular premio_total/total_variavel: a alteração é exclusiva
+                # da aba SEMANAL e não muda fechamento, comissão ou visão mensal.
+        except Exception:
+            # Em qualquer cenário inesperado, preserva o resumo mensal original.
+            pass
+
+        return result, calendar_days, elapsed_days, official
+
+    core.summarize = summarize_with_cross_month_weeks
+    core._cross_month_commercial_weeks_installed = True
+
+
+_install_cross_month_commercial_weeks()
+
+
 def _install_commercial_refresh_control():
     """Reuse the Conciliação refresh pattern in the Commercial control row."""
     try:
