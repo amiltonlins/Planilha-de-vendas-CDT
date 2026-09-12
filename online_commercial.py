@@ -58,19 +58,23 @@ def _prepare_online_rows(core, base):
     return incoming, inferred_dates
 
 
+def _full_week_ranges(core, year, month):
+    """Converte os blocos da competência para semanas completas (segunda a domingo)."""
+    ranges = []
+    for start, _end in core.month_weeks(int(year), int(month)):
+        monday = start - timedelta(days=start.weekday())
+        ranges.append((monday, monday + timedelta(days=6)))
+    return ranges
+
+
 def _install_weekly_commercial_behavior(core):
-    """Garante a regra semanal completa e o seletor visual diretamente no Comercial."""
+    """Garante a regra semanal completa, seletor e download diretamente no Comercial."""
     if not getattr(core, "_weekly_complete_runtime_installed", False):
         original_summarize = core.summarize
 
         def summarize_with_complete_weeks(rows, cfg):
             result, calendar_days, elapsed_days, official = original_summarize(rows, cfg)
-            clipped_weeks = core.month_weeks(int(cfg["ano"]), int(cfg["mes"]))
-            full_weeks = []
-            for start, _end in clipped_weeks:
-                monday = start - timedelta(days=start.weekday())
-                full_weeks.append((monday, monday + timedelta(days=6)))
-
+            full_weeks = _full_week_ranges(core, cfg["ano"], cfg["mes"])
             awards = list(cfg.get("premiacao_semanal", []) or [])
 
             def weekly_award(qty):
@@ -104,6 +108,30 @@ def _install_weekly_commercial_behavior(core):
         core.summarize = summarize_with_complete_weeks
         core._weekly_complete_runtime_installed = True
 
+    # O PNG semanal usava os limites recortados pela competência (ex.: 01/09 a 06/09).
+    # Durante a geração do ranking, fornecemos a semana real completa (ex.: 31/08 a 06/09).
+    if not getattr(core, "_weekly_download_complete_period_installed", False):
+        original_weekly_png = core.weekly_prize_ranking_png
+
+        def weekly_prize_ranking_png_with_complete_period(team, week_index, cfg):
+            original_month_weeks = core.month_weeks
+
+            def complete_month_weeks(year, month):
+                ranges = []
+                for start, _end in original_month_weeks(int(year), int(month)):
+                    monday = start - timedelta(days=start.weekday())
+                    ranges.append((monday, monday + timedelta(days=6)))
+                return ranges
+
+            core.month_weeks = complete_month_weeks
+            try:
+                return original_weekly_png(team, week_index, cfg)
+            finally:
+                core.month_weeks = original_month_weeks
+
+        core.weekly_prize_ranking_png = weekly_prize_ranking_png_with_complete_period
+        core._weekly_download_complete_period_installed = True
+
     if getattr(st, "_weekly_commercial_selector_runtime_installed", False):
         return
 
@@ -134,7 +162,7 @@ def _install_weekly_commercial_behavior(core):
         period = None
         if isinstance(cfg, dict):
             try:
-                ranges = core.month_weeks(int(cfg["ano"]), int(cfg["mes"]))
+                ranges = _full_week_ranges(core, cfg["ano"], cfg["mes"])
                 if 0 <= index < len(ranges):
                     period = ranges[index]
             except Exception:
