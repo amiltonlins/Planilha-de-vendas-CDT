@@ -216,16 +216,21 @@ def render_conciliacao(st, registry, save_registry, manager_password, goals=None
         force = False
         today = datetime.now(TZ).date()
         with st.container(key="dashboard_view_controls"):
-            nav, refresh = st.columns([5,1],vertical_alignment="center")
+            nav, refresh, spacer = st.columns([2.15, 1.15, 6.70], vertical_alignment="center")
             with nav:
                 if not managing:
                     with st.container(key="top_nav_buttons"):
-                        for col,label in zip(st.columns(3,gap="small"),("VISÃO GERAL","DIÁRIO","SEMANAL")):
-                            if col.button(label,key="conc_nav_"+label,use_container_width=True,type="primary" if view==label else "secondary"):
-                                st.session_state.conc_view=label
+                        labels = (("GERAL", "VISÃO GERAL"), ("DIÁRIO", "DIÁRIO"), ("SEMANAL", "SEMANAL"))
+                        for col, (display_label, state_label) in zip(st.columns(3, gap="small"), labels):
+                            if col.button(display_label, key="conc_nav_" + state_label, use_container_width=True,
+                                          type="primary" if view == state_label else "secondary"):
+                                st.session_state.conc_view = state_label
                                 st.rerun()
             with refresh:
-                force=st.button("↻ Atualizar dados",key="conc_refresh",help="Consultar novamente os resultados e as faixas da planilha")
+                force = st.button("↻ Atualizar dados", key="conc_refresh",
+                                  help="Consultar novamente os resultados e as faixas da planilha")
+            with spacer:
+                st.empty()
         payload,stale=source_cache(identity).get(settings,ttl,force) if settings else (None,True)
         if stale:
             st.warning("Não foi possível atualizar. Última leitura válida mantida, quando disponível.")
