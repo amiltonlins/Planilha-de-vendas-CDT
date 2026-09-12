@@ -108,8 +108,7 @@ def _install_weekly_commercial_behavior(core):
         core.summarize = summarize_with_complete_weeks
         core._weekly_complete_runtime_installed = True
 
-    # O PNG semanal usava os limites recortados pela competência (ex.: 01/09 a 06/09).
-    # Durante a geração do ranking, fornecemos a semana real completa (ex.: 31/08 a 06/09).
+    # O PNG semanal usa a semana real completa, inclusive quando começa no mês anterior.
     if not getattr(core, "_weekly_download_complete_period_installed", False):
         original_weekly_png = core.weekly_prize_ranking_png
 
@@ -132,22 +131,60 @@ def _install_weekly_commercial_behavior(core):
         core.weekly_prize_ranking_png = weekly_prize_ranking_png_with_complete_period
         core._weekly_download_complete_period_installed = True
 
-    if getattr(st, "_weekly_commercial_selector_runtime_installed", False):
+    # Instala o seletor diretamente no fluxo Comercial. Não depende de sitecustomize.
+    if getattr(st, "_commercial_week_dates_selector_installed", False):
         return
 
     original_button = st.button
 
     selector_css = """<style>
-.st-key-dashboard_view_controls .st-key-week_nav_buttons{width:100%!important;max-width:100%!important;margin:6px 0 2px!important;padding:0!important;overflow:visible!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:nowrap!important;width:100%!important;gap:7px!important;align-items:flex-start!important;overflow:visible!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div{width:100%!important;min-width:0!important;margin:0!important;padding:0!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;max-height:38px!important;margin:0!important;padding:0 8px!important;border-radius:8px!important;background:#FFFFFF!important;color:#475569!important;border:1px solid #D8E3EE!important;box-shadow:none!important;font-size:.72rem!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important;justify-content:center!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button:hover{background:#F8FAFC!important;color:#0F172A!important;border-color:#B8C7D6!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button[kind="primary"],.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stBaseButton-primary"]{background:#075B35!important;color:#FFFFFF!important;border-color:#075B35!important;font-weight:950!important}
-.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button p,.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button span{margin:0!important;padding:0!important;font:inherit!important;line-height:1!important;white-space:nowrap!important}
-.week-period-caption{margin:4px 0 0!important;padding:0!important;text-align:center!important;color:#94A3B8!important;font-size:.54rem!important;font-weight:650!important;line-height:1.05!important;white-space:nowrap!important}
-@media(max-width:700px){.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{gap:3px!important}.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{height:34px!important;min-height:34px!important;max-height:34px!important;padding:0 3px!important;border-radius:7px!important;font-size:clamp(.56rem,2.1vw,.66rem)!important}.week-period-caption{font-size:clamp(.43rem,1.8vw,.51rem)!important;margin-top:3px!important}}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons{
+  width:auto!important;max-width:100%!important;margin:2px 0 0!important;padding:0!important;overflow:visible!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;justify-content:flex-start!important;align-items:center!important;
+  width:auto!important;max-width:100%!important;gap:3px!important;overflow:visible!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
+  flex:0 0 58px!important;width:58px!important;min-width:58px!important;max-width:58px!important;margin:0!important;padding:0!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div{
+  width:58px!important;min-width:58px!important;max-width:58px!important;margin:0!important;padding:0!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+  width:58px!important;min-width:58px!important;max-width:58px!important;height:28px!important;min-height:28px!important;max-height:28px!important;
+  margin:0!important;padding:0 4px!important;border-radius:6px!important;background:#FFFFFF!important;color:#64748B!important;
+  border:1px solid #D7E0E8!important;box-shadow:none!important;font-size:.62rem!important;font-weight:850!important;line-height:1!important;
+  white-space:nowrap!important;overflow:visible!important;justify-content:center!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button:hover{
+  background:#F8FAFC!important;color:#0F172A!important;border-color:#B8C5D1!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button[kind="primary"],
+.st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stBaseButton-primary"]{
+  background:#075B35!important;color:#FFFFFF!important;border-color:#075B35!important;font-weight:950!important;
+}
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button p,
+.st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button span{
+  margin:0!important;padding:0!important;font:inherit!important;line-height:1!important;white-space:nowrap!important;
+}
+.week-period-caption{display:none!important;height:0!important;margin:0!important;padding:0!important;}
+@media(max-width:700px){
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons{overflow-x:visible!important;}
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="stHorizontalBlock"]{gap:2px!important;flex-wrap:nowrap!important;}
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons [data-testid="column"]{
+    flex:0 0 55px!important;width:55px!important;min-width:55px!important;max-width:55px!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton>div,
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+    width:55px!important;min-width:55px!important;max-width:55px!important;
+  }
+  .st-key-dashboard_view_controls .st-key-week_nav_buttons .stButton button{
+    height:27px!important;min-height:27px!important;max-height:27px!important;padding:0 3px!important;border-radius:5px!important;font-size:.58rem!important;
+  }
+}
 </style>"""
 
     def standardized_button(label, *args, **kwargs):
@@ -162,22 +199,18 @@ def _install_weekly_commercial_behavior(core):
         period = None
         if isinstance(cfg, dict):
             try:
-                ranges = _full_week_ranges(core, cfg["ano"], cfg["mes"])
+                ranges = core.month_weeks(int(cfg["ano"]), int(cfg["mes"]))
                 if 0 <= index < len(ranges):
                     period = ranges[index]
             except Exception:
                 period = None
 
-        result = original_button(f"S - {index + 1}", *args, **kwargs)
+        button_label = f"{period[0].day:02d}–{period[1].day:02d}" if period else str(label)
         st.markdown(selector_css, unsafe_allow_html=True)
-        if period:
-            st.markdown(
-                f'<div class="week-period-caption">{period[0]:%d/%m} a {period[1]:%d/%m}</div>',
-                unsafe_allow_html=True,
-            )
-        return result
+        return original_button(button_label, *args, **kwargs)
 
     st.button = standardized_button
+    st._commercial_week_dates_selector_installed = True
     st._weekly_commercial_selector_runtime_installed = True
 
 
