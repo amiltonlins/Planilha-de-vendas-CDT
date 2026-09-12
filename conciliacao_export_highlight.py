@@ -12,7 +12,13 @@ from conciliacao_export_reference import (
 
 def _daily_ranking_png(rows, period, totals, synced_at):
     from PIL import Image, ImageDraw
-    from app_core import _daily_font, _draw_daily_brand, _draw_daily_ordinal, _fit_image_text
+    from app_core import (
+        _daily_font,
+        _draw_daily_brand,
+        _draw_daily_ordinal,
+        _draw_daily_status_icon,
+        _fit_image_text,
+    )
 
     width = 1080
     header_h = 190
@@ -68,14 +74,6 @@ def _daily_ranking_png(rows, period, totals, synced_at):
     for x, label, anchor in columns:
         draw.text((x, columns_top + 17), label, font=_daily_font(15, True), fill="#536176", anchor=anchor)
 
-    status_emoji = {
-        "Azul": "🔵",
-        "Verde": "🟢",
-        "Amarelo": "🟡",
-        "Laranja": "🟠",
-        "Vermelho": "🔴",
-    }
-
     y = columns_top + columns_h
     for pos, item in enumerate(rows, 1):
         classification, fill = _classification(item)
@@ -93,7 +91,7 @@ def _daily_ranking_png(rows, period, totals, synced_at):
         qias_projection = _daily_projection(qias, period, synced_at)
         changes_projection = _daily_projection(changes, period, synced_at)
 
-        draw.text((500, y + 26), status_emoji.get(classification, "⚪"), font=_daily_font(27, True), fill=text_fill, anchor="ma")
+        _draw_daily_status_icon(draw, 500, y + 44, classification)
         draw.text((610, y + 28), _integer(qias), font=_daily_font(30, True), fill=text_fill, anchor="ma")
         draw.text((720, y + 28), _integer(qias_projection), font=_daily_font(30, True), fill=projection_fill, anchor="ma")
         draw.text((840, y + 28), _integer(changes), font=_daily_font(30, True), fill=text_fill, anchor="ma")
