@@ -13,6 +13,7 @@ import streamlit as st
 DEFAULT_SHEET_ID = "14uhlJmDA3UeTZb7sZ3zu-Fovr8utzQbFcpU8LEbuKXE"
 DEFAULT_GID = "56831808"  # aba VENDAS
 SOURCE_NAME = "google_sheets_vendas.csv"
+SELECTOR_VERSION = "2026-09-12-commercial-dates-v4"
 
 
 @st.cache_data(ttl=120, show_spinner=False)
@@ -130,7 +131,10 @@ def _install_weekly_commercial_behavior(core):
         core.weekly_prize_ranking_png = weekly_prize_ranking_png_with_complete_period
         core._weekly_download_complete_period_installed = True
 
-    if getattr(st, "_commercial_week_dates_selector_installed", False):
+    # Versão explícita: em hot reload do Streamlit o módulo `streamlit` pode manter
+    # atributos antigos entre execuções. O seletor só é considerado instalado quando
+    # a versão ativa corresponde a esta implementação.
+    if getattr(st, "_commercial_week_dates_selector_version", None) == SELECTOR_VERSION:
         return
 
     original_button = st.button
@@ -209,6 +213,7 @@ def _install_weekly_commercial_behavior(core):
 
     st.button = standardized_button
     st._commercial_week_dates_selector_installed = True
+    st._commercial_week_dates_selector_version = SELECTOR_VERSION
     st._weekly_commercial_selector_runtime_installed = True
 
 
