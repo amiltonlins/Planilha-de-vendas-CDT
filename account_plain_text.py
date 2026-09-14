@@ -9,6 +9,29 @@ def install(st=None):
 
     import inspect
 
+    # Mantém o dia de referência do Comercial alinhado automaticamente à data
+    # atual quando o painel está exibindo a competência corrente. Sem isso, uma
+    # referência persistida (ex.: dia 12) faz a Visão Geral ignorar vendas já
+    # sincronizadas de dias posteriores (ex.: dia 14).
+    try:
+        import app_core as core
+
+        current_summarize = core.summarize
+
+        def summarize_with_live_reference(rows, cfg):
+            live_cfg = dict(cfg or {})
+            now = core.datetime.now(core.RECIFE_TZ).date()
+            try:
+                if int(live_cfg.get("ano", 0) or 0) == now.year and int(live_cfg.get("mes", 0) or 0) == now.month:
+                    live_cfg["dia_referencia"] = now.day
+            except Exception:
+                pass
+            return current_summarize(rows, live_cfg)
+
+        core.summarize = summarize_with_live_reference
+    except Exception:
+        pass
+
     # O online_commercial instala core.load_published antes deste módulo. A função
     # instalada consulta _prepare_online_rows em tempo de execução, então podemos
     # substituir somente a leitura da planilha sem alterar o restante do painel.
