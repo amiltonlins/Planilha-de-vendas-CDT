@@ -1,7 +1,4 @@
-"""Remove o aspecto de balão do identificador de acesso no cabeçalho.
-
-Mantém o popover e suas ações, mas exibe apenas o texto clicável.
-"""
+"""Ajustes leves de interface aplicados pelo bootstrap do app.py."""
 
 
 def install(st=None):
@@ -10,14 +7,17 @@ def install(st=None):
     if st is None:
         import streamlit as st
 
+    import inspect
+
     original_popover = st.popover
+    original_markdown = st.markdown
 
     def plain_account_popover(label, *args, **kwargs):
         text = str(label or "")
         is_account = text.startswith("◉ ") and text.endswith(" ⌄")
         if is_account:
             text = text[2:-2].strip()
-            st.markdown(
+            original_markdown(
                 """<style>
 .st-key-cdt_top_header [data-testid="stPopover"]>button{
   width:auto!important;min-width:0!important;height:auto!important;min-height:0!important;
@@ -39,4 +39,41 @@ def install(st=None):
             )
         return original_popover(text, *args, **kwargs)
 
+    def markdown_with_overview_download(body, *args, **kwargs):
+        result = original_markdown(body, *args, **kwargs)
+        try:
+            caller = inspect.currentframe().f_back
+            is_overview_ranking = (
+                caller is not None
+                and caller.f_code.co_name == "render_app"
+                and str(caller.f_code.co_filename).endswith("app_core.py")
+                and caller.f_locals.get("area") == "VISÃO GERAL"
+                and isinstance(body, str)
+                and body.startswith('<div class="rank-card">')
+            )
+            if is_overview_ranking:
+                from commercial_overview_export import overview_ranking_png
+
+                ranking = list(caller.f_locals.get("ranking") or [])
+                cfg = caller.f_locals.get("cfg") or {}
+                team_filter = caller.f_locals.get("team_filter") or "TODAS AS EQUIPES"
+                if ranking:
+                    safe_filter = "geral" if team_filter == "TODAS AS EQUIPES" else str(team_filter).lower().replace(" ", "-")
+                    st.download_button(
+                        "BAIXAR RANKING GERAL",
+                        data=overview_ranking_png(ranking, cfg, team_filter),
+                        file_name=f"ranking-visao-geral-{safe_filter}-{int(cfg.get('ano', 0))}-{int(cfg.get('mes', 0)):02d}.png",
+                        mime="image/png",
+                        key="download_overview_ranking_png",
+                        use_container_width=True,
+                    )
+        except Exception as exc:
+            # Falha no exportador não deve interromper o painel principal.
+            try:
+                st.caption(f"Não foi possível preparar o download da Visão Geral: {exc}")
+            except Exception:
+                pass
+        return result
+
     st.popover = plain_account_popover
+    st.markdown = markdown_with_overview_download
