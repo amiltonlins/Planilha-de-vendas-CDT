@@ -9,6 +9,66 @@ def install(st=None):
 
     import inspect
 
+    # O online_commercial instala core.load_published antes deste módulo. A função
+    # instalada consulta _prepare_online_rows em tempo de execução, então podemos
+    # substituir somente a leitura da planilha sem alterar o restante do painel.
+    # Isso evita respostas antigas do cache do Streamlit/Google no Comercial.
+    try:
+        import os
+        import time
+        from urllib.request import Request, urlopen
+        import online_commercial as commercial
+
+        def prepare_online_rows_fresh(core, base):
+            sheet_id = os.environ.get("PAINEL_GOOGLE_SHEET_ID", commercial.DEFAULT_SHEET_ID).strip()
+            gid = os.environ.get("PAINEL_GOOGLE_SHEET_GID", commercial.DEFAULT_GID).strip()
+            cache_buster = time.time_ns()
+            url = (
+                f"https://docs.google.com/spreadsheets/d/{sheet_id}/export"
+                f"?format=csv&gid={gid}&_refresh={cache_buster}"
+            )
+            request = Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "Cache-Control": "no-cache, no-store, max-age=0",
+                    "Pragma": "no-cache",
+                },
+            )
+            with urlopen(request, timeout=20) as response:
+                data = response.read()
+                content_type = str(response.headers.get("Content-Type", "")).lower()
+
+            sample = data[:800].lower()
+            if not data:
+                raise RuntimeError("A planilha online retornou um arquivo vazio.")
+            if "text/html" in content_type or b"<html" in sample or b"accounts.google.com" in sample:
+                raise RuntimeError("A aba VENDAS não está acessível para leitura anônima.")
+
+            raw_rows = core.rows_from_csv(data)
+            if not raw_rows:
+                raise RuntimeError("A aba VENDAS não possui registros para sincronizar.")
+
+            mapping = core.detect_columns(raw_rows[0].keys())
+            date_column = mapping.get("data_venda")
+            today = core.datetime.now(core.RECIFE_TZ).date().isoformat()
+            inferred_dates = 0
+            if date_column:
+                for row in raw_rows:
+                    raw_value = str(row.get(date_column, "") or "").strip()
+                    if not raw_value or ("#" in raw_value and raw_value.replace("#", "").strip() == ""):
+                        row[date_column] = today
+                        inferred_dates += 1
+
+            incoming, _ = core.canonicalize(raw_rows, base)
+            return incoming, inferred_dates
+
+        commercial._prepare_online_rows = prepare_online_rows_fresh
+    except Exception:
+        # O ajuste visual continua funcionando mesmo se o módulo comercial não
+        # estiver disponível em algum ambiente de manutenção/teste.
+        pass
+
     original_popover = st.popover
     original_markdown = st.markdown
 
