@@ -91,6 +91,8 @@ def _install_refresh_button():
 
 def _install_auto_refresh():
     if not st.session_state.get("dashboard_autenticado",False):return
+    # Gestão precisa manter a sessão estável; o reload automático é somente para as telas de resultados.
+    if st.session_state.get("area")=="GESTÃO" or st.session_state.get("gestor_autenticado",False) or st.session_state.get("conc_management",False):return
     try:
         import streamlit.components.v1 as components; components.html(f'<script>setTimeout(function(){{try{{window.parent.location.reload();}}catch(e){{window.location.reload();}}}},{AUTO_REFRESH_SECONDS*1000});</script>',height=0)
     except Exception:pass
@@ -109,20 +111,7 @@ def _install_access_code_login(core):
         except Exception:return None
     def render_login(st_module,cfg):
         busy=bool(st_module.session_state.get("results_access_busy",False)); error=st_module.session_state.pop("results_access_error","")
-        st_module.markdown(f'''<style>
-[data-testid="stAppViewContainer"]{{background:#F8FAFC!important}}
-.results-login-wrap{{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;margin:0 0 12px;padding:0 14px}}
-.results-login-logo{{display:block;width:min(220px,52vw);max-height:82px;object-fit:contain;margin:0 auto 14px}}
-.results-login-title{{font-size:1.28rem;font-weight:950;color:#0F172A;line-height:1.1}}
-.results-login-subtitle{{margin-top:5px;font-size:.78rem;font-weight:650;color:#64748B}}
-.st-key-results_access_form{{width:min(360px,92vw)!important;margin:0 auto!important}}
-.st-key-results_access_form [data-testid="stForm"]{{border:0!important;background:transparent!important;padding:0!important}}
-.st-key-results_access_form label p{{font-size:.70rem!important;font-weight:850!important;color:#334155!important}}
-.st-key-results_access_form input{{height:43px!important;border-radius:9px!important;border:1px solid #CBD5E1!important;background:#fff!important;text-align:center!important;font-size:.95rem!important}}
-.st-key-results_access_form button{{height:41px!important;border-radius:9px!important;background:#075B35!important;color:#fff!important;border:1px solid #075B35!important;font-size:.74rem!important;font-weight:950!important}}
-.results-access-error{{width:min(360px,92vw);margin:7px auto 0;text-align:center;color:#B91C1C;font-size:.69rem;font-weight:800}}
-@media(max-width:700px){{.results-login-logo{{width:min(190px,55vw);max-height:70px}}.results-login-title{{font-size:1.12rem}}}}
-</style><div class="results-login-wrap"><img class="results-login-logo" src="{ACCESS_LOGO_URL}" alt="Cartão de TODOS"><div class="results-login-title">PAINEL DE RESULTADOS</div><div class="results-login-subtitle">Recife Afogados</div></div>''',unsafe_allow_html=True)
+        st_module.markdown(f'''<style>[data-testid="stAppViewContainer"]{{background:#F8FAFC!important}}.results-login-wrap{{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;margin:0 0 12px;padding:0 14px}}.results-login-logo{{display:block;width:min(220px,52vw);max-height:82px;object-fit:contain;margin:0 auto 14px}}.results-login-title{{font-size:1.28rem;font-weight:950;color:#0F172A;line-height:1.1}}.results-login-subtitle{{margin-top:5px;font-size:.78rem;font-weight:650;color:#64748B}}.st-key-results_access_form{{width:min(360px,92vw)!important;margin:0 auto!important}}.st-key-results_access_form [data-testid="stForm"]{{border:0!important;background:transparent!important;padding:0!important}}.st-key-results_access_form label p{{font-size:.70rem!important;font-weight:850!important;color:#334155!important}}.st-key-results_access_form input{{height:43px!important;border-radius:9px!important;border:1px solid #CBD5E1!important;background:#fff!important;text-align:center!important;font-size:.95rem!important}}.st-key-results_access_form button{{height:41px!important;border-radius:9px!important;background:#075B35!important;color:#fff!important;border:1px solid #075B35!important;font-size:.74rem!important;font-weight:950!important}}.results-access-error{{width:min(360px,92vw);margin:7px auto 0;text-align:center;color:#B91C1C;font-size:.69rem;font-weight:800}}@media(max-width:700px){{.results-login-logo{{width:min(190px,55vw);max-height:70px}}.results-login-title{{font-size:1.12rem}}}}</style><div class="results-login-wrap"><img class="results-login-logo" src="{ACCESS_LOGO_URL}" alt="Cartão de TODOS"><div class="results-login-title">PAINEL DE RESULTADOS</div><div class="results-login-subtitle">Recife Afogados</div></div>''',unsafe_allow_html=True)
         with st_module.container(key="results_access_form"):
             with st_module.form("dashboard_login_code",clear_on_submit=False,enter_to_submit=True):
                 code=st_module.text_input("Código de acesso",type="password",key="results_access_code",autocomplete="off",placeholder="",disabled=busy); submitted=st_module.form_submit_button("ACESSAR",use_container_width=True,disabled=busy)
