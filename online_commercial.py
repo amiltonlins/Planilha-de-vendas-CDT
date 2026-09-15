@@ -86,6 +86,23 @@ def _full_week_ranges(core, year, month):
     return ranges
 
 
+def _install_daily_current_date(core):
+    """Faz o Diário usar sempre a data atual de Recife, sem o corte de dia_referencia."""
+    if getattr(core, "_daily_current_date_runtime_installed", False):
+        return
+    original_daily_ranking_rows = core.daily_ranking_rows
+
+    def daily_ranking_rows_current(team, rows, cfg, reference_day=None):
+        current_day = reference_day or core.datetime.now(core.RECIFE_TZ).date()
+        effective_cfg = dict(cfg)
+        if current_day.year == int(cfg["ano"]) and current_day.month == int(cfg["mes"]):
+            effective_cfg["dia_referencia"] = current_day.day
+        return original_daily_ranking_rows(team, rows, effective_cfg, current_day)
+
+    core.daily_ranking_rows = daily_ranking_rows_current
+    core._daily_current_date_runtime_installed = True
+
+
 def _install_weekly_commercial_behavior(core):
     """Mantém semana completa, seletor por datas e download semanal corrigido."""
     if not getattr(core, "_weekly_complete_runtime_installed", False):
@@ -217,6 +234,7 @@ def install(core):
     """Sincroniza a fonte online e instala atualização automática do Comercial."""
     original_load_published = core.load_published
     _install_access_code_login(core)
+    _install_daily_current_date(core)
     _install_weekly_commercial_behavior(core)
     _install_refresh_button()
 
