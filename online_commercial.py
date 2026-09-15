@@ -6,7 +6,7 @@ from datetime import timedelta
 from urllib.request import Request,urlopen
 import streamlit as st
 DEFAULT_SHEET_ID="14uhlJmDA3UeTZb7sZ3zu-Fovr8utzQbFcpU8LEbuKXE"; DEFAULT_GID="56831808"; SOURCE_NAME="google_sheets_vendas.csv"; SELECTOR_VERSION="2026-09-12-commercial-dates-v4"
-ACCESS_CODE=os.environ.get("PAINEL_ACCESS_CODE","resultados"); ACCESS_SESSION_USER="Painel de Resultados"; ACCESS_SESSION_VERSION="results-code-v2-20260915"; ACCESS_LOGO_URL="https://share.google/eNhOIxBCCPNSKbiUE"; AUTO_REFRESH_SECONDS=60
+ACCESS_CODE=os.environ.get("PAINEL_ACCESS_CODE","resultados"); ACCESS_SESSION_USER="Painel de Resultados"; ACCESS_SESSION_VERSION="results-code-v2-20260915"; ACCESS_LOGO_URL="https://share.google/eNhOIxBCCPNSKbiUE"
 
 def _download_csv(sheet_id,gid):
     url=f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&_={time.time_ns()}"; request=Request(url,headers={"User-Agent":"Mozilla/5.0","Cache-Control":"no-cache, no-store, max-age=0","Pragma":"no-cache"})
@@ -89,13 +89,6 @@ def _install_refresh_button():
         return cols[0],cols[1],cols[3],cols[4]
     st.columns=columns; st._cdt_commercial_refresh_installed=True
 
-def _install_auto_refresh():
-    if not st.session_state.get("dashboard_autenticado",False):return
-    if st.session_state.get("area")=="GESTÃO" or st.session_state.get("gestor_autenticado",False) or st.session_state.get("conc_management",False):return
-    try:
-        import streamlit.components.v1 as components; components.html(f'<script>setTimeout(function(){{try{{window.parent.location.reload();}}catch(e){{window.location.reload();}}}},{AUTO_REFRESH_SECONDS*1000});</script>',height=0)
-    except Exception:pass
-
 def _normalize_access_code(value):return str(value or "").strip().casefold()
 
 def _install_access_code_login(core):
@@ -165,15 +158,17 @@ def install(core):
     original=core.load_published; _install_access_code_login(core); _invalidate_legacy_session(); _install_daily_current_date(core); _install_weekly_commercial_behavior(core); _install_refresh_button(); _install_management_report_month(core)
     def load(base):
         rows,cfg,metadata=original(base); metadata=dict(metadata or {}); force=bool(st.session_state.pop("commercial_force_refresh",False))
+        if not force:
+            return rows,cfg,metadata
         try:
-            incoming,inferred=_prepare_online_rows(core,base); days=sorted({r["data_venda"] for r in incoming}); before=_signature(rows,days); merged,days=core.merge_daily_history(rows,incoming); after=_signature(merged,days)
+            incoming,inferred=_prepare_online_rows(core,base); days=sorted({r["data_venda"] for r in incoming}); merged,days=core.merge_daily_history(rows,incoming)
             if days:
                 latest=max(days); cfg=core.prepare_config(core.merge_registry(base,cfg),merged,latest.month,latest.year)
-            now=core.datetime.now(core.RECIFE_TZ); metadata.update({"arquivo":SOURCE_NAME,"fonte_online":"Google Sheets · VENDAS","fonte_online_status":"ok","fonte_online_datas_inferidas":inferred})
-            if before!=after or force:core.save_published(merged,cfg,SOURCE_NAME,metadata.get("historico_importacoes",[]),updated_at=now); metadata["atualizado_em"]=now.isoformat(timespec="seconds")
+            now=core.datetime.now(core.RECIFE_TZ); metadata.update({"arquivo":SOURCE_NAME,"fonte_online":"Google Sheets · VENDAS","fonte_online_status":"ok","fonte_online_datas_inferidas":inferred,"atualizado_em":now.isoformat(timespec="seconds")})
+            core.save_published(merged,cfg,SOURCE_NAME,metadata.get("historico_importacoes",[]),updated_at=now)
             return merged,cfg,metadata
         except Exception as exc:
             metadata.update({"fonte_online":"Google Sheets · VENDAS","fonte_online_status":"fallback","fonte_online_erro":str(exc)})
-            if force:st.warning("Não foi possível atualizar. Última leitura válida mantida, quando disponível.")
+            st.warning("Não foi possível atualizar. Última leitura válida mantida, quando disponível.")
             return rows,cfg,metadata
-    core.load_published=load; _install_auto_refresh()
+    core.load_published=load
