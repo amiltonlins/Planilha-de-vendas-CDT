@@ -23,10 +23,21 @@ ACCESS_LOGO_URL = "https://share.google/eNhOIxBCCPNSKbiUE"
 AUTO_REFRESH_SECONDS = 60
 
 
-@st.cache_data(ttl=45, show_spinner=False)
 def _download_csv(sheet_id: str, gid: str) -> bytes:
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-    request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    """Baixa sempre uma cópia nova da aba VENDAS, evitando cache local e HTTP."""
+    cache_buster = str(time.time_ns())
+    url = (
+        f"https://docs.google.com/spreadsheets/d/{sheet_id}/export"
+        f"?format=csv&gid={gid}&_={cache_buster}"
+    )
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0",
+            "Cache-Control": "no-cache, no-store, max-age=0",
+            "Pragma": "no-cache",
+        },
+    )
     with urlopen(request, timeout=20) as response:
         data = response.read()
         content_type = str(response.headers.get("Content-Type", "")).lower()
@@ -212,7 +223,6 @@ def install(core):
     def load_published_online(base):
         rows, cfg, metadata = original_load_published(base); metadata = dict(metadata or {})
         force_refresh = bool(st.session_state.pop("commercial_force_refresh", False))
-        if force_refresh: _download_csv.clear()
         try:
             incoming, inferred_dates = _prepare_online_rows(core, base)
             imported_days = sorted({row["data_venda"] for row in incoming}); before = _signature(rows, imported_days); merged, imported_days = core.merge_daily_history(rows, incoming); after = _signature(merged, imported_days)
