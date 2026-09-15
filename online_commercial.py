@@ -91,7 +91,6 @@ def _install_refresh_button():
 
 def _install_auto_refresh():
     if not st.session_state.get("dashboard_autenticado",False):return
-    # Gestão precisa manter a sessão estável; o reload automático é somente para as telas de resultados.
     if st.session_state.get("area")=="GESTÃO" or st.session_state.get("gestor_autenticado",False) or st.session_state.get("conc_management",False):return
     try:
         import streamlit.components.v1 as components; components.html(f'<script>setTimeout(function(){{try{{window.parent.location.reload();}}catch(e){{window.location.reload();}}}},{AUTO_REFRESH_SECONDS*1000});</script>',height=0)
@@ -135,8 +134,35 @@ def _invalidate_legacy_session():
         except Exception:pass
     st.session_state["dashboard_access_version"]=ACCESS_SESSION_VERSION
 
+def _install_management_report_month(core):
+    """Seleciona a competência apenas dos relatórios da Gestão, sem alterar/salvar a configuração oficial."""
+    if getattr(core,"_management_report_month_installed",False):return
+    original_render=core.render_management
+    def render(st_module,base,current_rows,current_cfg,metadata):
+        if not st_module.session_state.get("gestor_autenticado",False):
+            return original_render(st_module,base,current_rows,current_cfg,metadata)
+        periods=sorted({(r["data_venda"].year,r["data_venda"].month) for r in current_rows if r.get("data_venda")},reverse=True)
+        if not periods:return original_render(st_module,base,current_rows,current_cfg,metadata)
+        names=("Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro")
+        labels=[f"{names[m-1]} / {y}" for y,m in periods]
+        current=(int(current_cfg.get("ano",0) or 0),int(current_cfg.get("mes",0) or 0)); default=periods.index(current) if current in periods else 0
+        saved=st_module.session_state.get("gestao_relatorio_mes")
+        index=labels.index(saved) if saved in labels else default
+        selected_label=st_module.selectbox("Mês do relatório",labels,index=index,key="gestao_relatorio_mes",help="Altera somente os relatórios e indicadores da Gestão Comercial; não modifica a competência oficial do painel.")
+        selected=periods[labels.index(selected_label)]
+        original_summarize=core.summarize
+        def summarize_for_report(rows,cfg):
+            effective=dict(cfg); effective["ano"],effective["mes"]=selected
+            selected_rows=[r for r in rows if r.get("data_venda") and r["data_venda"].year==selected[0] and r["data_venda"].month==selected[1]]
+            if selected_rows:effective["dia_referencia"]=max(r["data_venda"].day for r in selected_rows)
+            return original_summarize(rows,effective)
+        core.summarize=summarize_for_report
+        try:return original_render(st_module,base,current_rows,current_cfg,metadata)
+        finally:core.summarize=original_summarize
+    core.render_management=render; core._management_report_month_installed=True
+
 def install(core):
-    original=core.load_published; _install_access_code_login(core); _invalidate_legacy_session(); _install_daily_current_date(core); _install_weekly_commercial_behavior(core); _install_refresh_button()
+    original=core.load_published; _install_access_code_login(core); _invalidate_legacy_session(); _install_daily_current_date(core); _install_weekly_commercial_behavior(core); _install_refresh_button(); _install_management_report_month(core)
     def load(base):
         rows,cfg,metadata=original(base); metadata=dict(metadata or {}); force=bool(st.session_state.pop("commercial_force_refresh",False))
         try:
