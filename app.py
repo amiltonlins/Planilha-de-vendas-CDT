@@ -135,7 +135,13 @@ def _open_team_dialog_if_requested():
 
 
 def _install_login_viewport_fix():
-    original_render_login = _core.render_login
+    # Streamlit pode reexecutar app.py mantendo app_core em memória.
+    # Preserve uma única referência à função original para evitar wrappers
+    # acumulados e RecursionError após reruns/redeploys.
+    if not hasattr(_core, "_original_render_login_viewport"):
+        _core._original_render_login_viewport = _core.render_login
+    original_render_login = _core._original_render_login_viewport
+
     def render_login_without_scroll(st,cfg):
         original_render_login(st,cfg)
         st.markdown("""<style>
