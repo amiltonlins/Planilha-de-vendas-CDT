@@ -451,7 +451,7 @@ def general_report_display(team):
     for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):
         display.append(item|{
             "media":f'{item["media"]:.2f}',
-            "meta_pct":pct(item["projecao"]/item["meta_individual"] if item["meta_individual"] else 0),
+            "meta_pct":pct(item["projecao"]/40),
             "neo_pct_fmt":pct(item["neo_pct"]),
             "base_fmt":money(item["base"]),
             "proj_fmt":money(item["comissao_proj"]),
@@ -477,7 +477,7 @@ def general_report_xlsx_bytes(team,all_days):
         cell.font=Font(color="FFFFFF",bold=True)
         cell.alignment=Alignment(horizontal="center")
     for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):
-        meta_pct=item["projecao"]/item["meta_individual"] if item.get("meta_individual") else 0
+        meta_pct=item["projecao"]/40
         values=[item.get("equipe",""),item.get("vendedor",""),int(item.get("vendas",0) or 0),int(item.get("projecao",0) or 0),float(item.get("media",0) or 0),int(item.get("zeros",0) or 0),meta_pct,int(item.get("neo",0) or 0),float(item.get("neo_pct",0) or 0),float(item.get("base",0) or 0),float(item.get("comissao_proj",0) or 0),float(item.get("bonus_neo_proj",0) or 0),float(item.get("bonus_adim_proj",0) or 0),float(item.get("premio_total",0) or 0),float(item.get("total_variavel_proj",0) or 0)]
         elapsed_days=item.get("dias_decorridos",set())
         daily=item.get("diario",{})
@@ -709,7 +709,7 @@ def seller_kpi_card(label,value,sub,cls):
     return f'<div class="seller-kpi {cls}"><small>{html.escape(str(label))}</small><strong>{html.escape(str(value))}</strong><span>{html.escape(str(sub))}</span></div>'
 
 def seller_kpis_html(x):
-    meta_value=int(x.get("meta_individual",0) or 0)
+    meta_value=40  # Meta comercial fixa para o percentual da projeção
     vendas=int(x.get("vendas",0) or 0)
     projecao=int(x.get("projecao",0) or 0)
     meta_pct=projecao/meta_value if meta_value else 0
@@ -760,7 +760,7 @@ def ranking_html(ranking,auth_token=""):
     for i,x in enumerate(ranking):
         classification,color,_=performance(x["media"])
         medal=medals[i] if i<3 else f"{i+1}º"
-        meta_pct=x["projecao"]/x["meta_individual"] if x["meta_individual"] else 0
+        meta_pct=x["projecao"]/40
         performance_key=normalize_text(classification)
         status_emoji={
             "vermelho":"😟",
