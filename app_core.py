@@ -2878,7 +2878,24 @@ section.main>div{margin-top:0!important;padding-top:.35rem!important}
     user_name_raw=str(st.session_state.get("dashboard_usuario") or "Usuário autenticado")
     auth_token=st.session_state.get("dashboard_auth_token") or incoming_token or ""
     management_available=bool(manager_password(st))
-    data_until=max((x["data_venda"] for x in rows if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),default=date(cfg["ano"],cfg["mes"],1))
+    # Competência comercial selecionável: usa todos os meses disponíveis no histórico.
+    # A seleção é apenas de consulta e não altera/sobrescreve os dados publicados.
+    available_competences=sorted(
+        {(int(x["data_venda"].year),int(x["data_venda"].month)) for x in rows},
+        reverse=True,
+    )
+    current_competence=(int(cfg["ano"]),int(cfg["mes"]))
+    if current_competence not in available_competences:
+        available_competences.insert(0,current_competence)
+    selected_competence=st.session_state.get("commercial_reference_month",current_competence)
+    if selected_competence not in available_competences:
+        selected_competence=current_competence
+    cfg["ano"],cfg["mes"]=int(selected_competence[0]),int(selected_competence[1])
+    data_until=max(
+        (x["data_venda"] for x in rows
+         if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),
+        default=date(cfg["ano"],cfg["mes"],1),
+    )
     updated=datetime.fromisoformat(metadata["atualizado_em"])
     if updated.tzinfo is not None:
         updated=updated.astimezone(RECIFE_TZ)
@@ -3124,7 +3141,22 @@ section.main>div,
             with update_col:
                 st.markdown(f'<div class="header-meta header-update">{html.escape(update_text)}</div>',unsafe_allow_html=True)
             with month_col:
-                st.markdown(f'<div class="header-meta header-month">{html.escape(competence_text)}</div>',unsafe_allow_html=True)
+                month_options=[(year,month) for year,month in available_competences]
+                month_labels=[f"{month_names[month-1]}/{year}" for year,month in month_options]
+                current_index=month_options.index((int(cfg["ano"]),int(cfg["mes"])))
+                selected_label=st.selectbox(
+                    "Mês de referência",
+                    month_labels,
+                    index=current_index,
+                    key="commercial_reference_month_label",
+                    label_visibility="collapsed",
+                )
+                selected_index=month_labels.index(selected_label)
+                selected_value=month_options[selected_index]
+                if selected_value != st.session_state.get("commercial_reference_month",(int(cfg["ano"]),int(cfg["mes"]))):
+                    st.session_state["commercial_reference_month"]=selected_value
+                    st.session_state["weekly_selected_label"]=None
+                    st.rerun()
             with spacer_col:
                 st.empty()
 
