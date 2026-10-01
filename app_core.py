@@ -2891,6 +2891,17 @@ section.main>div{margin-top:0!important;padding-top:.35rem!important}
     if selected_competence not in available_competences:
         selected_competence=current_competence
     cfg["ano"],cfg["mes"]=int(selected_competence[0]),int(selected_competence[1])
+    # Para meses já encerrados, a consulta deve considerar o mês inteiro.
+    # O limite diário configurado é usado somente para a competência corrente.
+    today_ref=datetime.now(RECIFE_TZ).date()
+    selected_period=(int(cfg["ano"]),int(cfg["mes"]))
+    current_period=(today_ref.year,today_ref.month)
+    if selected_period < current_period:
+        if int(cfg["mes"]) == 12:
+            next_month=date(int(cfg["ano"])+1,1,1)
+        else:
+            next_month=date(int(cfg["ano"]),int(cfg["mes"])+1,1)
+        cfg["dia_referencia"]=(next_month-timedelta(days=1)).day
     data_until=max(
         (x["data_venda"] for x in rows
          if x["data_venda"].year==cfg["ano"] and x["data_venda"].month==cfg["mes"]),
