@@ -542,7 +542,7 @@ def executive_kpis_html(cfg,total,projection,neo,team):
     neo_meta=14
     neo_faltam=max(0,neo_meta-neo)
     return (
-        '<div class="exec-compact-grid">'
+        '<div class="exec-compact-grid" style="display:grid !important;visibility:visible !important;opacity:1 !important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;">'
         '<div class="exec-compact-card exec-performance">'
         '<div class="exec-compact-title">DESEMPENHO DE VENDAS</div>'
         '<div class="exec-performance-values">'
@@ -556,7 +556,7 @@ def executive_kpis_html(cfg,total,projection,neo,team):
         f'<div><small>META</small><strong>{meta}</strong></div>'
         f'<div><small>FALTAM</small><strong>{faltam}</strong></div>'
         '</div></div>'
-        '<div class="exec-compact-card exec-energy">'
+        '<div class="exec-compact-card exec-energy" style="display:block !important;visibility:visible !important;opacity:1 !important;">'
         '<div class="exec-compact-title">NEOENERGIA</div>'
         '<div class="exec-pair-values">'
         f'<div><small>FALTAM PARA 14</small><strong>{neo_faltam}</strong></div>'
