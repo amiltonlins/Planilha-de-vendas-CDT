@@ -162,10 +162,10 @@ def install(core):
         # pode conter uma configuração antiga persistida, então sincronizamos somente as
         # regras de remuneração sem sobrescrever vendedores, equipes ou demais ajustes administrativos.
         cfg=dict(cfg or {})
-        for key in ("limite_cenario_maior","bonus_neoenergia","bonus_adimplencia","reguas_comissao","premiacao_semanal"):
+        for key in ("limite_cenario_maior","bonus_adimplencia","reguas_comissao","premiacao_semanal"):
             if key in base:
                 cfg[key]=base[key]
-        force=bool(st.session_state.pop("commercial_force_refresh",False))
+        cfg.pop("bonus_neoenergia",None)\n        force=bool(st.session_state.pop("commercial_force_refresh",False))
         if not force:
             return rows,cfg,metadata
         try:
