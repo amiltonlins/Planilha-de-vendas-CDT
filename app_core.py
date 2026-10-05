@@ -897,7 +897,8 @@ CSS="""<style>
 .rank-inside>span:nth-child(8),.rank-inside>span:nth-child(9),.rank-inside>span:nth-child(10),.rank-inside>span:nth-child(11){grid-column:span 3!important}
 .rank-inside>span:nth-child(12){grid-column:span 6!important}
 .rank-inside>span:nth-child(13){grid-column:span 6!important;min-height:48px!important;background:rgba(15,23,42,.24)!important}
-.rank-inside>span:nth-child(14){display:none!important}
+.rank-inside>span:nth-child(14){grid-column:span 6!important;min-height:48px!important;background:rgba(255,255,255,.13)!important}
+.rank-inside>span:nth-child(15){display:none!important}
 .rank-inside>span{box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
 .rank-inside strong{max-width:100%!important;overflow-wrap:anywhere!important}
 
