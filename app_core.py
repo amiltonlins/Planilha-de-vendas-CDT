@@ -555,10 +555,11 @@ def executive_kpis_html(cfg,total,projection,neo,team):
         f'<div><small>META</small><strong>{meta}</strong></div>'
         f'<div><small>FALTAM</small><strong>{faltam}</strong></div>'
         '</div></div>'
-        '<div class="exec-compact-card exec-energy" style="display:block !important;visibility:visible !important;opacity:1 !important;">'
+        '<div class="exec-compact-card exec-energy">'
         '<div class="exec-compact-title">NEOENERGIA</div>'
         '<div class="exec-pair-values">'
-        f'<div><small>FALTAM PARA 14</small><strong>{neo_faltam}</strong></div>'
+        f'<div><small>VENDAS</small><strong>{neo}</strong></div>'
+        f'<div><small>% NEO</small><strong>{pct(neo_pct)}</strong></div>'
         '</div></div>'
         '</div>'
     )
