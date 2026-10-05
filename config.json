@@ -13,10 +13,6 @@
   "calendario": {
     "trabalha_sabado": true
   },
-  "bonus_neoenergia": {
-    "percentual_minimo": 0.3,
-    "percentual_bonus": 0.15
-  },
   "bonus_adimplencia": {
     "percentual_minimo": 1,
     "percentual_bonus": 0.1
