@@ -165,7 +165,8 @@ def install(core):
         for key in ("limite_cenario_maior","bonus_adimplencia","reguas_comissao","premiacao_semanal"):
             if key in base:
                 cfg[key]=base[key]
-        cfg.pop("bonus_neoenergia",None)\n        force=bool(st.session_state.pop("commercial_force_refresh",False))
+        cfg.pop("bonus_neoenergia",None)
+        force=bool(st.session_state.pop("commercial_force_refresh",False))
         if not force:
             return rows,cfg,metadata
         try:
