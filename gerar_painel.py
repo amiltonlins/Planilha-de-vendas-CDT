@@ -255,12 +255,12 @@ def build_sheets(rows,cfg,summary,all_days,elapsed,official):
             r=len(dash.rows); dash.rows[-1][0].extend([label,f'=IFERROR(VLOOKUP($E$13,\'RELATORIO GERAL\'!$A$4:$AF${n},{colnum},FALSE),0)']); dash.rows[-1][1].update({4:10,5:15 if i>=17 else 11})
     sheets.append(dash)
 
-    general_end=column(tail+11)
-    general=Sheet("RELATORIO GERAL",{1:24,2:13,3:13,**{i:14 for i in range(4,tail+12)}},freeze="A5",autofilter=f"A4:{general_end}{n}")
+    general_end=column(tail+10)
+    general=Sheet("RELATORIO GERAL",{1:24,2:13,3:13,**{i:14 for i in range(4,tail+11)}},freeze="A5",autofilter=f"A4:{general_end}{n}")
     title(general,"RELATÓRIO GERAL","Produção, projeção e remuneração por vendedor",general_end)
-    general.add([]); headers=["Vendedor","Setor","Categoria","Experiência","Vendas","Dias trabalhados","Média/dia","Projeção","Dias zerados","Neo","% Neo",*[f"S{i}" for i in range(1,week_count+1)],*[f"Prêmio S{i}" for i in range(1,week_count+1)],"Semanais","Mínimo","R$/venda","Premiação base","Bônus Neo","Bônus adimpl.","Total acumulado","Premiação projetada","Próxima faixa","Faltam próxima","Ganho adicional","Meta individual"]
+    general.add([]); headers=["Vendedor","Setor","Categoria","Experiência","Vendas","Dias trabalhados","Média/dia","Projeção","Dias zerados","Neo","% Neo",*[f"S{i}" for i in range(1,week_count+1)],*[f"Prêmio S{i}" for i in range(1,week_count+1)],"Semanais","Mínimo","R$/venda","Premiação base","Bônus adimpl.","Total acumulado","Premiação projetada","Próxima faixa","Faltam próxima","Ganho adicional","Meta individual"]
     header(general,headers)
-    for x in report_summary: general.add([x["vendedor"],x["setor"],x["categoria"],x["experiencia"],x["vendas"],x["dias"],x["media"],x["projecao"],x["zeros"],x["neo"],x["neo_pct"],*x["semanas"],*x["premios"],x["premio_total"],x["minimo"],x["taxa"],x["base"]x["bonus_adim"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"],x["meta_individual"]],{7:3,11:4,**{i:5 for i in range(17,23)},25:5,26:5,27:5,28:5,29:5,32:5})
+    for x in report_summary: general.add([x["vendedor"],x["setor"],x["categoria"],x["experiencia"],x["vendas"],x["dias"],x["media"],x["projecao"],x["zeros"],x["neo"],x["neo_pct"],*x["semanas"],*x["premios"],x["premio_total"],x["minimo"],x["taxa"],x["base"],x["bonus_adim"],x["total"],x["comissao_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"],x["meta_individual"]],{7:3,11:4,**{i:5 for i in range(17,23)},25:5,26:5,27:5,28:5,29:5,32:5})
     general.color_scale(f"E5:E{n}"); general.performance_scale(f"A5:A{n} H5:H{n}",5,target_col=general_end); sheets.append(general)
 
     weekly_end=column(2*week_count+7); weekly=Sheet("SEMANAL",{1:24,**{i:15 for i in range(2,2*week_count+8)}},freeze="A5",autofilter=f"A4:{weekly_end}{n}"); title(weekly,"ACOMPANHAMENTO SEMANAL","Semanas automáticas de segunda-feira a domingo",weekly_end); weekly.add([]); header(weekly,["Vendedor",*[f"Vendas S{i}" for i in range(1,week_count+1)],*[f"Prêmio S{i}" for i in range(1,week_count+1)],"Total semanais","Melhor semana","Pior semana","Média semanal","Semana atual","Evolução"])
@@ -268,8 +268,8 @@ def build_sheets(rows,cfg,summary,all_days,elapsed,official):
     for x in report_summary: weekly.add([x["vendedor"],*x["semanas"],*x["premios"],x["premio_total"],max(x["semanas"]),min(x["semanas"]),sum(x["semanas"])/week_count,current,x["semanas"][current-1]-x["semanas"][max(0,current-2)]],{i:5 for i in range(2+week_count,3+2*week_count)})
     weekly.color_scale(f"B5:{column(week_count+1)}{n}"); sheets.append(weekly)
 
-    comm=Sheet("COMISSOES",{1:24,**{i:18 for i in range(2,17)}},freeze="A5",autofilter=f"A4:P{n}"); title(comm,"COMISSÕES E REMUNERAÇÃO",f"Cenário oficial: {'empresa >= 1.000' if official=='maior_ou_igual_1000' else 'empresa < 1.000'}","P"); comm.add([]); header(comm,["Vendedor","Vendas","Mínimo","R$/venda","Base atual","Bônus Neo atual","Bônus adimpl. atual","Semanais acumulados","Total atual","Premiação projetada","Bônus Neo proj.","Bônus adimpl. proj.","Total variável projetado","Próxima faixa","Faltam","Ganho adicional"])
-    for x in report_summary: comm.add([x["vendedor"],x["vendas"],x["minimo"],x["taxa"],x["base"],x["bonus_neo"],x["bonus_adim"],x["premio_total"],x["total"],x["comissao_proj"]x["bonus_adim_proj"],x["total_variavel_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"]],{i:5 for i in range(4,14)}|{16:5})
+    comm=Sheet("COMISSOES",{1:24,**{i:18 for i in range(2,15)}},freeze="A5",autofilter=f"A4:N{n}"); title(comm,"COMISSÕES E REMUNERAÇÃO",f"Cenário oficial: {'empresa >= 1.000' if official=='maior_ou_igual_1000' else 'empresa < 1.000'}","N"); comm.add([]); header(comm,["Vendedor","Vendas","Mínimo","R$/venda","Base atual","Bônus adimpl. atual","Semanais acumulados","Total atual","Premiação projetada","Bônus adimpl. proj.","Total variável projetado","Próxima faixa","Faltam","Ganho adicional"])
+    for x in report_summary: comm.add([x["vendedor"],x["vendas"],x["minimo"],x["taxa"],x["base"],x["bonus_adim"],x["premio_total"],x["total"],x["comissao_proj"],x["bonus_adim_proj"],x["total_variavel_proj"],x["proxima"],x["faltam_proxima"],x["ganho_proxima"]],{i:5 for i in range(4,12)}|{14:5})
     comm.color_scale(f"I5:I{n}"); sheets.append(comm)
 
     conf=Sheet("CONFIGURACOES",{1:30,2:22,3:52},freeze="A5"); title(conf,"CONFIGURAÇÕES","Valores carregados de config.json; altere o JSON e gere novamente","C"); conf.add([]); header(conf,["Parâmetro","Valor","Observação"])
