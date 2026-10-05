@@ -135,9 +135,37 @@ def month_weeks(year, month):
     return weeks
 
 
+def tier_entry(qty, tiers):
+    eligible=[t for t in tiers if qty>=int(t["vendas"])]
+    return eligible[-1] if eligible else None
+
+
 def tier_value(qty, tiers):
-    eligible=[float(t["valor_por_venda"]) for t in tiers if qty>=int(t["vendas"])]
-    return eligible[-1] if eligible else 0
+    entry=tier_entry(qty, tiers)
+    if not entry: return 0
+    if "valor_por_venda" in entry:
+        return float(entry["valor_por_venda"])
+    return (float(entry.get("credito",0))+float(entry.get("celpe",0)))/2
+
+
+def commission_rates(qty, tiers):
+    entry=tier_entry(qty, tiers)
+    if not entry: return 0.0, 0.0
+    return float(entry.get("credito",entry.get("valor_por_venda",0))), float(entry.get("celpe",entry.get("valor_por_venda",0)))
+
+
+def commission_base(sales, qty, tiers):
+    credito,celpe=commission_rates(qty,tiers)
+    celpe_count=sum(1 for x in sales if str(x.get("neoenergia","")).strip().lower() in ("sim","1","true","neoenergia celpe"))
+    credito_count=max(0,len(sales)-celpe_count)
+    return credito_count*credito + celpe_count*celpe, credito_count, celpe_count, credito, celpe
+
+
+def projected_commission_base(projection, neo_pct, tiers):
+    credito,celpe=commission_rates(projection,tiers)
+    celpe_count=round(projection*neo_pct)
+    credito_count=max(0,projection-celpe_count)
+    return credito_count*credito + celpe_count*celpe, credito_count, celpe_count, credito, celpe
 
 
 def weekly_prize(qty, awards):
@@ -163,11 +191,13 @@ def summarize(rows, cfg):
         category=seller.get("categoria","Vendedor"); franchise=seller.get("pertence_franquia",True); active=seller.get("ativo",True)
         local_seller=active and franchise and category.lower() not in ("website","adm","freelance","canal nacional")
         scheduled=workdays(year,month,seller.get("trabalha_sabado",cfg.get("calendario",{}).get("trabalha_sabado",True)),seller.get("trabalha_domingo",False),seller.get("data_inicio"),seller.get("data_desligamento"),seller.get("folgas",[]))
-        elapsed=[d for d in scheduled if d<=cutoff]; days_worked=len(elapsed); avg=qty/days_worked if days_worked else 0; projection=round(avg*len(scheduled)) if days_worked else 0; minimum=35 if seller["experiencia"] else 40
+        elapsed=[d for d in scheduled if d<=cutoff]; days_worked=len(elapsed); avg=qty/days_worked if days_worked else 0; projection=round(avg*len(scheduled)) if days_worked else 0; minimum=40
         weeks=[sum(a<=x["data_venda"]<=b for x in sales) for a,b in weeks_ranges]
         prizes=[weekly_prize(x,cfg["premiacao_semanal"]) if local_seller else 0 for x in weeks]
         neo=sum(x["neoenergia"].strip().lower() in ("sim","1","true","neoenergia celpe") for x in sales); neo_pct=neo/qty if qty else 0
-        ruler=cfg["reguas_comissao"][official]; rate=tier_value(qty,ruler) if local_seller and qty>=minimum else 0; base=qty*rate
+        ruler=cfg["reguas_comissao"][official]
+        base,credito_count,celpe_count,rate_credito,rate_celpe=commission_base(sales,qty,ruler) if local_seller and qty>=minimum else (0,0,0,0.0,0.0)
+        rate=(base/qty) if qty else 0.0
         adim=all(x["adimplencia_m2"].strip().replace(",",".") in ("1","1.0","100%") for x in sales) if sales else False
         bonus_neo=base*cfg["bonus_neoenergia"]["percentual_bonus"] if neo_pct>=cfg["bonus_neoenergia"]["percentual_minimo"] else 0
         bonus_adim=base*cfg["bonus_adimplencia"]["percentual_bonus"] if adim else 0
@@ -182,16 +212,19 @@ def summarize(rows, cfg):
         current_week=next(((a,b) for a,b in weeks_ranges if a<=cutoff<=b),weeks_ranges[-1])
         zeros_week=sum(current_week[0]<=d<=current_week[1] for d in zero_days)
         next_tier=next((int(x["vendas"]) for x in ruler if int(x["vendas"])>qty),None); next_gain=0
-        if next_tier: next_gain=next_tier*tier_value(next_tier,ruler)-base
+        if next_tier and local_seller:
+            next_base,_,_,_,_=projected_commission_base(next_tier,neo_pct,ruler)
+            next_gain=next_base-base
         daily={d.day:sum(x["data_venda"]==d for x in sales) for d in calendar_days}
         result.append({"vendedor":name,"setor":seller.get("setor","NÃO INFORMADO"),"categoria":category,"ativo":active,"pertence_franquia":franchise,"elegivel_individual":local_seller,"experiencia":"Sim" if seller["experiencia"] else "Não","vendas":qty,"dias":days_worked,"dias_previstos":len(scheduled),"media":avg,"projecao":projection,"meta_individual":int(seller["meta_individual"]),"zeros":len(zero_days),"zeros_semana":zeros_week,"sequencia_zeros":current_sequence,"maior_sequencia_zeros":longest,"neo":neo,"neo_pct":neo_pct,"neo_elegivel":local_seller and neo_pct>=cfg["bonus_neoenergia"]["percentual_minimo"],"adim_elegivel":local_seller and adim,"semanas":weeks,"premios":prizes,"premio_total":sum(prizes),"minimo":minimum,"taxa":rate,"base":base,"bonus_neo":bonus_neo if local_seller else 0,"bonus_adim":bonus_adim if local_seller else 0,"total":base+(bonus_neo if local_seller else 0)+(bonus_adim if local_seller else 0)+sum(prizes),"proxima":next_tier or "Faixa máxima","faltam_proxima":max(0,(next_tier or qty)-qty) if local_seller else 0,"ganho_proxima":next_gain if local_seller else 0,"proxima_taxa":tier_value(next_tier,ruler) if next_tier and local_seller else rate,"proxima_comissao":next_tier*tier_value(next_tier,ruler) if next_tier and local_seller else base,"diario":daily,"dias_agendados":{d.day for d in scheduled},"dias_decorridos":{d.day for d in elapsed}})
     enterprise_projection=sum(x["projecao"] for x in result); projected_scenario="maior_ou_igual_1000" if enterprise_projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
     for item in result:
-        projected_ruler=cfg["reguas_comissao"][projected_scenario]; projected_rate=tier_value(item["projecao"],projected_ruler) if item["elegivel_individual"] and item["projecao"]>=item["minimo"] else 0
-        projected_base=item["projecao"]*projected_rate
+        projected_ruler=cfg["reguas_comissao"][projected_scenario]
+        projected_base,projected_credito_count,projected_celpe_count,projected_rate_credito,projected_rate_celpe=projected_commission_base(item["projecao"],item["neo_pct"],projected_ruler) if item["elegivel_individual"] and item["projecao"]>=item["minimo"] else (0,0,0,0.0,0.0)
+        projected_rate=(projected_base/item["projecao"]) if item["projecao"] else 0.0
         projected_neo=projected_base*cfg["bonus_neoenergia"]["percentual_bonus"] if item["neo_elegivel"] else 0
         projected_adim=projected_base*cfg["bonus_adimplencia"]["percentual_bonus"] if item["elegivel_individual"] else 0
-        item.update({"cenario_projetado":projected_scenario,"taxa_proj":projected_rate,"base_proj":projected_base,"comissao_proj":projected_base,"bonus_neo_proj":projected_neo,"bonus_adim_proj":projected_adim,"total_variavel_proj":projected_base+projected_neo+projected_adim+item["premio_total"]})
+        item.update({"cenario_projetado":projected_scenario,"taxa_proj":projected_rate,"taxa_proj_credito":projected_rate_credito,"taxa_proj_celpe":projected_rate_celpe,"base_proj":projected_base,"base_proj_credito":projected_credito_count*projected_rate_credito,"base_proj_celpe":projected_celpe_count*projected_rate_celpe,"comissao_proj":projected_base,"bonus_neo_proj":projected_neo,"bonus_adim_proj":projected_adim,"total_variavel_proj":projected_base+projected_neo+projected_adim+item["premio_total"]})
     return result, calendar_days, [d for d in calendar_days if d<=cutoff], official
 
 
