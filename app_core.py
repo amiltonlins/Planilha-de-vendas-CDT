@@ -477,7 +477,7 @@ def general_report_xlsx_bytes(team,all_days):
         cell.alignment=Alignment(horizontal="center")
     for item in sorted(team,key=lambda z:(z["vendas"],z["projecao"]),reverse=True):
         meta_pct=item["projecao"]/40
-        values=[item.get("equipe",""),item.get("vendedor",""),int(item.get("vendas",0) or 0),int(item.get("projecao",0) or 0),float(item.get("media",0) or 0),int(item.get("zeros",0) or 0),meta_pct,int(item.get("neo",0) or 0),float(item.get("neo_pct",0) or 0),float(item.get("base",0) or 0),float(item.get("comissao_proj",0) or 0),float(item.get("bonus_neo_proj",0) or 0),float(item.get("bonus_adim_proj",0) or 0),float(item.get("premio_total",0) or 0),float(item.get("total_variavel_proj",0) or 0)]
+        values=[item.get("equipe",""),item.get("vendedor",""),int(item.get("vendas",0) or 0),int(item.get("projecao",0) or 0),float(item.get("media",0) or 0),int(item.get("zeros",0) or 0),meta_pct,int(item.get("neo",0) or 0),float(item.get("neo_pct",0) or 0),float(item.get("base",0) or 0),float(item.get("comissao_proj",0) or 0),float(item.get("bonus_adim_proj",0) or 0),float(item.get("premio_total",0) or 0),float(item.get("total_variavel_proj",0) or 0)]
         elapsed_days=item.get("dias_decorridos",set())
         daily=item.get("diario",{})
         for d in all_days:
