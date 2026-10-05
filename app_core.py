@@ -3202,13 +3202,7 @@ section.main>div,
         detail=next((x for x in team if normalize_text(x["vendedor"])==normalize_text(requested_seller)),None)
         if detail:open_seller_dialog(st,detail)
     if area=="VISÃO GERAL":
-        k1,k2,k3=st.columns(3)
-        with k1:
-            st.markdown(f'<div class="exec-compact-card exec-performance" style="height:100%;box-sizing:border-box;"><div class="exec-compact-title">DESEMPENHO DE VENDAS</div><div class="exec-performance-values"><div class="exec-main-value"><small>REALIZADAS</small><strong>{total}</strong></div><div><small>PROJEÇÃO</small><strong>{projection}</strong></div><div><small>% DA META</small><strong>{pct(total/cfg["meta_empresa"] if cfg["meta_empresa"] else 0)}</strong></div></div></div>',unsafe_allow_html=True)
-        with k2:
-            st.markdown(f'<div class="exec-compact-card exec-goal" style="height:100%;box-sizing:border-box;"><div class="exec-compact-title">METAS DO MÊS</div><div class="exec-pair-values"><div><small>META</small><strong>{cfg["meta_empresa"]}</strong></div><div><small>FALTAM</small><strong>{max(0,cfg["meta_empresa"]-total)}</strong></div></div></div>',unsafe_allow_html=True)
-        with k3:
-            st.markdown(f'<div class="exec-compact-card exec-energy" style="display:block!important;visibility:visible!important;opacity:1!important;height:100%;box-sizing:border-box;"><div class="exec-compact-title">NEOENERGIA</div><div class="exec-pair-values"><div><small>FALTAM PARA 14</small><strong>{max(0,14-neo)}</strong></div></div></div>',unsafe_allow_html=True)
+        st.markdown(executive_kpis_html(cfg,total,projection,neo,team),unsafe_allow_html=True)
         st.markdown('<div class="section">Ranking da equipe</div>',unsafe_allow_html=True)
         team_filter=st.selectbox("Filtrar ranking por equipe",("TODAS AS EQUIPES",)+TEAM_OPTIONS,key="ranking_team_filter",label_visibility="collapsed")
         filtered_team=team if team_filter=="TODAS AS EQUIPES" else [x for x in team if x.get("equipe")==team_filter]
