@@ -732,6 +732,7 @@ def seller_kpis_html(x):
     awards=[
         ("PREMIAÇÃO ATUAL",money(x["base"]),"main"),
         ("PREMIAÇÃO PROJ.",money(x["comissao_proj"]),""),
+        ("FALTAM PARA 14 NEO",str(max(0,14-int(x.get("neo",0) or 0))),""),
         ("BÔNUS (SE) 100% ADIM",money(x["bonus_adim_proj"]),""),
         ("SEMANAIS",money(x["premio_total"]),""),
         ("TOTAL VAR. PROJ.",money(x["total_variavel_proj"]),"total"),
@@ -782,6 +783,7 @@ def ranking_html(ranking,auth_token=""):
             f'<span class="neo-highlight"><strong>{pct(x["neo_pct"])}</strong><small>% NEO</small></span>'
             f'<span><strong>{money(x["base"])}</strong><small>PREMIAÇÃO ATUAL</small></span>'
             f'<span><strong>{money(x["comissao_proj"])}</strong><small>PREMIAÇÃO PROJ.</small></span>'
+            f'<span><strong>{max(0,14-int(x.get("neo",0) or 0))}</strong><small>FALTAM PARA 14 NEO</small></span>'
             f'<span><strong>{money(x["bonus_adim_proj"])}</strong><small>BÔNUS (SE) 100% ADIM</small></span>'
             f'<span><strong>{money(x["premio_total"])}</strong><small>SEMANAIS</small></span>'
             f'<span class="total-highlight"><strong>{money(x["total_variavel_proj"])}</strong><small>TOTAL VAR. PROJ.</small></span>'
