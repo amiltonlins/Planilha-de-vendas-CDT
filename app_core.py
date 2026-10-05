@@ -559,7 +559,6 @@ def executive_kpis_html(cfg,total,projection,neo,team):
         '<div class="exec-compact-card exec-energy">'
         '<div class="exec-compact-title">NEOENERGIA</div>'
         '<div class="exec-pair-values">'
-        f'<div><small>VENDAS</small><strong>{neo}</strong></div>'
         f'<div><small>FALTAM PARA 14</small><strong>{neo_faltam}</strong></div>'
         '</div></div>'
         '</div>'
