@@ -539,10 +539,9 @@ def executive_kpis_html(cfg,total,projection,neo,team):
     meta=cfg["meta_empresa"]
     ating=total/meta if meta else 0
     faltam=max(0,meta-total)
-    neo_meta=14
-    neo_faltam=max(0,neo_meta-neo)
+    neo_pct=neo/total if total else 0
     return (
-        '<div class="exec-compact-grid" style="display:grid !important;visibility:visible !important;opacity:1 !important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;">'
+        '<div class="exec-compact-grid">'
         '<div class="exec-compact-card exec-performance">'
         '<div class="exec-compact-title">DESEMPENHO DE VENDAS</div>'
         '<div class="exec-performance-values">'
