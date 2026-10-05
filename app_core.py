@@ -455,7 +455,6 @@ def general_report_display(team):
             "neo_pct_fmt":pct(item["neo_pct"]),
             "base_fmt":money(item["base"]),
             "proj_fmt":money(item["comissao_proj"]),
-            "neo_proj_fmt":money(item["bonus_neo_proj"]),
             "adim_proj_fmt":money(item["bonus_adim_proj"]),
             "premio_fmt":money(item["premio_total"]),
             "total_proj_fmt":money(item["total_variavel_proj"])})
@@ -470,7 +469,7 @@ def general_report_xlsx_bytes(team,all_days):
     wb=Workbook()
     ws=wb.active
     ws.title="RELATORIO GERAL"
-    headers=["EQUIPE","VENDEDOR","TOTAL","PROJEÇÃO","MÉDIA","ZEROS","% META","NEO","% NEO","PREMIAÇÃO ATUAL","PREMIAÇÃO PROJETADA","BÔNUS NEO PROJ.","BÔNUS (SE) 100% ADIM","SEMANAIS","TOTAL VAR. PROJ."]+[str(d.day) for d in all_days]
+    headers=["EQUIPE","VENDEDOR","TOTAL","PROJEÇÃO","MÉDIA","ZEROS","% META","NEO","% NEO","PREMIAÇÃO ATUAL","PREMIAÇÃO PROJETADA","BÔNUS (SE) 100% ADIM","SEMANAIS","TOTAL VAR. PROJ."]+[str(d.day) for d in all_days]
     ws.append(headers)
     for cell in ws[1]:
         cell.fill=PatternFill("solid",fgColor="0F172A")
@@ -501,7 +500,7 @@ def general_report_xlsx_bytes(team,all_days):
 
 def render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color):
     st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
-    cols=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt","BÔNUS NEO PROJ."),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
+    cols=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt"),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
     display=general_report_display(team)
     st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
 
@@ -1856,8 +1855,8 @@ def render_management(st,base,current_rows,current_cfg,metadata):
         management_total=sum(x["vendas"] for x in management_summary)
         management_projection=sum(x["projecao"] for x in management_summary)
         management_projected="maior_ou_igual_1000" if management_projection>=cfg["limite_cenario_maior"] else "abaixo_1000"
-        cards(st,[("CENÁRIO ATUAL","≥ 1.000" if management_official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{management_total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if management_projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{management_projection} vendas"),("PREMIAÇÃO BASE ATUAL",money(sum(x["base"] for x in management_team)),"cyan",""),("PREMIAÇÃO PROJETADA",money(sum(x["comissao_proj"] for x in management_team)),"yellow","Base projetada"),("BÔNUS NEO PROJ.",money(sum(x["bonus_neo_proj"] for x in management_team)),"green",""),("BÔNUS (SE) 100% ADIM",money(sum(x["bonus_adim_proj"] for x in management_team)),"green",""),("SEMANAIS ACUMULADOS",money(sum(x["premio_total"] for x in management_team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in management_team)),"yellow","")])
-        st.dataframe([{"Vendedor":x["vendedor"],"Vendas":x["vendas"],"Projeção":x["projecao"],"Mínimo":x["minimo"],"R$/venda":x["taxa"],"Base atual":x["base"],"Premiação projetada":x["comissao_proj"],"Bônus Neo proj.":x["bonus_neo_proj"],"BÔNUS (SE) 100% ADIM":x["bonus_adim_proj"],"Semanais":x["premio_total"],"Total atual":x["total"],"Total var. projetado":x["total_variavel_proj"]} for x in sorted(management_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True)],use_container_width=True,hide_index=True)
+        cards(st,[("CENÁRIO ATUAL","≥ 1.000" if management_official=="maior_ou_igual_1000" else "< 1.000","cyan",f"{management_total} vendas"),("CENÁRIO PROJETADO","≥ 1.000" if management_projected=="maior_ou_igual_1000" else "< 1.000","yellow",f"{management_projection} vendas"),("PREMIAÇÃO BASE ATUAL",money(sum(x["base"] for x in management_team)),"cyan",""),("PREMIAÇÃO PROJETADA",money(sum(x["comissao_proj"] for x in management_team)),"yellow","Base projetada"),("BÔNUS (SE) 100% ADIM",money(sum(x["bonus_adim_proj"] for x in management_team)),"green",""),("SEMANAIS ACUMULADOS",money(sum(x["premio_total"] for x in management_team)),"cyan",""),("TOTAL VAR. PROJETADO",money(sum(x["total_variavel_proj"] for x in management_team)),"yellow","")])
+        st.dataframe([{"Vendedor":x["vendedor"],"Vendas":x["vendas"],"Projeção":x["projecao"],"Mínimo":x["minimo"],"R$/venda":x["taxa"],"Base atual":x["base"],"Premiação projetada":x["comissao_proj"],"BÔNUS (SE) 100% ADIM":x["bonus_adim_proj"],"Semanais":x["premio_total"],"Total atual":x["total"],"Total var. projetado":x["total_variavel_proj"]} for x in sorted(management_team,key=lambda x:(x["vendas"],x["projecao"]),reverse=True)],use_container_width=True,hide_index=True)
     except Exception as exc:
         st.error(f"Não foi possível montar a área de Premiações: {exc}")
 
