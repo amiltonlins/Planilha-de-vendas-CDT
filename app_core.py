@@ -457,7 +457,8 @@ def general_report_display(team):
             "proj_fmt":money(item["comissao_proj"]),
             "adim_proj_fmt":money(item["bonus_adim_proj"]),
             "premio_fmt":money(item["premio_total"]),
-            "total_proj_fmt":money(item["total_variavel_proj"])})
+            "total_proj_fmt":money(item["total_variavel_proj"]),
+            "neo_faltam_14":max(0,14-int(item.get("neo",0) or 0))})
     return display
 
 def general_report_xlsx_bytes(team,all_days):
@@ -500,7 +501,7 @@ def general_report_xlsx_bytes(team,all_days):
 
 def render_general_report(st,team,rows,cfg,summary,all_days,elapsed,official,color):
     st.markdown('<div class="section">Relatório geral da equipe</div>',unsafe_allow_html=True)
-    cols=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_proj_fmt"),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
+    cols=[("equipe","EQUIPE"),("vendedor","VENDEDOR"),("vendas","TOTAL"),("projecao","PROJEÇÃO"),("media","MÉDIA"),("zeros","ZEROS"),("meta_pct","% META"),("neo","NEO"),("neo_pct_fmt","% NEO"),("base_fmt","PREMIAÇÃO ATUAL"),("proj_fmt","PREMIAÇÃO PROJETADA"),("neo_faltam_14","FALTAM PARA 14 NEO"),("adim_proj_fmt","BÔNUS (SE) 100% ADIM"),("premio_fmt","SEMANAIS"),("total_proj_fmt","TOTAL VAR. PROJ.")]+[(d.day,str(d.day)) for d in all_days]
     display=general_report_display(team)
     st.markdown(table_html(display,cols,color,True),unsafe_allow_html=True)
 
