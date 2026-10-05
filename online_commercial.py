@@ -157,7 +157,15 @@ def _install_management_report_month(core):
 def install(core):
     original=core.load_published; _install_access_code_login(core); _invalidate_legacy_session(); _install_daily_current_date(core); _install_weekly_commercial_behavior(core); _install_refresh_button(); _install_management_report_month(core)
     def load(base):
-        rows,cfg,metadata=original(base); metadata=dict(metadata or {}); force=bool(st.session_state.pop("commercial_force_refresh",False))
+        rows,cfg,metadata=original(base); metadata=dict(metadata or {})
+        # As regras de comissão ficam no config.json como fonte oficial. O payload publicado
+        # pode conter uma configuração antiga persistida, então sincronizamos somente as
+        # regras de remuneração sem sobrescrever vendedores, equipes ou demais ajustes administrativos.
+        cfg=dict(cfg or {})
+        for key in ("limite_cenario_maior","bonus_neoenergia","bonus_adimplencia","reguas_comissao","premiacao_semanal"):
+            if key in base:
+                cfg[key]=base[key]
+        force=bool(st.session_state.pop("commercial_force_refresh",False))
         if not force:
             return rows,cfg,metadata
         try:
