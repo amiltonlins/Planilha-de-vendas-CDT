@@ -177,7 +177,7 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
     header_h = 205
     summary_h = 112
     columns_h = 54
-    row_h = 122 if view == "VISÃO GERAL" else 102
+    row_h = 122 if view == "VISÃO GERAL" else (128 if view == "SEMANAL" else 102)
     footer_h = 60
     height = header_h + summary_h + columns_h + max(1, len(rows)) * row_h + footer_h
 
@@ -259,8 +259,17 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
             ruler = f"NR {nr}   ·   1 a 3 {one_three}   ·   4 a 6 {four_six}"
             draw.text((128, y + 82), ruler, font=_daily_font(15, True), fill=muted_fill)
         else:
-            ticket = _money(item.get("ticket", 0))
-            draw.text((128, y + 62), f"Ticket médio {ticket}", font=_daily_font(14), fill=muted_fill)
+            if view == "SEMANAL":
+                remain_q = int(item.get("qias_remaining", 0) or 0)
+                remain_c = int(item.get("changes_remaining", 0) or 0)
+                if item.get("next_award", 0):
+                    draw.text((610, y + 82), f"Faltam {remain_q} QIAs", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+                    draw.text((755, y + 82), f"Faltam {remain_c} trocas", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+                else:
+                    draw.text((682, y + 82), "Faixa máxima atingida", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+            else:
+                ticket = _money(item.get("ticket", 0))
+                draw.text((128, y + 62), f"Ticket médio {ticket}", font=_daily_font(14), fill=muted_fill)
 
         y += row_h
 
