@@ -150,8 +150,15 @@ def read_source(settings, session_factory=None):
 
 
 def weeks(year, month):
-    last = monthrange(year, month)[1]
-    return [(date(year, month, day), date(year, month, min(day + 6, last))) for day in range(1, last + 1, 7)]
+    """Calendar weeks run Monday through Sunday, clipped to the selected month."""
+    first = date(year, month, 1)
+    last = date(year, month, monthrange(year, month)[1])
+    cursor = first - timedelta(days=first.weekday())
+    periods = []
+    while cursor <= last:
+        periods.append((max(first, cursor), min(last, cursor + timedelta(days=6))))
+        cursor += timedelta(days=7)
+    return periods
 
 
 def useful_days(start, end):
