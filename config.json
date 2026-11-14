@@ -23,20 +23,16 @@
       "premio": 50
     },
     {
-      "vendas": 14,
+      "vendas": 12,
       "premio": 100
     },
     {
-      "vendas": 20,
+      "vendas": 14,
       "premio": 150
     },
     {
-      "vendas": 25,
+      "vendas": 18,
       "premio": 200
-    },
-    {
-      "vendas": 30,
-      "premio": 300
     }
   ],
   "reguas_comissao": {
