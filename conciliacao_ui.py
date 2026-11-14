@@ -256,7 +256,11 @@ def render_conciliacao(st, registry, save_registry, manager_password, goals=None
         default_day=today.day if (year,month)==(today.year,today.month) else 1
         if view=="SEMANAL":
             week_key=f"conc_week_{year}_{month}"
-            index=st.session_state.setdefault(week_key,min((default_day-1)//7,len(periods)-1))
+            reference_date=date(year,month,default_day)
+            default_index=next((i for i,(a,b) in enumerate(periods) if a<=reference_date<=b),0)
+            index=st.session_state.setdefault(week_key,default_index)
+            index=max(0,min(int(index),len(periods)-1))
+            st.session_state[week_key]=index
             with st.container(key="week_nav_buttons"):
                 for i,col in enumerate(st.columns(len(periods),gap="small")):
                     if col.button(f"S{i+1}",key=f"conc_week_btn_{year}_{month}_{i}",type="primary" if i==index else "secondary",help=f"{periods[i][0]:%d/%m} a {periods[i][1]:%d/%m}"):
