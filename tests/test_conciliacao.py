@@ -95,8 +95,9 @@ class ConciliationTests(unittest.TestCase):
 
     def test_calendar(self):
         self.assertEqual(useful_days(date(2026, 9, 1), date(2026, 9, 7)), 6)
-        self.assertEqual(weeks(2026, 2)[-1], (date(2026, 2, 22), date(2026, 2, 28)))
-        self.assertEqual(weeks(2026, 9)[-1], (date(2026, 9, 29), date(2026, 9, 30)))
+        self.assertEqual(weeks(2026, 2)[-1], (date(2026, 2, 23), date(2026, 2, 28)))
+        self.assertEqual(weeks(2026, 9)[-1], (date(2026, 9, 28), date(2026, 9, 30)))
+        self.assertIn((date(2026, 11, 9), date(2026, 11, 15)), weeks(2026, 11))
 
     def test_weekly_columns_reordered(self):
         config = CONFIG[:5] + [["SEMANAL CONCILIAÇÃO"], ["RÉGUA", "QIA'S", "TROCAS", "VALOR"], ["1ª", 170, 20, 50]]
