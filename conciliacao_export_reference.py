@@ -263,10 +263,10 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
                 remain_q = int(item.get("qias_remaining", 0) or 0)
                 remain_c = int(item.get("changes_remaining", 0) or 0)
                 if item.get("next_award", 0):
-                    draw.text((610, y + 82), f"Faltam {remain_q} QIAs", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
-                    draw.text((755, y + 82), f"Faltam {remain_c} trocas", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+                    draw.text((610, y + 82), f"FALTAM {remain_q} QIAs", font=_daily_font(16, True), fill=text_fill, anchor="ma")
+                    draw.text((755, y + 82), f"FALTAM {remain_c} TROCAS", font=_daily_font(16, True), fill=text_fill, anchor="ma")
                 else:
-                    draw.text((682, y + 82), "Faixa máxima atingida", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+                    draw.text((682, y + 82), "FAIXA MÁXIMA ATINGIDA", font=_daily_font(15, True), fill=text_fill, anchor="ma")
             else:
                 ticket = _money(item.get("ticket", 0))
                 draw.text((128, y + 62), f"Ticket médio {ticket}", font=_daily_font(14), fill=muted_fill)
