@@ -31,7 +31,7 @@ class WeeklyPrizeRankingTests(unittest.TestCase):
 
         self.assertTrue(png.startswith(b"\x89PNG\r\n\x1a\n"))
         self.assertEqual(1080, image.width)
-        self.assertEqual(270 + 62 + 3 * 96 + 70, image.height)
+        self.assertEqual(205 + 112 + 54 + 3 * 122 + 60, image.height)
 
 
 if __name__ == "__main__":
