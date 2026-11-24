@@ -229,28 +229,57 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
         text_fill = "#172033" if classification == "Amarelo" else "#FFFFFF"
         muted_fill = "#4B5563" if classification == "Amarelo" else "#E8EEF5"
 
-        draw.rounded_rectangle((32, y + 4, width - 32, y + row_h - 8), radius=17, fill=fill)
-        _draw_daily_ordinal(draw, 72, y + 43, pos, text_fill)
-
-        name_font = _daily_font(23, True)
-        name = _fit_image_text(draw, item.get("name", ""), name_font, 390)
-        draw.text((128, y + 18), name, font=name_font, fill=text_fill)
-        _draw_daily_status_icon(draw, 535, y + 39, classification)
-
-        qias = _integer(item.get("qias", 0))
-        qias_proj = _integer(item.get("qias_projection", 0))
-        changes = _integer(item.get("changes", 0))
-        changes_proj = _integer(item.get("changes_projection", 0))
-
-        draw.text((610, y + 15), qias, font=_daily_font(31, True), fill=text_fill, anchor="ma")
-        draw.text((610, y + 51), f"Proj. {qias_proj}", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
-        draw.text((755, y + 15), changes, font=_daily_font(29, True), fill=text_fill, anchor="ma")
-        draw.text((755, y + 51), f"Proj. {changes_proj}", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
-
-        award = _money(_award_value(item, view))
-        metric_left, metric_right = 842, 1018
-        draw.rounded_rectangle((metric_left, y + 14, metric_right, y + 70), radius=10, fill=_daily_overlay_color(fill))
-        draw.text(((metric_left + metric_right) // 2, y + 28), award, font=_daily_font(22, True), fill=text_fill, anchor="ma")
+        if view == "SEMANAL":
+            # Cartão branco e faixa lateral seguem o padrão da premiação comercial.
+            draw.rounded_rectangle((32, y + 4, width - 32, y + row_h - 8), radius=17,
+                                   fill="#FFFFFF", outline="#DDE5EE", width=1)
+            draw.rounded_rectangle((32, y + 4, 43, y + row_h - 8), radius=5, fill=fill)
+            _draw_daily_ordinal(draw, 72, y + 43, pos, "#64748B")
+            name_font = _daily_font(23, True)
+            name = _fit_image_text(draw, item.get("name", ""), name_font, 390)
+            draw.text((128, y + 18), name, font=name_font, fill="#172033")
+            classification_colors = {
+                "Azul": "#0891B2", "Verde": "#16A34A",
+                "Amarelo": "#B7791F", "Vermelho": "#DC2626",
+            }
+            draw.text((128, y + 53), f"CLASSIFICAÇÃO: {classification.upper()}",
+                      font=_daily_font(14, True), fill=classification_colors.get(classification, "#748197"))
+            qias = _integer(item.get("qias", 0))
+            qias_proj = _integer(item.get("qias_projection", 0))
+            changes = _integer(item.get("changes", 0))
+            changes_proj = _integer(item.get("changes_projection", 0))
+            metric_text = "#172033"
+            muted_text = "#748197"
+            draw.text((610, y + 13), qias, font=_daily_font(31, True), fill=metric_text, anchor="ma")
+            draw.text((610, y + 49), f"Proj. {qias_proj}", font=_daily_font(14, True), fill=muted_text, anchor="ma")
+            draw.text((755, y + 13), changes, font=_daily_font(29, True), fill=metric_text, anchor="ma")
+            draw.text((755, y + 49), f"Proj. {changes_proj}", font=_daily_font(14, True), fill=muted_text, anchor="ma")
+            award = _money(_award_value(item, view))
+            metric_left, metric_right = 842, 1018
+            award_fill = "#E8F7EE" if float(_award_value(item, view) or 0) > 0 else "#F1F5F9"
+            award_color = "#08733F" if float(_award_value(item, view) or 0) > 0 else "#64748B"
+            draw.rounded_rectangle((metric_left, y + 14, metric_right, y + 70), radius=10, fill=award_fill)
+            draw.text(((metric_left + metric_right) // 2, y + 28), award,
+                      font=_daily_font(22, True), fill=award_color, anchor="ma")
+        else:
+            draw.rounded_rectangle((32, y + 4, width - 32, y + row_h - 8), radius=17, fill=fill)
+            _draw_daily_ordinal(draw, 72, y + 43, pos, text_fill)
+            name_font = _daily_font(23, True)
+            name = _fit_image_text(draw, item.get("name", ""), name_font, 390)
+            draw.text((128, y + 18), name, font=name_font, fill=text_fill)
+            _draw_daily_status_icon(draw, 535, y + 39, classification)
+            qias = _integer(item.get("qias", 0))
+            qias_proj = _integer(item.get("qias_projection", 0))
+            changes = _integer(item.get("changes", 0))
+            changes_proj = _integer(item.get("changes_projection", 0))
+            draw.text((610, y + 15), qias, font=_daily_font(31, True), fill=text_fill, anchor="ma")
+            draw.text((610, y + 51), f"Proj. {qias_proj}", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+            draw.text((755, y + 15), changes, font=_daily_font(29, True), fill=text_fill, anchor="ma")
+            draw.text((755, y + 51), f"Proj. {changes_proj}", font=_daily_font(14, True), fill=muted_fill, anchor="ma")
+            award = _money(_award_value(item, view))
+            metric_left, metric_right = 842, 1018
+            draw.rounded_rectangle((metric_left, y + 14, metric_right, y + 70), radius=10, fill=_daily_overlay_color(fill))
+            draw.text(((metric_left + metric_right) // 2, y + 28), award, font=_daily_font(22, True), fill=text_fill, anchor="ma")
 
         if view == "VISÃO GERAL":
             nr = _integer(item.get("NR", 0))
