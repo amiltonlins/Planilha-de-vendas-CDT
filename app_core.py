@@ -1625,7 +1625,7 @@ def weekly_prize_ranking_png(team,week_index,cfg):
 
     draw.rectangle((0,0,width,header_h),fill="#075B35")
     _draw_daily_brand(draw,52,28)
-    draw.text((52,78),"RANKING DA PREMIAÇÃO · SEMANAL",font=_daily_font(42,True),fill="#FFFFFF")
+    draw.text((52,78),"RANKING COMERCIAL - SEMANAL",font=_daily_font(42,True),fill="#FFFFFF")
     draw.text((52,132),f"S{week_index+1} · {week_start:%d/%m/%Y} A {week_end:%d/%m/%Y}",font=_daily_font(22),fill="#DDF3E8")
     draw.text((width-52,38),f"{week_end:%d/%m/%Y}",font=_daily_font(22,True),fill="#E7F7EE",anchor="ra")
 
@@ -1667,8 +1667,14 @@ def weekly_prize_ranking_png(team,week_index,cfg):
         name_font=_daily_font(23,True)
         name=_fit_image_text(draw,item["vendedor"],name_font,390)
         draw.text((128,y+22),name,font=name_font,fill="#172033")
-        status="PREMIADO" if item["premio"]>0 else "AINDA SEM PREMIAÇÃO"
-        draw.text((128,y+58),status,font=_daily_font(14,True),fill=accent if item["premio"]>0 else "#748197")
+        next_goal=weekly_next_goal(item["vendas"],cfg)
+        if next_goal:
+            status=f"🎯 Faltam {next_goal['missing']} vendas para {money(next_goal['prize'])}"
+        else:
+            status="🏆 FAIXA MÁXIMA ALCANÇADA"
+        status_font=_daily_font(14,True)
+        status=_fit_image_text(draw,status,status_font,420)
+        draw.text((128,y+58),status,font=status_font,fill="#08733F" if next_goal else "#B7791F")
 
         draw.text((610,y+35),item["equipe"],font=_daily_font(18,True),fill="#536176",anchor="ma")
         draw.text((790,y+29),str(item["vendas"]),font=_daily_font(31,True),fill="#172033",anchor="ma")
