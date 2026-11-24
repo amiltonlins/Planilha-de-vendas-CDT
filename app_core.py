@@ -1617,7 +1617,7 @@ def weekly_prize_ranking_png(team,week_index,cfg):
     header_h=205
     summary_h=112
     columns_h=54
-    row_h=122
+    row_h=146
     footer_h=60
     height=header_h+summary_h+columns_h+max(1,len(rows))*row_h+footer_h
     image=Image.new("RGB",(width,height),"#F4F7FB")
@@ -1669,12 +1669,16 @@ def weekly_prize_ranking_png(team,week_index,cfg):
         draw.text((128,y+22),name,font=name_font,fill="#172033")
         next_goal=weekly_next_goal(item["vendas"],cfg)
         if next_goal:
-            status=f"🎯 Faltam {next_goal['missing']} vendas para {money(next_goal['prize'])}"
+            status=f"FALTAM {next_goal['missing']} VENDAS PARA {money(next_goal['prize'])}"
+            status_color="#08733F"
         else:
-            status="🏆 FAIXA MÁXIMA ALCANÇADA"
-        status_font=_daily_font(14,True)
-        status=_fit_image_text(draw,status,status_font,420)
-        draw.text((128,y+58),status,font=status_font,fill="#08733F" if next_goal else "#B7791F")
+            status="FAIXA MÁXIMA ALCANÇADA"
+            status_color="#B7791F"
+        status_box=(128,y+86,1018,y+128)
+        draw.rounded_rectangle(status_box,radius=9,fill="#F1F5F9",outline="#DCE5EC",width=1)
+        status_font=_daily_font(15,True)
+        status=_fit_image_text(draw,status,status_font,850)
+        draw.text(((status_box[0]+status_box[2])//2,y+98),status,font=status_font,fill=status_color,anchor="ma")
 
         draw.text((610,y+35),item["equipe"],font=_daily_font(18,True),fill="#536176",anchor="ma")
         draw.text((790,y+29),str(item["vendas"]),font=_daily_font(31,True),fill="#172033",anchor="ma")
