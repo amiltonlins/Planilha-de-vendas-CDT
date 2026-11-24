@@ -188,7 +188,7 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
     _draw_daily_brand(draw, 52, 28)
     titles = {
         "VISÃO GERAL": "RANKING CONCILIAÇÃO · GERAL",
-        "SEMANAL": "RANKING CONCILIAÇÃO · SEMANA",
+        "SEMANAL": "RANKING CONCILIAÇÃO - SEMANAL",
     }
     draw.text((52, 78), titles.get(view, "RANKING CONCILIAÇÃO"), font=_daily_font(42, True), fill="#FFFFFF")
     draw.text((52, 132), period, font=_daily_font(22), fill="#DDF3E8")
@@ -292,26 +292,19 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
                 remain_q = int(item.get("qias_remaining", 0) or 0)
                 remain_c = int(item.get("changes_remaining", 0) or 0)
                 info_top, info_bottom = y + 86, y + 128
-                info_fill = "#FFFFFF"
-                info_outline = "#DCE5EC"
-                info_text = "#172033"
+                info_box = (128, info_top, 1018, info_bottom)
+                draw.rounded_rectangle(info_box, radius=9, fill="#F1F5F9", outline="#DCE5EC", width=1)
                 if item.get("next_award", 0):
-                    qias_box = (128, info_top, 550, info_bottom)
-                    changes_box = (570, info_top, 1018, info_bottom)
-                    draw.rounded_rectangle(qias_box, radius=9, fill=info_fill, outline=info_outline, width=1)
-                    draw.rounded_rectangle(changes_box, radius=9, fill=info_fill, outline=info_outline, width=1)
-                    draw.text(((qias_box[0] + qias_box[2]) // 2, info_top + 12),
-                              f"FALTAM {remain_q} QIAs", font=_daily_font(16, True),
-                              fill=info_text, anchor="ma")
-                    draw.text(((changes_box[0] + changes_box[2]) // 2, info_top + 12),
-                              f"FALTAM {remain_c} TROCAS", font=_daily_font(16, True),
-                              fill=info_text, anchor="ma")
+                    target_prize = _money(item.get("next_award", 0))
+                    message = f"🎯 FALTAM {remain_q} QIAs E {remain_c} TROCAS PARA {target_prize}"
+                    message_color = "#08733F"
                 else:
-                    maximum_box = (128, info_top, 1018, info_bottom)
-                    draw.rounded_rectangle(maximum_box, radius=9, fill=info_fill, outline=info_outline, width=1)
-                    draw.text(((maximum_box[0] + maximum_box[2]) // 2, info_top + 12),
-                              "FAIXA MÁXIMA ATINGIDA", font=_daily_font(15, True),
-                              fill=info_text, anchor="ma")
+                    message = "🏆 FAIXA MÁXIMA ALCANÇADA"
+                    message_color = "#B7791F"
+                message_font = _daily_font(15, True)
+                message = _fit_image_text(draw, message, message_font, 850)
+                draw.text(((info_box[0] + info_box[2]) // 2, info_top + 12),
+                          message, font=message_font, fill=message_color, anchor="ma")
             else:
                 ticket = _money(item.get("ticket", 0))
                 draw.text((128, y + 62), f"Ticket médio {ticket}", font=_daily_font(14), fill=muted_fill)
