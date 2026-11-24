@@ -1589,6 +1589,23 @@ def weekly_rank_gamified_html(team,week_index,cfg,is_current):
     return '<div class="weekly-game-list">'+''.join(rows)+'</div>'
 
 
+def weekly_sales_classification(sales,week_start,week_end,cfg,reference_day=None):
+    """Aplica os mesmos cortes de projeção semanal usados na Conciliação."""
+    reference_day=reference_day or datetime.now(RECIFE_TZ).date()
+    elapsed_end=min(reference_day,week_end)
+    elapsed=sum(1 for offset in range(max(0,(elapsed_end-week_start).days+1))
+                if (week_start+timedelta(days=offset)).weekday()!=6) if elapsed_end>=week_start else 0
+    total=sum(1 for offset in range(max(0,(week_end-week_start).days+1))
+              if (week_start+timedelta(days=offset)).weekday()!=6)
+    projection=(float(sales)*total/elapsed) if elapsed else float(sales)
+    tiers=weekly_tiers(cfg)
+    goal=int(tiers[0].get("vendas",0)) if tiers else 0
+    attainment=(projection/goal*100) if goal else 0
+    if attainment>=101:return "AZUL","#0891B2"
+    if attainment>=100:return "VERDE","#16A34A"
+    if attainment>=50:return "AMARELO","#F59E0B"
+    return "VERMELHO","#DC2626"
+
 def weekly_prize_ranking_png(team,week_index,cfg):
     """Gera o ranking semanal comercial no padrão visual compartilhado com a Conciliação."""
     ranked=sorted(
@@ -1605,11 +1622,14 @@ def weekly_prize_ranking_png(team,week_index,cfg):
     for item in ranked:
         sales=int(item.get("semanas",[])[week_index] if week_index<len(item.get("semanas",[])) else 0)
         prize=float(item.get("premios",[])[week_index] if week_index<len(item.get("premios",[])) else 0)
+        classification,classification_color=weekly_sales_classification(sales,week_start,week_end,cfg)
         rows.append({
             "vendedor":str(item.get("vendedor","")),
             "equipe":str(item.get("equipe","")),
             "vendas":sales,
             "premio":prize,
+            "classificacao":classification,
+            "cor_classificacao":classification_color,
         })
 
     # Mesma estrutura-base do PNG semanal da Conciliação.
@@ -1659,14 +1679,16 @@ def weekly_prize_ranking_png(team,week_index,cfg):
     medal_colors=("#F5B301","#94A3B8","#B7791F")
     for pos,item in enumerate(rows,1):
         draw.rounded_rectangle((32,y+4,width-32,y+row_h-8),radius=17,fill="#FFFFFF",outline="#DDE5EE",width=1)
-        accent="#16A34A" if item["premio"]>0 else "#CBD5E1"
+        accent=item["cor_classificacao"]
         draw.rounded_rectangle((32,y+4,40,y+row_h-8),radius=4,fill=accent)
         position_color=medal_colors[pos-1] if pos<=3 else "#64748B"
         _draw_daily_ordinal(draw,72,y+43,pos,position_color)
 
         name_font=_daily_font(23,True)
         name=_fit_image_text(draw,item["vendedor"],name_font,390)
-        draw.text((128,y+22),name,font=name_font,fill="#172033")
+        draw.text((128,y+18),name,font=name_font,fill="#172033")
+        draw.text((128,y+53),f"CLASSIFICAÇÃO: {item['classificacao']}",
+                  font=_daily_font(14,True),fill=item["cor_classificacao"])
         next_goal=weekly_next_goal(item["vendas"],cfg)
         if next_goal:
             status=f"FALTAM {next_goal['missing']} VENDAS PARA {money(next_goal['prize'])}"
