@@ -296,10 +296,10 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
                 draw.rounded_rectangle(info_box, radius=9, fill="#F1F5F9", outline="#DCE5EC", width=1)
                 if item.get("next_award", 0):
                     target_prize = _money(item.get("next_award", 0))
-                    message = f"🎯 FALTAM {remain_q} QIAs E {remain_c} TROCAS PARA {target_prize}"
+                    message = f"FALTAM {remain_q} QIAs E {remain_c} TROCAS PARA {target_prize}"
                     message_color = "#08733F"
                 else:
-                    message = "🏆 FAIXA MÁXIMA ALCANÇADA"
+                    message = "FAIXA MÁXIMA ALCANÇADA"
                     message_color = "#B7791F"
                 message_font = _daily_font(15, True)
                 message = _fit_image_text(draw, message, message_font, 850)
