@@ -1590,7 +1590,7 @@ def weekly_rank_gamified_html(team,week_index,cfg,is_current):
 
 
 def weekly_prize_ranking_png(team,week_index,cfg):
-    """Gera o ranking da premiação referente à semana selecionada."""
+    """Gera o ranking semanal comercial no padrão visual compartilhado com a Conciliação."""
     ranked=sorted(
         team,
         key=lambda x:(
@@ -1612,58 +1612,81 @@ def weekly_prize_ranking_png(team,week_index,cfg):
             "premio":prize,
         })
 
-    width=1080; header_h=270; columns_h=62; row_h=96; footer_h=70
-    height=header_h+columns_h+max(1,len(rows))*row_h+footer_h
-    image=Image.new("RGB",(width,height),"#F4F7FB"); draw=ImageDraw.Draw(image)
+    # Mesma estrutura-base do PNG semanal da Conciliação.
+    width=1080
+    header_h=205
+    summary_h=112
+    columns_h=54
+    row_h=122
+    footer_h=60
+    height=header_h+summary_h+columns_h+max(1,len(rows))*row_h+footer_h
+    image=Image.new("RGB",(width,height),"#F4F7FB")
+    draw=ImageDraw.Draw(image)
+
     draw.rectangle((0,0,width,header_h),fill="#075B35")
-    _draw_daily_brand(draw,56,38)
-    draw.text((56,78),f"RANKING DA PREMIAÇÃO - S{week_index+1}",font=_daily_font(44,True),fill="#FFFFFF")
-    draw.text((width-56,48),f"{week_start:%d/%m} A {week_end:%d/%m/%Y}",font=_daily_font(25,True),fill="#E7F7EE",anchor="ra")
+    _draw_daily_brand(draw,52,28)
+    draw.text((52,78),"RANKING DA PREMIAÇÃO · SEMANAL",font=_daily_font(42,True),fill="#FFFFFF")
+    draw.text((52,132),f"S{week_index+1} · {week_start:%d/%m/%Y} A {week_end:%d/%m/%Y}",font=_daily_font(22),fill="#DDF3E8")
+    draw.text((width-52,38),f"{week_end:%d/%m/%Y}",font=_daily_font(22,True),fill="#E7F7EE",anchor="ra")
 
     total_sales=sum(item["vendas"] for item in rows)
     total_prize=sum(item["premio"] for item in rows)
     awarded=sum(1 for item in rows if item["premio"]>0)
-    cards=(("VENDAS NA SEMANA",str(total_sales)),("VENDEDORES PREMIADOS",str(awarded)),("TOTAL EM PRÊMIOS",money(total_prize)))
+    summary_top=header_h+16
+    card_gap=14
+    card_w=(width-104-card_gap*2)//3
+    cards=(
+        ("VENDAS NA SEMANA",str(total_sales)),
+        ("VENDEDORES PREMIADOS",str(awarded)),
+        ("TOTAL EM PRÊMIOS",money(total_prize)),
+    )
     for idx,(label,value) in enumerate(cards):
-        left=56+idx*326; right=left+300
-        fill="#EAF7FD" if idx==2 else "#FFFFFF"
-        value_color="#0878B9" if idx==2 else "#075B35"
-        draw.rounded_rectangle((left,160,right,244),radius=13,fill=fill)
-        draw.text(((left+right)//2,178),label,font=_daily_font(16,True),fill="#64748B",anchor="ma")
-        draw.text(((left+right)//2,207),value,font=_daily_font(30 if idx==2 else 34,True),fill=value_color,anchor="ma")
+        left=52+idx*(card_w+card_gap)
+        right=left+card_w
+        draw.rounded_rectangle((left,summary_top,right,summary_top+78),radius=12,fill="#FFFFFF",outline="#DDE5EE",width=1)
+        draw.text(((left+right)//2,summary_top+15),label,font=_daily_font(15,True),fill="#64748B",anchor="ma")
+        value_size=27 if idx==2 else 31
+        value_color="#075B35" if idx<2 else "#0878B9"
+        draw.text(((left+right)//2,summary_top+41),value,font=_daily_font(value_size,True),fill=value_color,anchor="ma")
 
-    columns_top=header_h
-    draw.rectangle((34,columns_top,width-34,columns_top+columns_h),fill="#E9EFF5")
-    columns=((58,"POS.","la"),(135,"VENDEDOR","la"),(610,"EQUIPE","ma"),(790,"VENDAS","ma"),(960,"PREMIAÇÃO","ma"))
+    columns_top=header_h+summary_h
+    draw.rectangle((32,columns_top,width-32,columns_top+columns_h),fill="#E9EFF5")
+    columns=((56,"POS.","la"),(128,"VENDEDOR","la"),(610,"EQUIPE","ma"),(790,"VENDAS","ma"),(910,"PREMIAÇÃO","ma"))
     for x,label,anchor in columns:
-        draw.text((x,columns_top+21),label,font=_daily_font(18,True),fill="#536176",anchor=anchor)
+        draw.text((x,columns_top+17),label,font=_daily_font(17,True),fill="#536176",anchor=anchor)
 
     y=columns_top+columns_h
     medal_colors=("#F5B301","#94A3B8","#B7791F")
     for pos,item in enumerate(rows,1):
-        row_bottom=y+row_h-8
+        draw.rounded_rectangle((32,y+4,width-32,y+row_h-8),radius=17,fill="#FFFFFF",outline="#DDE5EE",width=1)
         accent="#16A34A" if item["premio"]>0 else "#CBD5E1"
-        draw.rounded_rectangle((34,y,width-34,row_bottom),radius=18,fill="#FFFFFF",outline="#DDE5EE",width=2)
-        draw.rounded_rectangle((34,y,45,row_bottom),radius=5,fill=accent)
+        draw.rounded_rectangle((32,y+4,40,y+row_h-8),radius=4,fill=accent)
         position_color=medal_colors[pos-1] if pos<=3 else "#64748B"
-        _draw_daily_ordinal(draw,80,y+44,pos,position_color)
+        _draw_daily_ordinal(draw,72,y+43,pos,position_color)
+
         name_font=_daily_font(23,True)
-        name=_fit_image_text(draw,item["vendedor"],name_font,370)
-        draw.text((135,y+18),name,font=name_font,fill="#172033")
+        name=_fit_image_text(draw,item["vendedor"],name_font,390)
+        draw.text((128,y+22),name,font=name_font,fill="#172033")
         status="PREMIADO" if item["premio"]>0 else "AINDA SEM PREMIAÇÃO"
-        draw.text((135,y+51),status,font=_daily_font(15,True),fill=accent if item["premio"]>0 else "#748197")
-        draw.text((610,y+30),item["equipe"],font=_daily_font(18,True),fill="#536176",anchor="ma")
-        draw.text((790,y+23),str(item["vendas"]),font=_daily_font(34,True),fill="#172033",anchor="ma")
-        prize_left,prize_right=870,1030
+        draw.text((128,y+58),status,font=_daily_font(14,True),fill=accent if item["premio"]>0 else "#748197")
+
+        draw.text((610,y+35),item["equipe"],font=_daily_font(18,True),fill="#536176",anchor="ma")
+        draw.text((790,y+29),str(item["vendas"]),font=_daily_font(31,True),fill="#172033",anchor="ma")
+
+        prize_left,prize_right=842,1018
         prize_fill="#E8F7EE" if item["premio"]>0 else "#F1F5F9"
         prize_color="#08733F" if item["premio"]>0 else "#64748B"
-        draw.rounded_rectangle((prize_left,y+16,prize_right,y+69),radius=11,fill=prize_fill)
-        draw.text(((prize_left+prize_right)//2,y+27),money(item["premio"]),font=_daily_font(23,True),fill=prize_color,anchor="ma")
+        draw.rounded_rectangle((prize_left,y+20,prize_right,y+76),radius=10,fill=prize_fill)
+        draw.text(((prize_left+prize_right)//2,y+34),money(item["premio"]),font=_daily_font(22,True),fill=prize_color,anchor="ma")
         y+=row_h
 
-    draw.text((width//2,height-39),"PAINEL COMERCIAL · AFOGADOS",font=_daily_font(18,True),fill="#758397",anchor="ma")
-    output=io.BytesIO(); image.save(output,format="PNG",optimize=True); return output.getvalue()
+    if not rows:
+        draw.text((52,columns_top+86),"Nenhum vendedor habilitado.",font=_daily_font(25,True),fill="#64748B")
 
+    draw.text((width//2,height-33),"PAINEL COMERCIAL · AFOGADOS",font=_daily_font(17,True),fill="#758397",anchor="ma")
+    output=io.BytesIO()
+    image.save(output,format="PNG",optimize=True)
+    return output.getvalue()
 
 def weekly_management_table_html(team,max_weeks):
     heads=['VENDEDOR']
