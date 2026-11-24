@@ -177,7 +177,7 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
     header_h = 205
     summary_h = 112
     columns_h = 54
-    row_h = 122 if view == "VISÃO GERAL" else (128 if view == "SEMANAL" else 102)
+    row_h = 122 if view == "VISÃO GERAL" else (146 if view == "SEMANAL" else 102)
     footer_h = 60
     height = header_h + summary_h + columns_h + max(1, len(rows)) * row_h + footer_h
 
@@ -262,11 +262,27 @@ def ranking_png(rows, view, period, totals, goals, synced_at):
             if view == "SEMANAL":
                 remain_q = int(item.get("qias_remaining", 0) or 0)
                 remain_c = int(item.get("changes_remaining", 0) or 0)
+                info_top, info_bottom = y + 86, y + 128
+                info_fill = "#FFFFFF"
+                info_outline = "#DCE5EC"
+                info_text = "#172033"
                 if item.get("next_award", 0):
-                    draw.text((610, y + 82), f"FALTAM {remain_q} QIAs", font=_daily_font(16, True), fill=text_fill, anchor="ma")
-                    draw.text((755, y + 82), f"FALTAM {remain_c} TROCAS", font=_daily_font(16, True), fill=text_fill, anchor="ma")
+                    qias_box = (128, info_top, 550, info_bottom)
+                    changes_box = (570, info_top, 1018, info_bottom)
+                    draw.rounded_rectangle(qias_box, radius=9, fill=info_fill, outline=info_outline, width=1)
+                    draw.rounded_rectangle(changes_box, radius=9, fill=info_fill, outline=info_outline, width=1)
+                    draw.text(((qias_box[0] + qias_box[2]) // 2, info_top + 12),
+                              f"FALTAM {remain_q} QIAs", font=_daily_font(16, True),
+                              fill=info_text, anchor="ma")
+                    draw.text(((changes_box[0] + changes_box[2]) // 2, info_top + 12),
+                              f"FALTAM {remain_c} TROCAS", font=_daily_font(16, True),
+                              fill=info_text, anchor="ma")
                 else:
-                    draw.text((682, y + 82), "FAIXA MÁXIMA ATINGIDA", font=_daily_font(15, True), fill=text_fill, anchor="ma")
+                    maximum_box = (128, info_top, 1018, info_bottom)
+                    draw.rounded_rectangle(maximum_box, radius=9, fill=info_fill, outline=info_outline, width=1)
+                    draw.text(((maximum_box[0] + maximum_box[2]) // 2, info_top + 12),
+                              "FAIXA MÁXIMA ATINGIDA", font=_daily_font(15, True),
+                              fill=info_text, anchor="ma")
             else:
                 ticket = _money(item.get("ticket", 0))
                 draw.text((128, y + 62), f"Ticket médio {ticket}", font=_daily_font(14), fill=muted_fill)
