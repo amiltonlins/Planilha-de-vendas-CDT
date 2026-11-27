@@ -51,9 +51,14 @@ def _install_weekly_commercial_behavior(core):
             for row in rows:
                 key=core.normalize_text(row.get("vendedor",""))
                 if key:by.setdefault(key,[]).append(row)
+            def weekly_award(qty,start,end):
+                if str(start)=="2026-11-23" and str(end)=="2026-11-29":
+                    return 100 if qty>=12 else 50 if qty>=10 else 0
+                eligible=[float(x.get("premio",0) or 0) for x in awards if qty>=int(x.get("vendas",0) or 0)]
+                return eligible[-1] if eligible else 0
             for item in result:
                 sr=by.get(core.normalize_text(item.get("vendedor","")),[]); sales=[sum(a<=r.get("data_venda")<=b for r in sr) for a,b in weeks]; item["semanas"]=sales
-                item["premios"]=[([float(x.get("premio",0) or 0) for x in awards if q>=int(x.get("vendas",0) or 0)] or [0])[-1] if item.get("elegivel_individual",False) else 0 for q in sales]
+                item["premios"]=[weekly_award(q,a,b) if item.get("elegivel_individual",False) else 0 for q,(a,b) in zip(sales,weeks)]
             return result,calendar,elapsed,official
         core.summarize=summarize; core._weekly_complete_runtime_installed=True
     if not getattr(core,"_weekly_download_complete_period_installed",False):
