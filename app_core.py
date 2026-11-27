@@ -1551,6 +1551,13 @@ def weekly_game_level(sales,cfg):
     return max(1,min(6,1+int(idx*5/(len(tiers)-1))))
 
 def weekly_next_goal(sales,cfg):
+    # Campanha Black Zerada: 23 a 29/11/2026.
+    # Nesta semana, 12 vendas atingem o teto de R$ 100, sem novas faixas.
+    today=datetime.now(RECIFE_TZ).date()
+    black_week_start=date(2026,11,23)
+    black_week_end=date(2026,11,29)
+    if black_week_start<=today<=black_week_end and int(sales or 0)>=12:
+        return None
     tiers=weekly_tiers(cfg)
     nxt=next((t for t in tiers if int(t.get("vendas",0))>sales),None)
     if not nxt:return None
